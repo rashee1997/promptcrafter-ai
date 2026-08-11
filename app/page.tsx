@@ -33,7 +33,12 @@ import { computePromptStats, generateVersionName } from '@/lib/prompt-stats';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'generator' | 'history' | 'settings'>('generator');
-  const [darkMode, setDarkMode] = useState<boolean>(true);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return true;
+  });
 
   // Storage state
   const [providers, setProviders] = useState<ProviderConfig[]>([DEFAULT_BUILTIN_PROVIDER]);
@@ -56,8 +61,10 @@ export default function HomePage() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 
@@ -419,12 +426,12 @@ export default function HomePage() {
   const displayOutput = isGenerating ? streamingText : activeVersion?.content || '';
 
   return (
-    <div className="min-h-screen bg-slate-900 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors selection:bg-indigo-500 selection:text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-white flex flex-col justify-between">
       {/* Dynamic Atmospheric Light Glow Orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 right-[-10%] w-[45%] h-[45%] bg-teal-500/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-1/3 w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand/20 rounded-full blur-[120px]" />
+        <div className="absolute top-1/3 right-[-10%] w-[45%] h-[45%] bg-brand/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-1/3 w-[50%] h-[50%] bg-brand/10 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -498,10 +505,10 @@ export default function HomePage() {
         </main>
 
         {/* Footer */}
-        <footer className="mt-auto border-t border-slate-200/60 dark:border-white/5 py-4 px-4 sm:px-8 text-[11px] text-slate-500 dark:text-slate-500 font-mono flex flex-wrap items-center justify-between gap-2 max-w-7xl w-full mx-auto">
+        <footer className="mt-auto border-t border-border py-4 px-4 sm:px-8 text-[11px] text-text-muted font-mono flex flex-wrap items-center justify-between gap-2 max-w-7xl w-full mx-auto">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               STORAGE: {storageMode} OK
             </span>
             <span>ENCRYPTION: AES-GCM</span>
