@@ -13,7 +13,14 @@ export function normalizeBaseUrl(url: string): string {
 
   let normalized = url.trim();
   if (!/^https?:\/\//i.test(normalized)) {
-    normalized = `https://${normalized}`;
+    const localHostPattern = /^(localhost|127(?:\.\d{1,3}){0,3}|::1)(:\d+)?(\/.*)?$/i;
+    const ipv6LocalPattern = /^\[::1\](?::\d+)?(\/.*)?$/i;
+
+    if (localHostPattern.test(normalized) || ipv6LocalPattern.test(normalized)) {
+      normalized = `http://${normalized}`;
+    } else {
+      normalized = `https://${normalized}`;
+    }
   }
 
   try {
