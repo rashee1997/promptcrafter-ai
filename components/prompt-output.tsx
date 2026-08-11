@@ -76,13 +76,13 @@ export function PromptOutput({
   if (!output && !isGenerating && !currentSession) {
     return (
       <GlassCard variant="subtle" className="p-8 text-center flex flex-col items-center justify-center min-h-[360px]">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 border border-indigo-500/20">
+        <div className="w-16 h-16 rounded-2xl bg-brand/10  text-brand flex items-center justify-center mb-4 border border-brand/20">
           <Sparkles className="w-8 h-8" />
         </div>
-        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+        <h3 className="text-base font-bold text-text-primary">
           Ready to Craft Your Prompt
         </h3>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
+        <p className="mt-2 text-xs text-text-muted max-w-md leading-relaxed">
           Select a target domain, specify your goal or topic, choose a framework like Role-Task-Format or Chain-of-Thought, and click Generate.
         </p>
       </GlassCard>
@@ -175,19 +175,19 @@ export function PromptOutput({
   return (
     <GlassCard variant="glowing" className="p-5 sm:p-6 space-y-4">
       {/* Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-800/80">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+          <div className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/20">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-bold text-text-primary">
                 Engineered Raw Prompt
               </h3>
 
               {activeVersion && (
-                <span className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                <span className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-brand/15 text-brand border border-brand/30 flex items-center gap-1">
                   <GitCommit className="w-3 h-3" />
                   v{activeVersion.versionNumber}: {activeVersion.name}
                 </span>
@@ -199,7 +199,7 @@ export function PromptOutput({
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] text-text-muted">
               Generated via {activeVersion?.providerName || activeProvider.name}
             </p>
           </div>
@@ -208,11 +208,11 @@ export function PromptOutput({
         {/* Badges: Estimated Token Counter & Quality Score */}
         {!isGenerating && output && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-xl text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
+            <div className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 px-3 py-1 rounded-xl text-brand text-xs font-semibold">
               <Cpu className="w-3.5 h-3.5 text-indigo-500" />
               <span>~{estTokens.toLocaleString()} Tokens</span>
             </div>
-            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+            <div className="flex items-center gap-2 bg-success/10 border border-success/20 px-3 py-1 rounded-xl text-success text-xs font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Quality: {qualityScore}/100</span>
             </div>
@@ -221,15 +221,15 @@ export function PromptOutput({
       </div>
 
       {/* Analytics Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-text-muted bg-surface-muted p-2.5 rounded-xl border border-border/50">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-semibold text-indigo-600 dark:text-indigo-400">
+          <div className="flex items-center gap-1.5 font-semibold text-brand">
             <Cpu className="w-3.5 h-3.5" />
             <span>Estimated Tokens: ~{estTokens.toLocaleString()}</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
-            <Layers className="w-3.5 h-3.5 text-slate-400" />
+            <Layers className="w-3.5 h-3.5 text-text-muted" />
             <span>{wordCount.toLocaleString()} Words</span>
           </div>
           <span>•</span>
@@ -243,14 +243,14 @@ export function PromptOutput({
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            className="w-full h-[320px] p-4 rounded-xl border border-indigo-500/50 bg-slate-950 text-slate-100 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 selection:bg-indigo-500 selection:text-white"
+            className="w-full h-[320px] p-4 rounded-xl border border-brand/50 bg-surface-code text-text-primary font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand selection:bg-brand selection:text-white"
             placeholder="Edit prompt content directly..."
           />
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 transition-colors"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-code text-text-secondary hover:bg-surface-hover border border-border flex items-center gap-1 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
               <span>Cancel</span>
@@ -258,7 +258,7 @@ export function PromptOutput({
             <button
               type="button"
               onClick={handleSaveEdit}
-              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 shadow-md flex items-center gap-1.5 transition-colors"
+              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 shadow-md flex items-center gap-1.5 transition-colors"
             >
               <Save className="w-3.5 h-3.5" />
               <span>Save Edit as New Version</span>
@@ -268,7 +268,7 @@ export function PromptOutput({
       ) : (
         <div
           ref={outputRef}
-          className="relative rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-950 text-slate-100 p-4 min-h-[280px] max-h-[500px] overflow-y-auto selection:bg-indigo-500 selection:text-white scroll-smooth font-mono text-xs leading-relaxed"
+          className="relative rounded-xl border border-border bg-surface-code text-text-primary p-4 min-h-[280px] max-h-[500px] overflow-y-auto selection:bg-brand selection:text-white scroll-smooth font-mono text-xs leading-relaxed"
         >
           <MarkdownRenderer content={output} highlightPlaceholders={true} />
         </div>
@@ -281,9 +281,9 @@ export function PromptOutput({
           <button
             type="button"
             onClick={handleCopy}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/25 flex items-center gap-2 transition-all active:scale-95"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/25 flex items-center gap-2 transition-all active:scale-95"
           >
-            {copiedType === 'prompt' ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+            {copiedType === 'prompt' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
             <span>{copiedType === 'prompt' ? 'Copied Raw Prompt!' : 'Copy Prompt'}</span>
           </button>
 
@@ -293,8 +293,8 @@ export function PromptOutput({
             onClick={() => setIsEditing(!isEditing)}
             className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
               isEditing
-                ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
-                : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700 border-slate-700'
+                ? 'bg-indigo-500/20 border-brand/40 text-brand'
+                : 'bg-surface-code/80 text-text-primary hover:bg-surface-hover border-border'
             }`}
             title="Edit prompt in place"
           >
@@ -306,10 +306,10 @@ export function PromptOutput({
           <button
             type="button"
             onClick={() => onTestPrompt(rawPromptText)}
-            className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5 transition-all shadow-sm"
+            className="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-code text-text-primary hover:bg-surface-hover border border-border flex items-center gap-1.5 transition-all shadow-sm"
             title="Execute this prompt live against an AI model"
           >
-            <Play className="w-3.5 h-3.5 text-emerald-400 fill-current" />
+            <Play className="w-3.5 h-3.5 text-success fill-current" />
             <span>Test in Sandbox</span>
           </button>
 
@@ -320,8 +320,8 @@ export function PromptOutput({
               onClick={onToggleFavorite}
               className={`p-2 rounded-xl text-xs font-semibold border transition-all ${
                 currentSession?.favorite
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-500'
-                  : 'bg-white/60 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800/80 text-slate-600 dark:text-slate-300 hover:text-amber-500'
+                  ? 'bg-warning/20 border-warning/40 text-warning'
+                  : 'bg-surface-card/60 border-border text-text-secondary hover:text-warning'
               }`}
               title="Mark Session as Favorite"
             >
@@ -333,7 +333,7 @@ export function PromptOutput({
             <button
               type="button"
               onClick={onCancelGeneration}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/30 flex items-center gap-1.5 transition-all"
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-danger/20 border border-danger/40 text-danger hover:bg-rose-500/30 flex items-center gap-1.5 transition-all"
             >
               <StopCircle className="w-3.5 h-3.5" />
               <span>Cancel</span>
@@ -346,7 +346,7 @@ export function PromptOutput({
           <button
             type="button"
             onClick={handleDownloadMd}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-white/60 dark:bg-surface-muted text-text-secondary hover:bg-surface-hover flex items-center gap-1 transition-colors"
             title="Export as Markdown .md"
           >
             <Download className="w-3.5 h-3.5" />
@@ -356,7 +356,7 @@ export function PromptOutput({
           <button
             type="button"
             onClick={handleDownloadJson}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-white/60 dark:bg-surface-muted text-text-secondary hover:bg-surface-hover flex items-center gap-1 transition-colors"
             title="Export as JSON"
           >
             <FileCode className="w-3.5 h-3.5" />
@@ -366,11 +366,11 @@ export function PromptOutput({
       </div>
 
       {/* Docked Conversational Refine Section */}
-      <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800/80 space-y-3">
+      <div className="pt-4 border-t border-border space-y-3">
         {/* Thread Version History Strip */}
         {versions.length > 0 && (
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <span className="text-[11px] font-semibold text-text-muted flex items-center gap-1">
               <GitCommit className="w-3.5 h-3.5 text-indigo-500" /> Version Chain ({versions.length}):
             </span>
             <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-indigo-500/20">
@@ -383,8 +383,8 @@ export function PromptOutput({
                     onClick={() => onSelectVersion && onSelectVersion(ver.id)}
                     className={`shrink-0 px-2.5 py-1 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
                       isActive
-                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                        : 'bg-slate-800/60 text-slate-300 border-slate-700/80 hover:bg-slate-700'
+                        ? 'bg-brand text-white border-brand shadow-sm'
+                        : 'bg-surface-code/60 text-text-secondary border-border/80 hover:bg-surface-hover'
                     }`}
                   >
                     <span className="font-bold">v{ver.versionNumber}</span>
@@ -405,12 +405,12 @@ export function PromptOutput({
               onKeyDown={handleKeyDownRefine}
               disabled={isGenerating}
               placeholder="Refine this prompt — e.g. 'make it more concise' or 'add error handling constraints' (⌘/Ctrl+Enter)"
-              className="w-full p-3 pr-12 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-900/90 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 resize-y min-h-[64px]"
+              className="w-full p-3 pr-12 text-xs rounded-xl border border-border bg-surface-code text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 resize-y min-h-[64px]"
             />
             <button
               type="submit"
               disabled={!refineInstruction.trim() || isGenerating}
-              className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shadow-sm"
+              className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-brand text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shadow-sm"
               title="Submit Refinement Instruction"
             >
               {isGenerating ? (

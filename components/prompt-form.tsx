@@ -78,15 +78,15 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
         {/* Topic Input Area */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-500" />
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-warning" />
               Primary Topic / Goal
             </label>
             {topic && (
               <button
                 type="button"
                 onClick={() => setTopic('')}
-                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1"
+                className="text-xs text-text-muted hover:text-text-primary flex items-center gap-1"
               >
                 <X className="w-3.5 h-3.5" /> Clear
               </button>
@@ -100,9 +100,9 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
               onKeyDown={handleKeyDown}
               placeholder={selectedDomain.placeholders.topic}
               rows={3}
-              className="w-full p-3.5 text-sm rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 transition-all shadow-inner resize-y leading-relaxed"
+              className="w-full p-3.5 text-sm rounded-xl border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/80 focus:border-brand transition-all shadow-inner resize-y leading-relaxed"
             />
-            <div className="absolute right-3 bottom-3 text-[11px] text-slate-400 pointer-events-none flex items-center gap-2">
+            <div className="absolute right-3 bottom-3 text-[11px] text-text-muted pointer-events-none flex items-center gap-2">
               <span>Press ⌘+Enter to generate</span>
               <span>•</span>
               <span>{topic.length} chars</span>
@@ -119,8 +119,8 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
 
         {/* Custom Domain Context if Custom Selected */}
         {selectedDomain.id === 'custom-domain' && (
-          <div className="space-y-1.5 p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20">
-            <label className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+          <div className="space-y-1.5 p-3 rounded-xl bg-brand/5 border border-brand/20">
+            <label className="text-xs font-semibold text-text-primary">
               Custom Domain Context / Instructions
             </label>
             <input
@@ -128,7 +128,7 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
               value={customDomainText}
               onChange={(e) => setCustomDomainText(e.target.value)}
               placeholder="e.g. Healthcare Clinical Trial Protocols or Game Mechanics Architecture"
-              className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
         )}
@@ -136,13 +136,13 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
         {/* Prompt Framework Selector */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-brand" />
               Prompt Architecture Framework ({FRAMEWORK_OPTIONS.length})
             </label>
 
             {/* Framework Category Tabs */}
-            <div className="flex flex-wrap items-center gap-1 bg-slate-100/80 dark:bg-slate-900/80 p-1 rounded-lg border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex flex-wrap items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
               {frameworkCategories.map((cat) => (
                 <button
                   key={cat}
@@ -150,8 +150,8 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                   onClick={() => setSelectedFrameworkCategory(cat)}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
                     selectedFrameworkCategory === cat
-                      ? 'bg-indigo-600 text-white font-semibold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-brand text-white font-semibold shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {cat}
@@ -170,25 +170,25 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                   onClick={() => setFramework(f.value)}
                   className={`p-3 rounded-xl border text-left transition-all text-xs flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-indigo-600/10 dark:bg-indigo-500/20 border-indigo-500 text-indigo-950 dark:text-indigo-100 ring-2 ring-indigo-500/30 shadow-md shadow-indigo-500/10'
-                      : 'bg-white/40 dark:bg-slate-900/30 border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-indigo-400/50 dark:hover:border-indigo-500/40'
+                      ? 'bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30 shadow-md shadow-brand/10'
+                      : 'bg-surface-card/40 border-border text-text-secondary hover:border-brand/40'
                   }`}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center justify-between w-full font-bold">
-                      <span className="text-slate-900 dark:text-white">{f.label}</span>
-                      {isSelected && <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                      <span className="text-text-primary">{f.label}</span>
+                      {isSelected && <Check className="w-4 h-4 text-brand shrink-0" />}
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-500/10 dark:bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                      <span className="text-[10px] text-brand font-semibold bg-brand/10 px-1.5 py-0.5 rounded border border-brand/20">
                         {f.tag}
                       </span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[10px] text-text-muted">
                         • {f.category}
                       </span>
                     </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
+                  <p className="text-[11px] text-text-muted leading-relaxed mt-2">
                     {f.description}
                   </p>
                 </button>
@@ -200,13 +200,13 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
         {/* Tone Selector Pills */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5 text-indigo-500" />
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-brand" />
               Desired Tone &amp; Style Persona ({TONE_OPTIONS.length})
             </label>
 
             {/* Tone Category Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-1 bg-slate-100/80 dark:bg-slate-900/80 p-1 rounded-lg border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex flex-wrap items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
               {toneCategories.map((cat) => (
                 <button
                   key={cat}
@@ -214,8 +214,8 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                   onClick={() => setSelectedToneCategory(cat)}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all ${
                     selectedToneCategory === cat
-                      ? 'bg-indigo-600 text-white font-semibold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-brand text-white font-semibold shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {cat}
@@ -234,8 +234,8 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                   onClick={() => setTone(t.value)}
                   className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20 font-semibold'
-                      : 'bg-white/60 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-brand text-white border-brand shadow-md shadow-brand/20 font-semibold'
+                      : 'bg-surface-card/60 border-border text-text-secondary hover:bg-surface-hover'
                   }`}
                   title={`${t.label} (${t.category}): ${t.description}`}
                 >
@@ -248,25 +248,25 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
         </div>
 
         {/* Collapsible Advanced Options */}
-        <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4">
+        <div className="border-t border-border pt-4">
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center justify-between w-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            className="flex items-center justify-between w-full text-xs font-semibold text-text-secondary hover:text-brand transition-colors"
           >
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
+              <SlidersHorizontal className="w-4 h-4 text-brand" />
               <span>Advanced Customization & Constraints</span>
             </div>
             {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
           {showAdvanced && (
-            <div className="mt-4 space-y-4 p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800/60">
+            <div className="mt-4 space-y-4 p-4 rounded-xl bg-surface-muted border border-border">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Target Audience */}
                 <div>
-                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 block">
+                  <label className="text-xs font-medium text-text-secondary mb-1 block">
                     Target Audience / Persona
                   </label>
                   <input
@@ -274,19 +274,19 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                     value={targetAudience}
                     onChange={(e) => setTargetAudience(e.target.value)}
                     placeholder={selectedDomain.placeholders.audience}
-                    className="w-full p-2.5 text-xs rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
                   />
                 </div>
 
                 {/* Preferred Output Format */}
                 <div>
-                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 block">
+                  <label className="text-xs font-medium text-text-secondary mb-1 block">
                     Target Output Format
                   </label>
                   <select
                     value={outputFormat}
                     onChange={(e: any) => setOutputFormat(e.target.value)}
-                    className="w-full p-2.5 text-xs rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
                   >
                     <option value="markdown">Markdown Sections</option>
                     <option value="bullet-points">Bullet-pointed List</option>
@@ -299,12 +299,12 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
 
               {/* Toggles */}
               <div className="flex flex-wrap items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-text-secondary">
                   <input
                     type="checkbox"
                     checked={includeConstraints}
                     onChange={(e) => setIncludeConstraints(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-border text-brand focus:ring-brand"
                   />
                   <span>Include Negative Constraints &amp; Guardrails (&quot;What NOT to do&quot;)</span>
                 </label>
@@ -312,7 +312,7 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
 
               {/* Additional Notes */}
               <div>
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 block">
+                <label className="text-xs font-medium text-text-secondary mb-1 block">
                   Additional Directives / Context
                 </label>
                 <textarea
@@ -320,7 +320,7 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                   onChange={(e) => setAdditionalNotes(e.target.value)}
                   placeholder={selectedDomain.placeholders.additionalNotes}
                   rows={2}
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand resize-none"
                 />
               </div>
             </div>

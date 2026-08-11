@@ -21,15 +21,15 @@ export function GlassCard({
 
   const variantStyles = {
     default:
-      'bg-white/80 dark:bg-slate-900/40 border-slate-200/80 dark:border-white/10 shadow-2xl shadow-indigo-950/5 dark:shadow-none',
+      'bg-surface-card/80 border-border shadow-2xl shadow-brand/5',
     hoverable:
-      'bg-white/80 dark:bg-slate-900/40 border-slate-200/80 dark:border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-0.5 hover:border-indigo-500/40 dark:hover:border-indigo-400/40 cursor-pointer',
+      'bg-surface-card/80 border-border shadow-lg hover:shadow-2xl hover:-translate-y-0.5 hover:border-brand/40 cursor-pointer',
     glowing:
-      'bg-gradient-to-b from-white/95 to-indigo-50/50 dark:from-slate-900/60 dark:to-indigo-950/30 border-indigo-300/80 dark:border-white/15 shadow-2xl shadow-indigo-500/10 dark:shadow-[0_0_30px_rgba(79,70,229,0.15)]',
+      'bg-gradient-to-b from-surface-elevated to-brand-muted/50 border-brand/50 shadow-2xl shadow-brand/10 dark:shadow-[0_0_30px_rgba(99,102,241,0.15)]',
     subtle:
-      'bg-white/50 dark:bg-white/5 border-slate-200/50 dark:border-white/10 shadow-sm',
+      'bg-surface-card/50 border-border shadow-sm',
     accent:
-      'bg-indigo-600/10 dark:bg-indigo-500/10 border-indigo-400/30 dark:border-indigo-500/30 shadow-md',
+      'bg-brand/10 border-brand/30 shadow-md',
   };
 
   return (

@@ -136,14 +136,14 @@ export function HistoryPanel({
       <GlassCard variant="default" className="p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <div className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/20">
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base font-bold text-text-primary">
                 Threaded Prompt Sessions
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-text-muted">
                 {sessions.length} Session Threads ({sessions.reduce((acc, s) => acc + s.versions.length, 0)} Total Versions)
               </p>
             </div>
@@ -154,14 +154,14 @@ export function HistoryPanel({
             <button
               onClick={handleExportSessions}
               disabled={sessions.length === 0}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors disabled:opacity-40"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-card/80 border border-border hover:border-brand/40 text-text-secondary flex items-center gap-1.5 transition-colors disabled:opacity-40"
               title="Export Sessions to JSON"
             >
               <Download className="w-3.5 h-3.5 text-indigo-500" />
               <span className="hidden sm:inline">Export</span>
             </button>
 
-            <label className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 text-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer transition-colors">
+            <label className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-card/80 border border-border hover:border-brand/40 text-text-secondary flex items-center gap-1.5 cursor-pointer transition-colors">
               <Upload className="w-3.5 h-3.5 text-indigo-500" />
               <span className="hidden sm:inline">Import</span>
               <input
@@ -175,7 +175,7 @@ export function HistoryPanel({
             {sessions.length > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 flex items-center gap-1.5 transition-colors"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-danger/10 border border-danger/20 text-rose-600 dark:text-danger hover:bg-danger/20 flex items-center gap-1.5 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Clear All</span>
@@ -188,23 +188,23 @@ export function HistoryPanel({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           {/* Search Box */}
           <div className="relative sm:col-span-1">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search topics, prompts, or versions..."
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
 
           {/* Domain Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <Filter className="w-3.5 h-3.5 text-text-muted shrink-0" />
             <select
               value={selectedDomainFilter}
               onChange={(e) => setSelectedDomainFilter(e.target.value)}
-              className="w-full p-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-2 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="all">All Domains</option>
               {DOMAIN_PRESETS.map((d) => (
@@ -220,8 +220,8 @@ export function HistoryPanel({
             onClick={() => setFavoritesOnly(!favoritesOnly)}
             className={`px-3 py-2 rounded-xl text-xs font-medium border flex items-center justify-center gap-2 transition-all ${
               favoritesOnly
-                ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 dark:text-amber-300 font-semibold'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                ? 'bg-warning/20 border-warning/40 text-warning font-semibold'
+                : 'bg-surface-card border-border text-text-secondary'
             }`}
           >
             <Star className={`w-3.5 h-3.5 ${favoritesOnly ? 'fill-current' : ''}`} />
@@ -232,7 +232,7 @@ export function HistoryPanel({
 
       {/* Sessions List */}
       {filteredSessions.length === 0 ? (
-        <GlassCard variant="subtle" className="p-8 text-center text-slate-500 dark:text-slate-400">
+        <GlassCard variant="subtle" className="p-8 text-center text-text-muted">
           <History className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm font-semibold">No prompt sessions match your criteria.</p>
           <p className="text-xs mt-1">Try resetting search filters or generate new prompts.</p>
@@ -268,21 +268,21 @@ export function HistoryPanel({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-brand/10 text-brand border border-brand/20">
                           {session.domainName}
                         </span>
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-surface-hover text-text-secondary border border-border">
                           {session.versions.length} {session.versions.length === 1 ? 'Version' : 'Versions'}
                         </span>
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-text-muted">
                           Updated {formattedDate}
                         </span>
                       </div>
 
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">
+                      <h4 className="text-sm font-bold text-text-primary line-clamp-1">
                         &quot;{session.title}&quot;
                       </h4>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">
+                      <p className="text-xs text-text-muted  line-clamp-1 mt-0.5">
                         Latest: v{activeVersion?.versionNumber} ({activeVersion?.name})
                       </p>
                     </div>
@@ -291,8 +291,8 @@ export function HistoryPanel({
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => onToggleFavorite(session.id)}
-                        className={`p-1.5 rounded-lg text-slate-400 hover:text-amber-500 transition-colors ${
-                          session.favorite ? 'text-amber-500 fill-amber-500' : ''
+                        className={`p-1.5 rounded-lg text-text-muted hover:text-warning transition-colors ${
+                          session.favorite ? 'text-warning fill-amber-500' : ''
                         }`}
                         title="Favorite Session"
                       >
@@ -301,14 +301,14 @@ export function HistoryPanel({
 
                       <button
                         onClick={() => onDeleteSession(session.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
+                        className="p-1.5 rounded-lg text-text-muted hover:text-rose-500 transition-colors"
                         title="Delete Session"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
 
                       <ChevronRight
-                        className={`w-4 h-4 text-slate-400 transition-transform ${
+                        className={`w-4 h-4 text-text-muted transition-transform ${
                           isExpanded ? 'rotate-90' : ''
                         }`}
                       />
@@ -318,12 +318,12 @@ export function HistoryPanel({
 
                 {/* Expanded Session Thread Details */}
                 {isExpanded && (
-                  <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800/60 space-y-4">
+                  <div className="pt-3 border-t border-border space-y-4">
                     {/* Diff Mode Toggle & Selector Bar */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted p-2.5 rounded-xl border border-border">
                       <div className="flex items-center gap-2">
-                        <GitCompare className="w-4 h-4 text-indigo-400" />
-                        <span className="text-xs font-bold text-slate-200">
+                        <GitCompare className="w-4 h-4 text-brand" />
+                        <span className="text-xs font-bold text-text-primary">
                           Compare Versions (Diff)
                         </span>
                       </div>
@@ -340,8 +340,8 @@ export function HistoryPanel({
                         }}
                         className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
                           isDiffActive
-                            ? 'bg-indigo-600 text-white border-indigo-500'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
+                            ? 'bg-brand text-white border-brand'
+                            : 'bg-surface-code text-text-secondary hover:bg-surface-hover border-border'
                         }`}
                       >
                         {isDiffActive ? 'Hide Diff' : 'Toggle Diff View'}
@@ -350,10 +350,10 @@ export function HistoryPanel({
 
                     {/* Diff Output Box */}
                     {isDiffActive && (
-                      <div className="space-y-3 p-3 rounded-xl bg-slate-950 border border-indigo-500/30">
+                      <div className="space-y-3 p-3 rounded-xl bg-surface-code border border-brand/30">
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            <label className="block text-[11px] font-semibold text-text-muted mb-1">
                               Version A (Original)
                             </label>
                             <select
@@ -361,7 +361,7 @@ export function HistoryPanel({
                               onChange={(e) =>
                                 setDiffState({ ...diffState, versionAId: e.target.value })
                               }
-                              className="w-full p-1.5 text-xs rounded-lg bg-slate-900 border border-slate-700 text-slate-200"
+                              className="w-full p-1.5 text-xs rounded-lg bg-surface-code border border-border text-text-primary"
                             >
                               {session.versions.map((v) => (
                                 <option key={v.id} value={v.id}>
@@ -372,7 +372,7 @@ export function HistoryPanel({
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            <label className="block text-[11px] font-semibold text-text-muted mb-1">
                               Version B (Newer)
                             </label>
                             <select
@@ -380,7 +380,7 @@ export function HistoryPanel({
                               onChange={(e) =>
                                 setDiffState({ ...diffState, versionBId: e.target.value })
                               }
-                              className="w-full p-1.5 text-xs rounded-lg bg-slate-900 border border-slate-700 text-slate-200"
+                              className="w-full p-1.5 text-xs rounded-lg bg-surface-code border border-border text-text-primary"
                             >
                               {session.versions.map((v) => (
                                 <option key={v.id} value={v.id}>
@@ -392,7 +392,7 @@ export function HistoryPanel({
                         </div>
 
                         {/* Rendered Word Diff */}
-                        <div className="p-3 rounded-lg bg-slate-900 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                        <div className="p-3 rounded-lg bg-surface-code text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
                           {(() => {
                             const verA = session.versions.find((v) => v.id === diffState.versionAId);
                             const verB = session.versions.find((v) => v.id === diffState.versionBId);
@@ -404,7 +404,7 @@ export function HistoryPanel({
                                 return (
                                   <span
                                     key={idx}
-                                    className="bg-emerald-500/25 text-emerald-300 font-bold px-0.5 rounded"
+                                    className="bg-success/25 text-success font-bold px-0.5 rounded"
                                   >
                                     {chunk.value}
                                   </span>
@@ -414,7 +414,7 @@ export function HistoryPanel({
                                 return (
                                   <span
                                     key={idx}
-                                    className="bg-rose-500/25 text-rose-300 line-through px-0.5 rounded opacity-70"
+                                    className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70"
                                   >
                                     {chunk.value}
                                   </span>
@@ -429,7 +429,7 @@ export function HistoryPanel({
 
                     {/* Versions List */}
                     <div className="space-y-2">
-                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                      <span className="text-xs font-bold text-text-secondary uppercase tracking-wider block">
                         Thread Version History
                       </span>
 
@@ -448,16 +448,16 @@ export function HistoryPanel({
                         return (
                           <div
                             key={ver.id}
-                            className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
+                            className="p-3 rounded-xl bg-surface-muted border border-border hover:border-border transition-all space-y-2"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-indigo-600/30 text-indigo-300 border border-indigo-500/30">
+                                <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-brand/30 text-brand border border-brand/30">
                                   v{ver.versionNumber}
                                 </span>
 
-                                <span className="p-1 rounded bg-slate-800 text-slate-400">
-                                  <SourceIcon className="w-3.5 h-3.5 text-indigo-400" />
+                                <span className="p-1 rounded bg-surface-hover text-text-muted">
+                                  <SourceIcon className="w-3.5 h-3.5 text-brand" />
                                 </span>
 
                                 {/* Editable Version Name */}
@@ -472,12 +472,12 @@ export function HistoryPanel({
                                           name: e.target.value,
                                         })
                                       }
-                                      className="px-2 py-0.5 text-xs rounded bg-slate-950 border border-indigo-500 text-white focus:outline-none"
+                                      className="px-2 py-0.5 text-xs rounded bg-surface-code border border-brand text-white focus:outline-none"
                                       autoFocus
                                     />
                                     <button
                                       onClick={() => handleSaveRename(session.id, ver.id)}
-                                      className="p-1 text-emerald-400 hover:text-emerald-300"
+                                      className="p-1 text-success hover:text-success"
                                       title="Save Name"
                                     >
                                       <Check className="w-3.5 h-3.5" />
@@ -485,7 +485,7 @@ export function HistoryPanel({
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                    <span className="text-xs font-bold text-slate-200 truncate">
+                                    <span className="text-xs font-bold text-text-primary truncate">
                                       {ver.name}
                                     </span>
                                     <button
@@ -496,7 +496,7 @@ export function HistoryPanel({
                                           name: ver.name,
                                         })
                                       }
-                                      className="p-1 text-slate-500 hover:text-indigo-400 opacity-60 hover:opacity-100 transition-opacity"
+                                      className="p-1 text-text-muted hover:text-brand opacity-60 hover:opacity-100 transition-opacity"
                                       title="Rename Version"
                                     >
                                       <Edit3 className="w-3 h-3" />
@@ -505,7 +505,7 @@ export function HistoryPanel({
                                 )}
                               </div>
 
-                              <div className="flex items-center gap-1.5 shrink-0 text-[11px] text-slate-400">
+                              <div className="flex items-center gap-1.5 shrink-0 text-[11px] text-text-muted">
                                 <span>~{ver.stats?.estTokens || 0} tokens</span>
                                 <span>•</span>
                                 <span>{ver.stats?.wordCount || 0} words</span>
@@ -514,16 +514,16 @@ export function HistoryPanel({
 
                             {/* Refinement instruction if present */}
                             {ver.refinementInstruction && (
-                              <p className="text-[11px] italic text-indigo-300/80 bg-indigo-500/10 p-1.5 rounded-lg border border-indigo-500/20">
+                              <p className="text-[11px] italic text-brand/80 bg-brand/10 p-1.5 rounded-lg border border-brand/20">
                                 Instruction: &quot;{ver.refinementInstruction}&quot;
                               </p>
                             )}
 
                             {/* Actions for this Version */}
-                            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/60">
                               <button
                                 onClick={() => onSelectSession(session, ver.id)}
-                                className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 flex items-center gap-1 shadow-sm transition-colors"
+                                className="px-3 py-1 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1 shadow-sm transition-colors"
                               >
                                 <Sparkles className="w-3 h-3" />
                                 <span>Load in Generator</span>
@@ -532,11 +532,11 @@ export function HistoryPanel({
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={(e) => handleCopy(ver.id, ver.content, e)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 transition-colors"
+                                  className="p-1.5 rounded-lg text-text-muted hover:text-brand transition-colors"
                                   title="Copy Version Prompt"
                                 >
                                   {copiedVersionId === ver.id ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    <Check className="w-3.5 h-3.5 text-success" />
                                   ) : (
                                     <Copy className="w-3.5 h-3.5" />
                                   )}
@@ -544,7 +544,7 @@ export function HistoryPanel({
 
                                 <button
                                   onClick={() => onTestPrompt(ver.content)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 transition-colors"
+                                  className="p-1.5 rounded-lg text-text-muted hover:text-success transition-colors"
                                   title="Test in Sandbox"
                                 >
                                   <Play className="w-3.5 h-3.5" />
@@ -553,7 +553,7 @@ export function HistoryPanel({
                                 {session.versions.length > 1 && (
                                   <button
                                     onClick={() => onDeleteVersion(session.id, ver.id)}
-                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 transition-colors"
+                                    className="p-1.5 rounded-lg text-text-muted hover:text-danger transition-colors"
                                     title="Delete Version"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />

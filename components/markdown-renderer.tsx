@@ -29,7 +29,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
       try {
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'dark',
+          theme: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'default',
           securityLevel: 'loose',
           fontFamily: 'monospace',
         });
@@ -59,12 +59,12 @@ function MermaidDiagram({ chart }: { chart: string }) {
 
   if (error) {
     return (
-      <div className="my-3 p-3 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
-        <div className="text-amber-400 font-semibold mb-1 flex items-center gap-1.5">
+      <div className="my-3 p-3 rounded-xl bg-surface-code border border-border font-mono text-xs text-text-muted">
+        <div className="text-warning font-semibold mb-1 flex items-center gap-1.5">
           <Code className="w-3.5 h-3.5" />
           <span>Mermaid Diagram Blueprint</span>
         </div>
-        <pre className="overflow-x-auto whitespace-pre text-slate-300 bg-slate-950 p-2 rounded border border-slate-800/80">
+        <pre className="overflow-x-auto whitespace-pre text-text-secondary bg-surface-code p-2 rounded border border-border">
           {chart}
         </pre>
       </div>
@@ -74,7 +74,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
   return (
     <div
       ref={containerRef}
-      className="my-4 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 overflow-x-auto flex justify-center shadow-lg"
+      className="my-4 p-4 rounded-2xl bg-surface-code/90 border border-border overflow-x-auto flex justify-center shadow-lg"
       dangerouslySetInnerHTML={{ __html: svgContent }}
     />
   );
@@ -101,18 +101,18 @@ function CodeBlock({
   };
 
   return (
-    <div className="relative group my-3 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-mono text-slate-400">
+    <div className="relative group my-3 rounded-xl border border-border bg-surface-code overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-surface-muted border-b border-border text-[11px] font-mono text-text-muted">
         <span>{language || 'code'}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
         >
-          {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
           <span>{copied ? 'Copied' : 'Copy'}</span>
         </button>
       </div>
-      <pre className="p-3 overflow-x-auto font-mono text-xs text-slate-200 leading-relaxed whitespace-pre">
+      <pre className="p-3 overflow-x-auto font-mono text-xs text-text-primary leading-relaxed whitespace-pre">
         <code>{value}</code>
       </pre>
     </div>
@@ -162,7 +162,7 @@ export function MarkdownRenderer({
             return (
               <span
                 key={i}
-                className="px-1.5 py-0.5 mx-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono text-[11px] font-bold inline-block shadow-sm"
+                className="px-1.5 py-0.5 mx-0.5 rounded bg-warning/20 text-warning border border-warning/40 font-mono text-[11px] font-bold inline-block shadow-sm"
                 title="Dynamic Placeholder Variable"
               >
                 {part}
@@ -176,7 +176,7 @@ export function MarkdownRenderer({
   };
 
   return (
-    <div className={`prose prose-invert max-w-none text-xs leading-relaxed ${className}`}>
+    <div className={`prose max-w-none text-xs leading-relaxed ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -195,7 +195,7 @@ export function MarkdownRenderer({
 
             return (
               <code
-                className="px-1.5 py-0.5 rounded bg-slate-800/80 text-indigo-300 font-mono text-[11px] border border-slate-700/60"
+                className="px-1.5 py-0.5 rounded bg-surface-hover text-brand font-mono text-[11px] border border-border"
                 {...props}
               >
                 {children}
@@ -204,7 +204,7 @@ export function MarkdownRenderer({
           },
           p({ children }) {
             return (
-              <p className="my-2 leading-relaxed text-slate-200">
+              <p className="my-2 leading-relaxed text-text-primary">
                 {React.Children.map(children, (child) =>
                   typeof child === 'string' ? renderTextWithPlaceholders(child) : child
                 )}
@@ -213,37 +213,37 @@ export function MarkdownRenderer({
           },
           h1({ children }) {
             return (
-              <h1 className="text-base font-bold text-white border-b border-slate-800 pb-1.5 mt-4 mb-2">
+              <h1 className="text-base font-bold text-text-primary border-b border-border pb-1.5 mt-4 mb-2">
                 {children}
               </h1>
             );
           },
           h2({ children }) {
             return (
-              <h2 className="text-sm font-bold text-indigo-400 mt-3 mb-1.5 flex items-center gap-1.5">
+              <h2 className="text-sm font-bold text-brand mt-3 mb-1.5 flex items-center gap-1.5">
                 {children}
               </h2>
             );
           },
           h3({ children }) {
             return (
-              <h3 className="text-xs font-bold text-slate-100 mt-2.5 mb-1">
+              <h3 className="text-xs font-bold text-text-primary mt-2.5 mb-1">
                 {children}
               </h3>
             );
           },
           ul({ children }) {
-            return <ul className="list-disc list-inside space-y-1 my-2 text-slate-300 pl-2">{children}</ul>;
+            return <ul className="list-disc list-inside space-y-1 my-2 text-text-secondary pl-2">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="list-decimal list-inside space-y-1 my-2 text-slate-300 pl-2">{children}</ol>;
+            return <ol className="list-decimal list-inside space-y-1 my-2 text-text-secondary pl-2">{children}</ol>;
           },
           li({ children }) {
-            return <li className="text-slate-200">{children}</li>;
+            return <li className="text-text-primary">{children}</li>;
           },
           blockquote({ children }) {
             return (
-              <blockquote className="border-l-2 border-indigo-500 pl-3 my-2 text-slate-400 italic bg-indigo-500/5 py-1 rounded-r-lg">
+              <blockquote className="border-l-2 border-brand pl-3 my-2 text-text-muted italic bg-brand/5 py-1 rounded-r-lg">
                 {children}
               </blockquote>
             );
