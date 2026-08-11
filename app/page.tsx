@@ -7,23 +7,29 @@ import { PromptOutput } from '@/components/prompt-output';
 import { HistoryPanel } from '@/components/history-panel';
 import { ProviderSettings } from '@/components/provider-settings';
 import { TestPromptModal } from '@/components/test-prompt-modal';
-import { HistoryItem, PromptInput, ProviderConfig } from '@/types';
+import { PromptInput, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
 import {
-  clearAllHistory,
+  clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
-  deleteHistoryItem,
   deleteProviderConfig,
+  deleteSession,
+  deleteVersionFromSession,
   getActiveProviderId,
-  getHistoryItems,
   getSavedProviders,
+  getSessions,
   getStorageType,
-  saveHistoryItem,
+  renameVersion,
   saveProviderConfig,
+  saveSession,
   setActiveProviderId,
-  toggleFavoriteHistoryItem,
+  setActiveVersion,
+  addVersionToSession,
+  toggleFavoriteSession,
+  getSessionById,
 } from '@/lib/storage';
 import { DOMAIN_PRESETS } from '@/lib/domains';
-import { generatePromptStream } from '@/lib/ai-client';
+import { generatePromptStream, refinePromptStream } from '@/lib/ai-client';
+import { computePromptStats, generateVersionName } from '@/lib/prompt-stats';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'generator' | 'history' | 'settings'>('generator');
@@ -32,13 +38,13 @@ export default function HomePage() {
   // Storage state
   const [providers, setProviders] = useState<ProviderConfig[]>([DEFAULT_BUILTIN_PROVIDER]);
   const [activeProvider, setActiveProvider] = useState<ProviderConfig>(DEFAULT_BUILTIN_PROVIDER);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [storageMode, setStorageMode] = useState<string>('INDEXED_DB');
 
-  // Generation state
-  const [generatedOutput, setGeneratedOutput] = useState('');
+  // Generation & Session state
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [currentHistoryItem, setCurrentHistoryItem] = useState<HistoryItem | null>(null);
 
   // Sandbox modal state
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -46,9 +52,8 @@ export default function HomePage() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Initialize Dark Mode & Storage Data
+  // Sync dark mode
   useEffect(() => {
-    // Sync dark mode class
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -56,13 +61,12 @@ export default function HomePage() {
     }
   }, [darkMode]);
 
+  // Load app storage data
   useEffect(() => {
     const loadAppData = async () => {
-      // Determine Storage Type
       const type = await getStorageType();
       setStorageMode(type);
 
-      // Load Providers
       const savedProviders = await getSavedProviders();
       setProviders(savedProviders);
 
@@ -70,9 +74,12 @@ export default function HomePage() {
       const current = savedProviders.find((p) => p.id === activeId) || DEFAULT_BUILTIN_PROVIDER;
       setActiveProvider(current);
 
-      // Load History
-      const historyItems = await getHistoryItems();
-      setHistory(historyItems);
+      const loadedSessions = await getSessions();
+      setSessions(loadedSessions);
+
+      if (loadedSessions.length > 0) {
+        setCurrentSession(loadedSessions[0]);
+      }
     };
 
     loadAppData();
@@ -103,19 +110,24 @@ export default function HomePage() {
     }
   };
 
-  const handleGeneratePrompt = async (input: PromptInput) => {
+  const handleCancelGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
+    setIsGenerating(false);
+  };
+
+  const handleGeneratePrompt = async (input: PromptInput) => {
+    handleCancelGeneration();
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     setIsGenerating(true);
-    setGeneratedOutput('');
+    setStreamingText('');
 
     const domain = DOMAIN_PRESETS.find((d) => d.id === input.domainId) || DOMAIN_PRESETS[0];
-
     let fullText = '';
 
     await generatePromptStream(
@@ -125,73 +137,286 @@ export default function HomePage() {
       },
       (chunk) => {
         fullText += chunk;
-        setGeneratedOutput(fullText);
+        setStreamingText(fullText);
       },
       async (completedText) => {
         setIsGenerating(false);
 
-        // Save entry into History
-        const newHistoryItem: HistoryItem = {
-          id: `hist-${Date.now()}`,
-          timestamp: Date.now(),
-          domainId: input.domainId,
-          domainName: domain.name,
-          input,
-          output: completedText,
+        const timestamp = Date.now();
+        const rand = Math.random().toString(36).slice(2, 7);
+        const sessId = `sess-${timestamp}-${rand}`;
+        const v1Id = `v-${timestamp}-1`;
+        const stats = computePromptStats(completedText);
+
+        const initialVersion: PromptVersion = {
+          id: v1Id,
+          versionNumber: 1,
+          name: 'Initial Generation',
+          sourceType: 'initial',
+          createdAt: timestamp,
+          content: completedText,
           providerName: activeProvider.name,
           modelUsed: activeProvider.model,
-          favorite: false,
+          stats,
         };
 
-        await saveHistoryItem(newHistoryItem);
-        setCurrentHistoryItem(newHistoryItem);
+        const newSession: Session = {
+          id: sessId,
+          title: input.topic || 'Initial Generation',
+          domainId: input.domainId,
+          domainName: domain.name,
+          originalInput: input,
+          messages: [
+            {
+              id: `msg-${timestamp}-1`,
+              role: 'user',
+              content: input.topic,
+              createdAt: timestamp,
+            },
+            {
+              id: `msg-${timestamp}-2`,
+              role: 'assistant',
+              content: completedText,
+              createdAt: timestamp,
+              resultingVersionId: v1Id,
+            },
+          ],
+          versions: [initialVersion],
+          activeVersionId: v1Id,
+          favorite: false,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        };
 
-        const updatedHistory = await getHistoryItems();
-        setHistory(updatedHistory);
+        await saveSession(newSession);
+        setCurrentSession(newSession);
+        const updatedSessions = await getSessions();
+        setSessions(updatedSessions);
       },
       (error) => {
         setIsGenerating(false);
-        setGeneratedOutput(`⚠️ Generation Error: ${error.message}`);
+        setStreamingText(`⚠️ Generation Error: ${error.message}`);
       },
       controller.signal
     );
   };
 
-  const handleDeleteHistory = async (id: string) => {
-    await deleteHistoryItem(id);
-    const updated = await getHistoryItems();
-    setHistory(updated);
+  const handleRefinePrompt = async (instruction: string) => {
+    if (!currentSession) return;
+
+    handleCancelGeneration();
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setIsGenerating(true);
+    setStreamingText('');
+
+    const priorMessages = currentSession.messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    let fullText = '';
+
+    await refinePromptStream(
+      {
+        provider: activeProvider,
+        session: {
+          id: currentSession.id,
+          originalInput: currentSession.originalInput,
+          domainId: currentSession.domainId,
+        },
+        priorMessages,
+        instruction,
+      },
+      (chunk) => {
+        fullText += chunk;
+        setStreamingText(fullText);
+      },
+      async (completedText) => {
+        setIsGenerating(false);
+
+        const timestamp = Date.now();
+        const rand = Math.random().toString(36).slice(2, 7);
+        const versionNumber = currentSession.versions.length + 1;
+        const vId = `v-${timestamp}-${rand}`;
+        const versionName = generateVersionName(instruction, versionNumber, 'refinement');
+        const stats = computePromptStats(completedText);
+
+        const newVersion: PromptVersion = {
+          id: vId,
+          versionNumber,
+          name: versionName,
+          sourceType: 'refinement',
+          createdAt: timestamp,
+          refinementInstruction: instruction,
+          content: completedText,
+          providerName: activeProvider.name,
+          modelUsed: activeProvider.model,
+          stats,
+        };
+
+        const userMsg: ThreadMessage = {
+          id: `msg-${timestamp}-1`,
+          role: 'user',
+          content: instruction,
+          createdAt: timestamp,
+        };
+
+        const assistantMsg: ThreadMessage = {
+          id: `msg-${timestamp}-2`,
+          role: 'assistant',
+          content: completedText,
+          createdAt: timestamp,
+          resultingVersionId: vId,
+        };
+
+        const updatedSession = await addVersionToSession(
+          currentSession.id,
+          newVersion,
+          userMsg,
+          assistantMsg
+        );
+
+        setCurrentSession(updatedSession);
+        const updatedSessions = await getSessions();
+        setSessions(updatedSessions);
+      },
+      (error) => {
+        setIsGenerating(false);
+        setStreamingText(`⚠️ Refinement Error: ${error.message}`);
+      },
+      controller.signal
+    );
   };
 
-  const handleClearAllHistory = async () => {
-    await clearAllHistory();
-    setHistory([]);
+  const handleSaveEditVersion = async (newContent: string) => {
+    if (!currentSession) return;
+
+    const timestamp = Date.now();
+    const rand = Math.random().toString(36).slice(2, 7);
+    const versionNumber = currentSession.versions.length + 1;
+    const vId = `v-${timestamp}-${rand}`;
+    const versionName = generateVersionName(undefined, versionNumber, 'manual-edit');
+    const stats = computePromptStats(newContent);
+
+    const editVersion: PromptVersion = {
+      id: vId,
+      versionNumber,
+      name: versionName,
+      sourceType: 'manual-edit',
+      createdAt: timestamp,
+      content: newContent,
+      providerName: activeProvider.name,
+      modelUsed: activeProvider.model,
+      stats,
+    };
+
+    const assistantMsg: ThreadMessage = {
+      id: `msg-${timestamp}-edit`,
+      role: 'assistant',
+      content: newContent,
+      createdAt: timestamp,
+      resultingVersionId: vId,
+    };
+
+    const updatedSession = await addVersionToSession(
+      currentSession.id,
+      editVersion,
+      undefined,
+      assistantMsg
+    );
+
+    setCurrentSession(updatedSession);
+    const updatedSessions = await getSessions();
+    setSessions(updatedSessions);
+  };
+
+  const handleSelectVersion = async (versionId: string) => {
+    if (!currentSession) return;
+    const updated = await setActiveVersion(currentSession.id, versionId);
+    setCurrentSession(updated);
+  };
+
+  const handleSelectSession = async (session: Session, versionId?: string) => {
+    let targetSession = session;
+    if (versionId && versionId !== session.activeVersionId) {
+      targetSession = await setActiveVersion(session.id, versionId);
+    }
+    setCurrentSession(targetSession);
+    setActiveTab('generator');
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    await deleteSession(id);
+    const updated = await getSessions();
+    setSessions(updated);
+    if (currentSession?.id === id) {
+      setCurrentSession(updated[0] || null);
+    }
+  };
+
+  const handleDeleteVersion = async (sessionId: string, versionId: string) => {
+    try {
+      const updated = await deleteVersionFromSession(sessionId, versionId);
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(updated);
+      }
+      const updatedSessions = await getSessions();
+      setSessions(updatedSessions);
+    } catch (err: any) {
+      alert(err.message || 'Could not delete version');
+    }
+  };
+
+  const handleClearAllSessions = async () => {
+    await clearAllSessions();
+    setSessions([]);
+    setCurrentSession(null);
   };
 
   const handleToggleFavorite = async (id: string) => {
-    await toggleFavoriteHistoryItem(id);
-    const updated = await getHistoryItems();
-    setHistory(updated);
-  };
-
-  const handleImportHistory = async (items: HistoryItem[]) => {
-    for (const item of items) {
-      await saveHistoryItem(item);
+    await toggleFavoriteSession(id);
+    const updated = await getSessions();
+    setSessions(updated);
+    if (currentSession?.id === id) {
+      const fresh = await getSessionById(id);
+      if (fresh) setCurrentSession(fresh);
     }
-    const updated = await getHistoryItems();
-    setHistory(updated);
   };
 
-  const handleSelectHistoryItem = (item: HistoryItem) => {
-    setGeneratedOutput(item.output);
-    setCurrentHistoryItem(item);
-    setActiveTab('generator');
+  const handleRenameVersion = async (sessionId: string, versionId: string, newName: string) => {
+    const updated = await renameVersion(sessionId, versionId, newName);
+    if (currentSession?.id === sessionId) {
+      setCurrentSession(updated);
+    }
+    const updatedSessions = await getSessions();
+    setSessions(updatedSessions);
+  };
+
+  const handleImportSessions = async (importedSessions: Session[]) => {
+    for (const sess of importedSessions) {
+      await saveSession(sess);
+    }
+    const updated = await getSessions();
+    setSessions(updated);
+    if (updated.length > 0) {
+      setCurrentSession(updated[0]);
+    }
   };
 
   const handleOpenSandboxTest = (promptText: string) => {
     setPromptToTest(promptText);
     setTestModalOpen(true);
   };
+
+  const activeVersion = currentSession
+    ? currentSession.versions.find((v) => v.id === currentSession.activeVersionId) ||
+      currentSession.versions[currentSession.versions.length - 1]
+    : null;
+
+  const displayOutput = isGenerating ? streamingText : activeVersion?.content || '';
 
   return (
     <div className="min-h-screen bg-slate-900 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors selection:bg-indigo-500 selection:text-white flex flex-col justify-between">
@@ -208,7 +433,7 @@ export default function HomePage() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           activeProvider={activeProvider}
-          historyCount={history.length}
+          historyCount={sessions.length}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
         />
@@ -222,19 +447,22 @@ export default function HomePage() {
                 <PromptForm onGenerate={handleGeneratePrompt} isGenerating={isGenerating} />
               </div>
 
-              {/* Right Column: Live Output Display */}
+              {/* Right Column: Live Output & Refinement Display */}
               <div className="lg:col-span-6 space-y-6 lg:sticky lg:top-20">
                 <PromptOutput
-                  output={generatedOutput}
+                  output={displayOutput}
                   isGenerating={isGenerating}
                   onTestPrompt={handleOpenSandboxTest}
-                  onSaveFavorite={async (item) => {
-                    await saveHistoryItem(item);
-                    const updated = await getHistoryItems();
-                    setHistory(updated);
-                  }}
+                  onToggleFavorite={() =>
+                    currentSession && handleToggleFavorite(currentSession.id)
+                  }
                   activeProvider={activeProvider}
-                  currentHistoryItem={currentHistoryItem}
+                  currentSession={currentSession}
+                  activeVersion={activeVersion}
+                  onSelectVersion={handleSelectVersion}
+                  onRefinePrompt={handleRefinePrompt}
+                  onSaveEditVersion={handleSaveEditVersion}
+                  onCancelGeneration={handleCancelGeneration}
                 />
               </div>
             </div>
@@ -243,13 +471,15 @@ export default function HomePage() {
           {activeTab === 'history' && (
             <div className="max-w-4xl mx-auto">
               <HistoryPanel
-                historyItems={history}
-                onSelectHistoryItem={handleSelectHistoryItem}
-                onDeleteHistoryItem={handleDeleteHistory}
-                onClearAllHistory={handleClearAllHistory}
+                sessions={sessions}
+                onSelectSession={handleSelectSession}
+                onDeleteSession={handleDeleteSession}
+                onDeleteVersion={handleDeleteVersion}
+                onClearAllSessions={handleClearAllSessions}
                 onToggleFavorite={handleToggleFavorite}
+                onRenameVersion={handleRenameVersion}
                 onTestPrompt={handleOpenSandboxTest}
-                onImportHistory={handleImportHistory}
+                onImportSessions={handleImportSessions}
               />
             </div>
           )}
@@ -277,7 +507,7 @@ export default function HomePage() {
             <span>ENCRYPTION: AES-GCM</span>
           </div>
           <div>
-            <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI // LOCAL-FIRST ARCHITECTURE</span>
+            <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI // THREADED SESSION MODEL</span>
           </div>
         </footer>
       </div>

@@ -1,9 +1,11 @@
-import { HistoryItem, ProviderConfig } from '@/types';
+import { HistoryItem, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
 import { decryptSecret, encryptSecret } from './crypto';
+import { computePromptStats } from './prompt-stats';
 
 const DB_NAME = 'PromptCrafter_DB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_HISTORY = 'history';
+const STORE_SESSIONS = 'sessions';
 const STORE_PROVIDERS = 'providers';
 const STORE_SETTINGS = 'settings';
 
@@ -20,10 +22,60 @@ export const DEFAULT_BUILTIN_PROVIDER: ProviderConfig = {
   topP: 0.95,
 };
 
-// In-memory fallback if both IndexedDB and LocalStorage are blocked
+// In-memory fallbacks if IndexedDB/LocalStorage are blocked
+const memorySessions: Session[] = [];
 const memoryHistory: HistoryItem[] = [];
 const memoryProviders: ProviderConfig[] = [DEFAULT_BUILTIN_PROVIDER];
 let memoryActiveProviderId: string = DEFAULT_BUILTIN_PROVIDER.id;
+
+function convertHistoryItemToSession(item: HistoryItem): Session {
+  const timestamp = item.timestamp || Date.now();
+  const rand = Math.random().toString(36).slice(2, 7);
+  const sessId = `sess-${timestamp}-${rand}`;
+  const v1Id = `v-${timestamp}-1`;
+  const stats = computePromptStats(item.output || '');
+
+  return {
+    id: sessId,
+    title: item.input?.topic || 'Initial Generation',
+    domainId: item.domainId || 'general',
+    domainName: item.domainName || 'General',
+    originalInput: item.input,
+    messages: [
+      {
+        id: `msg-${timestamp}-1`,
+        role: 'user',
+        content: item.input?.topic ? `Topic: ${item.input.topic}` : 'Initial Generation',
+        createdAt: timestamp,
+      },
+      {
+        id: `msg-${timestamp}-2`,
+        role: 'assistant',
+        content: item.output || '',
+        createdAt: timestamp,
+        resultingVersionId: v1Id,
+      },
+    ],
+    versions: [
+      {
+        id: v1Id,
+        versionNumber: 1,
+        name: 'Initial Generation',
+        sourceType: 'initial',
+        createdAt: timestamp,
+        content: item.output || '',
+        providerName: item.providerName || 'Default Provider',
+        modelUsed: item.modelUsed || 'gemini-3.6-flash',
+        stats,
+      },
+    ],
+    activeVersionId: v1Id,
+    favorite: !!item.favorite,
+    tags: item.tags || [],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -36,6 +88,7 @@ function openDB(): Promise<IDBDatabase> {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+        const tx = (event.target as IDBOpenDBRequest).transaction!;
 
         if (!db.objectStoreNames.contains(STORE_HISTORY)) {
           const historyStore = db.createObjectStore(STORE_HISTORY, { keyPath: 'id' });
@@ -50,6 +103,29 @@ function openDB(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
           db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
         }
+
+        if (!db.objectStoreNames.contains(STORE_SESSIONS)) {
+          const sessionsStore = db.createObjectStore(STORE_SESSIONS, { keyPath: 'id' });
+          sessionsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+          sessionsStore.createIndex('domainId', 'domainId', { unique: false });
+        }
+
+        // Schema migration v1 -> v2: read from `history` store and populate `sessions`
+        if (db.objectStoreNames.contains(STORE_HISTORY) && db.objectStoreNames.contains(STORE_SESSIONS)) {
+          const historyStore = tx.objectStore(STORE_HISTORY);
+          const sessionsStore = tx.objectStore(STORE_SESSIONS);
+
+          const getAllReq = historyStore.getAll();
+          getAllReq.onsuccess = () => {
+            const items: HistoryItem[] = getAllReq.result || [];
+            for (const item of items) {
+              if (item && item.id) {
+                const session = convertHistoryItemToSession(item);
+                sessionsStore.put(session);
+              }
+            }
+          };
+        }
       };
 
       request.onsuccess = () => resolve(request.result);
@@ -61,62 +137,75 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-// Fallback LocalStorage functions if IndexedDB fails
-function getLocalHistory(): HistoryItem[] {
-  if (typeof window === 'undefined') return memoryHistory;
+// Fallback LocalStorage functions
+function getLocalSessions(): Session[] {
+  if (typeof window === 'undefined') return memorySessions;
   try {
-    const raw = localStorage.getItem('promptcrafter_history');
-    return raw ? JSON.parse(raw) : memoryHistory;
+    const raw = localStorage.getItem('promptcrafter_sessions');
+    if (raw) {
+      return JSON.parse(raw);
+    }
+
+    // Fallback migration from old history store
+    const rawHistory = localStorage.getItem('promptcrafter_history');
+    if (rawHistory) {
+      const historyItems: HistoryItem[] = JSON.parse(rawHistory);
+      const migrated = historyItems.map(convertHistoryItemToSession);
+      localStorage.setItem('promptcrafter_sessions', JSON.stringify(migrated));
+      return migrated;
+    }
+
+    return memorySessions;
   } catch {
-    return memoryHistory;
+    return memorySessions;
   }
 }
 
-function setLocalHistory(items: HistoryItem[]): void {
-  memoryHistory.length = 0;
-  memoryHistory.push(...items);
+function setLocalSessions(sessions: Session[]): void {
+  memorySessions.length = 0;
+  memorySessions.push(...sessions);
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem('promptcrafter_history', JSON.stringify(items));
+    localStorage.setItem('promptcrafter_sessions', JSON.stringify(sessions));
   } catch (err) {
     console.warn('LocalStorage write skipped:', err);
   }
 }
 
-// Public Storage API
+// --- Session Public Storage API ---
 
-export async function saveHistoryItem(item: HistoryItem): Promise<void> {
+export async function saveSession(session: Session): Promise<void> {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_HISTORY, 'readwrite');
-    const store = tx.objectStore(STORE_HISTORY);
+    const tx = db.transaction(STORE_SESSIONS, 'readwrite');
+    const store = tx.objectStore(STORE_SESSIONS);
     await new Promise<void>((resolve, reject) => {
-      const req = store.put(item);
+      const req = store.put(session);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
   } catch {
-    const history = getLocalHistory();
-    const existingIndex = history.findIndex((h) => h.id === item.id);
+    const sessions = getLocalSessions();
+    const existingIndex = sessions.findIndex((s) => s.id === session.id);
     if (existingIndex >= 0) {
-      history[existingIndex] = item;
+      sessions[existingIndex] = session;
     } else {
-      history.unshift(item);
+      sessions.unshift(session);
     }
-    setLocalHistory(history);
+    setLocalSessions(sessions);
   }
 }
 
-export async function getHistoryItems(): Promise<HistoryItem[]> {
+export async function getSessions(): Promise<Session[]> {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_HISTORY, 'readonly');
-    const store = tx.objectStore(STORE_HISTORY);
-    const index = store.index('timestamp');
+    const tx = db.transaction(STORE_SESSIONS, 'readonly');
+    const store = tx.objectStore(STORE_SESSIONS);
+    const index = store.index('updatedAt');
 
     return new Promise((resolve, reject) => {
-      const request = index.openCursor(null, 'prev'); // Latest first
-      const items: HistoryItem[] = [];
+      const request = index.openCursor(null, 'prev'); // Latest updated first
+      const items: Session[] = [];
 
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
@@ -131,53 +220,202 @@ export async function getHistoryItems(): Promise<HistoryItem[]> {
       request.onerror = () => reject(request.error);
     });
   } catch {
-    return getLocalHistory();
+    return getLocalSessions().sort((a, b) => b.updatedAt - a.updatedAt);
   }
 }
 
-export async function deleteHistoryItem(id: string): Promise<void> {
+export async function getSessionById(id: string): Promise<Session | null> {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_HISTORY, 'readwrite');
-    const store = tx.objectStore(STORE_HISTORY);
+    const tx = db.transaction(STORE_SESSIONS, 'readonly');
+    const store = tx.objectStore(STORE_SESSIONS);
+
+    return new Promise((resolve, reject) => {
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const sessions = getLocalSessions();
+    return sessions.find((s) => s.id === id) || null;
+  }
+}
+
+export async function deleteSession(id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_SESSIONS, 'readwrite');
+    const store = tx.objectStore(STORE_SESSIONS);
     await new Promise<void>((resolve, reject) => {
       const req = store.delete(id);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
   } catch {
-    const history = getLocalHistory().filter((h) => h.id !== id);
-    setLocalHistory(history);
+    const sessions = getLocalSessions().filter((s) => s.id !== id);
+    setLocalSessions(sessions);
   }
 }
 
-export async function clearAllHistory(): Promise<void> {
+export async function clearAllSessions(): Promise<void> {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_HISTORY, 'readwrite');
-    const store = tx.objectStore(STORE_HISTORY);
+    const tx = db.transaction(STORE_SESSIONS, 'readwrite');
+    const store = tx.objectStore(STORE_SESSIONS);
     await new Promise<void>((resolve, reject) => {
       const req = store.clear();
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
   } catch {
-    setLocalHistory([]);
+    setLocalSessions([]);
   }
 }
 
-export async function toggleFavoriteHistoryItem(id: string): Promise<boolean> {
-  const items = await getHistoryItems();
-  const target = items.find((i) => i.id === id);
-  if (target) {
-    target.favorite = !target.favorite;
-    await saveHistoryItem(target);
-    return target.favorite;
+export async function addVersionToSession(
+  sessionId: string,
+  version: PromptVersion,
+  userMessage?: ThreadMessage,
+  assistantMessage?: ThreadMessage
+): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+
+  const updatedVersions = [...session.versions, version];
+  const updatedMessages = [...session.messages];
+
+  if (userMessage) updatedMessages.push(userMessage);
+  if (assistantMessage) updatedMessages.push(assistantMessage);
+
+  const updatedSession: Session = {
+    ...session,
+    versions: updatedVersions,
+    messages: updatedMessages,
+    activeVersionId: version.id,
+    updatedAt: Date.now(),
+  };
+
+  await saveSession(updatedSession);
+  return updatedSession;
+}
+
+export async function setActiveVersion(sessionId: string, versionId: string): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+
+  const updatedSession: Session = {
+    ...session,
+    activeVersionId: versionId,
+    updatedAt: Date.now(),
+  };
+
+  await saveSession(updatedSession);
+  return updatedSession;
+}
+
+export async function renameVersion(sessionId: string, versionId: string, newName: string): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+
+  const updatedVersions = session.versions.map((v) =>
+    v.id === versionId ? { ...v, name: newName } : v
+  );
+
+  const updatedSession: Session = {
+    ...session,
+    versions: updatedVersions,
+    updatedAt: Date.now(),
+  };
+
+  await saveSession(updatedSession);
+  return updatedSession;
+}
+
+export async function deleteVersionFromSession(sessionId: string, versionId: string): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+
+  if (session.versions.length <= 1) {
+    throw new Error('Cannot delete the only remaining version in a session');
+  }
+
+  const updatedVersions = session.versions.filter((v) => v.id !== versionId);
+  const updatedMessages = session.messages.filter((m) => m.resultingVersionId !== versionId);
+
+  const activeVersionId = session.activeVersionId === versionId
+    ? updatedVersions[updatedVersions.length - 1].id
+    : session.activeVersionId;
+
+  const updatedSession: Session = {
+    ...session,
+    versions: updatedVersions,
+    messages: updatedMessages,
+    activeVersionId,
+    updatedAt: Date.now(),
+  };
+
+  await saveSession(updatedSession);
+  return updatedSession;
+}
+
+export async function toggleFavoriteSession(id: string): Promise<boolean> {
+  const session = await getSessionById(id);
+  if (session) {
+    session.favorite = !session.favorite;
+    session.updatedAt = Date.now();
+    await saveSession(session);
+    return session.favorite;
   }
   return false;
 }
 
-// Provider Persistence
+// --- Deprecated History API (Kept for backwards compatibility) ---
+
+export async function saveHistoryItem(item: HistoryItem): Promise<void> {
+  const session = convertHistoryItemToSession(item);
+  await saveSession(session);
+}
+
+export async function getHistoryItems(): Promise<HistoryItem[]> {
+  const sessions = await getSessions();
+  return sessions.map((s) => {
+    const activeVersion = s.versions.find((v) => v.id === s.activeVersionId) || s.versions[0];
+    return {
+      id: s.id,
+      timestamp: s.createdAt,
+      domainId: s.domainId,
+      domainName: s.domainName,
+      input: s.originalInput,
+      output: activeVersion ? activeVersion.content : '',
+      providerName: activeVersion ? activeVersion.providerName : '',
+      modelUsed: activeVersion ? activeVersion.modelUsed : '',
+      favorite: s.favorite,
+      tags: s.tags,
+    };
+  });
+}
+
+export async function deleteHistoryItem(id: string): Promise<void> {
+  await deleteSession(id);
+}
+
+export async function clearAllHistory(): Promise<void> {
+  await clearAllSessions();
+}
+
+export async function toggleFavoriteHistoryItem(id: string): Promise<boolean> {
+  return toggleFavoriteSession(id);
+}
+
+// --- Provider Persistence ---
 
 export async function getSavedProviders(): Promise<ProviderConfig[]> {
   let providers: ProviderConfig[] = [DEFAULT_BUILTIN_PROVIDER];
@@ -193,7 +431,6 @@ export async function getSavedProviders(): Promise<ProviderConfig[]> {
     });
 
     if (customList.length > 0) {
-      // Decrypt keys
       const decrypted = await Promise.all(
         customList.map(async (p) => ({
           ...p,
@@ -226,7 +463,7 @@ export async function getSavedProviders(): Promise<ProviderConfig[]> {
 }
 
 export async function saveProviderConfig(provider: ProviderConfig): Promise<void> {
-  if (provider.id === DEFAULT_BUILTIN_PROVIDER.id) return; // Don't overwrite built-in default
+  if (provider.id === DEFAULT_BUILTIN_PROVIDER.id) return;
 
   const encryptedProvider = {
     ...provider,

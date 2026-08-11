@@ -14,68 +14,93 @@ import {
   Sparkles,
   ChevronRight,
   Filter,
+  GitCommit,
+  Edit3,
+  GitCompare,
+  RefreshCw,
+  FileText,
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { ConfirmModal } from './confirm-modal';
 import { MarkdownRenderer } from './markdown-renderer';
-import { HistoryItem } from '@/types';
+import { PromptVersion, Session } from '@/types';
 import { DOMAIN_PRESETS } from '@/lib/domains';
+import { computeWordDiff } from '@/lib/diff';
 
 interface HistoryPanelProps {
-  historyItems: HistoryItem[];
-  onSelectHistoryItem: (item: HistoryItem) => void;
-  onDeleteHistoryItem: (id: string) => void;
-  onClearAllHistory: () => void;
+  sessions: Session[];
+  onSelectSession: (session: Session, versionId?: string) => void;
+  onDeleteSession: (id: string) => void;
+  onDeleteVersion: (sessionId: string, versionId: string) => void;
+  onClearAllSessions: () => void;
   onToggleFavorite: (id: string) => void;
+  onRenameVersion: (sessionId: string, versionId: string, newName: string) => void;
   onTestPrompt: (promptText: string) => void;
-  onImportHistory?: (items: HistoryItem[]) => void;
+  onImportSessions?: (sessions: Session[]) => void;
 }
 
 export function HistoryPanel({
-  historyItems,
-  onSelectHistoryItem,
-  onDeleteHistoryItem,
-  onClearAllHistory,
+  sessions,
+  onSelectSession,
+  onDeleteSession,
+  onDeleteVersion,
+  onClearAllSessions,
   onToggleFavorite,
+  onRenameVersion,
   onTestPrompt,
-  onImportHistory,
+  onImportSessions,
 }: HistoryPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<string>('all');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedVersionId, setCopiedVersionId] = useState<string | null>(null);
 
-  const filteredItems = historyItems.filter((item) => {
-    const matchesSearch =
-      item.input.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.output.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.domainName.toLowerCase().includes(searchQuery.toLowerCase());
+  // Inline name editing state: { sessionId, versionId, name }
+  const [editingVersion, setEditingVersion] = useState<{
+    sessionId: string;
+    versionId: string;
+    name: string;
+  } | null>(null);
 
-    const matchesDomain =
-      selectedDomainFilter === 'all' || item.domainId === selectedDomainFilter;
+  // Diff comparison state for expanded session: { sessionId, versionAId, versionBId }
+  const [diffState, setDiffState] = useState<{
+    sessionId: string | null;
+    versionAId: string;
+    versionBId: string;
+  }>({ sessionId: null, versionAId: '', versionBId: '' });
 
-    const matchesFavorite = !favoritesOnly || item.favorite;
+  const filteredSessions = sessions.filter((s) => {
+    const topicMatch = s.originalInput?.topic?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+    const titleMatch = s.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const domainMatch = s.domainName.toLowerCase().includes(searchQuery.toLowerCase());
+    const contentMatch = s.versions.some((v) =>
+      v.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const matchesSearch = !searchQuery || topicMatch || titleMatch || domainMatch || contentMatch;
+    const matchesDomain = selectedDomainFilter === 'all' || s.domainId === selectedDomainFilter;
+    const matchesFavorite = !favoritesOnly || s.favorite;
 
     return matchesSearch && matchesDomain && matchesFavorite;
   });
 
-  const handleCopy = (id: string, text: string, e: React.MouseEvent) => {
+  const handleCopy = (versionId: string, text: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    setCopiedVersionId(versionId);
+    setTimeout(() => setCopiedVersionId(null), 2000);
   };
 
-  const handleExportHistory = () => {
-    const blob = new Blob([JSON.stringify(historyItems, null, 2)], {
+  const handleExportSessions = () => {
+    const blob = new Blob([JSON.stringify(sessions, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `PromptCrafter-History-${Date.now()}.json`;
+    a.download = `PromptCrafter-Sessions-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -88,14 +113,21 @@ export function HistoryPanel({
     reader.onload = (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        if (Array.isArray(parsed) && onImportHistory) {
-          onImportHistory(parsed);
+        if (Array.isArray(parsed) && onImportSessions) {
+          onImportSessions(parsed);
         }
       } catch (err) {
-        alert('Invalid JSON history file');
+        alert('Invalid JSON sessions file');
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleSaveRename = (sessionId: string, versionId: string) => {
+    if (editingVersion && editingVersion.name.trim()) {
+      onRenameVersion(sessionId, versionId, editingVersion.name.trim());
+    }
+    setEditingVersion(null);
   };
 
   return (
@@ -109,10 +141,10 @@ export function HistoryPanel({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Prompt History Vault
+                Threaded Prompt Sessions
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {historyItems.length} Saved Prompts Stored Client-Side
+                {sessions.length} Session Threads ({sessions.reduce((acc, s) => acc + s.versions.length, 0)} Total Versions)
               </p>
             </div>
           </div>
@@ -120,10 +152,10 @@ export function HistoryPanel({
           {/* Action Toolbar */}
           <div className="flex items-center gap-2">
             <button
-              onClick={handleExportHistory}
-              disabled={historyItems.length === 0}
+              onClick={handleExportSessions}
+              disabled={sessions.length === 0}
               className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors disabled:opacity-40"
-              title="Export History to JSON"
+              title="Export Sessions to JSON"
             >
               <Download className="w-3.5 h-3.5 text-indigo-500" />
               <span className="hidden sm:inline">Export</span>
@@ -140,7 +172,7 @@ export function HistoryPanel({
               />
             </label>
 
-            {historyItems.length > 0 && (
+            {sessions.length > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 flex items-center gap-1.5 transition-colors"
@@ -161,7 +193,7 @@ export function HistoryPanel({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search prompts or topics..."
+              placeholder="Search topics, prompts, or versions..."
               className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -198,81 +230,79 @@ export function HistoryPanel({
         </div>
       </GlassCard>
 
-      {/* History Items List */}
-      {filteredItems.length === 0 ? (
+      {/* Sessions List */}
+      {filteredSessions.length === 0 ? (
         <GlassCard variant="subtle" className="p-8 text-center text-slate-500 dark:text-slate-400">
           <History className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-semibold">No prompts match your criteria.</p>
+          <p className="text-sm font-semibold">No prompt sessions match your criteria.</p>
           <p className="text-xs mt-1">Try resetting search filters or generate new prompts.</p>
         </GlassCard>
       ) : (
         <div className="space-y-3">
-          {filteredItems.map((item) => {
-            const isExpanded = expandedId === item.id;
-            const formattedDate = new Date(item.timestamp).toLocaleString(undefined, {
+          {filteredSessions.map((session) => {
+            const isExpanded = expandedSessionId === session.id;
+            const formattedDate = new Date(session.updatedAt).toLocaleString(undefined, {
               month: 'short',
               day: 'numeric',
               hour: '2-digit',
               minute: '2-digit',
             });
 
+            const activeVersion =
+              session.versions.find((v) => v.id === session.activeVersionId) ||
+              session.versions[session.versions.length - 1];
+
+            const isDiffActive = diffState.sessionId === session.id;
+
             return (
               <GlassCard
-                key={item.id}
+                key={session.id}
                 variant={isExpanded ? 'glowing' : 'hoverable'}
-                className="p-4 transition-all"
+                className="p-4 transition-all space-y-3"
               >
+                {/* Session Card Summary Bar */}
                 <div
                   className="cursor-pointer"
-                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                  onClick={() => setExpandedSessionId(isExpanded ? null : session.id)}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                          {item.domainName}
+                          {session.domainName}
+                        </span>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+                          {session.versions.length} {session.versions.length === 1 ? 'Version' : 'Versions'}
                         </span>
                         <span className="text-[11px] text-slate-400">
-                          {formattedDate}
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          • {item.providerName}
+                          Updated {formattedDate}
                         </span>
                       </div>
 
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">
-                        &quot;{item.input.topic}&quot;
+                        &quot;{session.title}&quot;
                       </h4>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">
+                        Latest: v{activeVersion?.versionNumber} ({activeVersion?.name})
+                      </p>
                     </div>
 
-                    {/* Quick Item Actions */}
+                    {/* Quick Session Actions */}
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => onToggleFavorite(item.id)}
+                        onClick={() => onToggleFavorite(session.id)}
                         className={`p-1.5 rounded-lg text-slate-400 hover:text-amber-500 transition-colors ${
-                          item.favorite ? 'text-amber-500 fill-amber-500' : ''
+                          session.favorite ? 'text-amber-500 fill-amber-500' : ''
                         }`}
-                        title="Favorite"
+                        title="Favorite Session"
                       >
-                        <Star className={`w-4 h-4 ${item.favorite ? 'fill-current' : ''}`} />
+                        <Star className={`w-4 h-4 ${session.favorite ? 'fill-current' : ''}`} />
                       </button>
 
                       <button
-                        onClick={(e) => handleCopy(item.id, item.output, e)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 transition-colors"
-                        title="Copy Prompt"
-                      >
-                        {copiedId === item.id ? (
-                          <Check className="w-4 h-4 text-emerald-500" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => onDeleteHistoryItem(item.id)}
+                        onClick={() => onDeleteSession(session.id)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
-                        title="Delete"
+                        title="Delete Session"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -286,34 +316,254 @@ export function HistoryPanel({
                   </div>
                 </div>
 
-                {/* Expanded Details */}
+                {/* Expanded Session Thread Details */}
                 {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-800/60 space-y-3">
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                        Engineered Prompt Output
-                      </span>
-                      <div className="p-3 rounded-xl bg-slate-950 text-slate-100 max-h-72 overflow-y-auto">
-                        <MarkdownRenderer content={item.output} highlightPlaceholders={true} />
+                  <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800/60 space-y-4">
+                    {/* Diff Mode Toggle & Selector Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <GitCompare className="w-4 h-4 text-indigo-400" />
+                        <span className="text-xs font-bold text-slate-200">
+                          Compare Versions (Diff)
+                        </span>
                       </div>
+
+                      <button
+                        onClick={() => {
+                          if (isDiffActive) {
+                            setDiffState({ sessionId: null, versionAId: '', versionBId: '' });
+                          } else {
+                            const vA = session.versions[0]?.id || '';
+                            const vB = session.versions[session.versions.length - 1]?.id || '';
+                            setDiffState({ sessionId: session.id, versionAId: vA, versionBId: vB });
+                          }
+                        }}
+                        className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                          isDiffActive
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
+                        }`}
+                      >
+                        {isDiffActive ? 'Hide Diff' : 'Toggle Diff View'}
+                      </button>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                      <button
-                        onClick={() => onSelectHistoryItem(item)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 flex items-center gap-1.5 shadow-sm transition-colors"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Load into Generator</span>
-                      </button>
+                    {/* Diff Output Box */}
+                    {isDiffActive && (
+                      <div className="space-y-3 p-3 rounded-xl bg-slate-950 border border-indigo-500/30">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                              Version A (Original)
+                            </label>
+                            <select
+                              value={diffState.versionAId}
+                              onChange={(e) =>
+                                setDiffState({ ...diffState, versionAId: e.target.value })
+                              }
+                              className="w-full p-1.5 text-xs rounded-lg bg-slate-900 border border-slate-700 text-slate-200"
+                            >
+                              {session.versions.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  v{v.versionNumber}: {v.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
 
-                      <button
-                        onClick={() => onTestPrompt(item.output)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5 transition-colors"
-                      >
-                        <Play className="w-3.5 h-3.5 text-emerald-400 fill-current" />
-                        <span>Test in Sandbox</span>
-                      </button>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                              Version B (Newer)
+                            </label>
+                            <select
+                              value={diffState.versionBId}
+                              onChange={(e) =>
+                                setDiffState({ ...diffState, versionBId: e.target.value })
+                              }
+                              className="w-full p-1.5 text-xs rounded-lg bg-slate-900 border border-slate-700 text-slate-200"
+                            >
+                              {session.versions.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  v{v.versionNumber}: {v.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Rendered Word Diff */}
+                        <div className="p-3 rounded-lg bg-slate-900 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                          {(() => {
+                            const verA = session.versions.find((v) => v.id === diffState.versionAId);
+                            const verB = session.versions.find((v) => v.id === diffState.versionBId);
+                            if (!verA || !verB) return <span>Select versions to compare.</span>;
+
+                            const diffs = computeWordDiff(verA.content, verB.content);
+                            return diffs.map((chunk, idx) => {
+                              if (chunk.added) {
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="bg-emerald-500/25 text-emerald-300 font-bold px-0.5 rounded"
+                                  >
+                                    {chunk.value}
+                                  </span>
+                                );
+                              }
+                              if (chunk.removed) {
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="bg-rose-500/25 text-rose-300 line-through px-0.5 rounded opacity-70"
+                                  >
+                                    {chunk.value}
+                                  </span>
+                                );
+                              }
+                              return <span key={idx}>{chunk.value}</span>;
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Versions List */}
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                        Thread Version History
+                      </span>
+
+                      {session.versions.map((ver) => {
+                        const isEditingThis =
+                          editingVersion?.sessionId === session.id &&
+                          editingVersion?.versionId === ver.id;
+
+                        const SourceIcon =
+                          ver.sourceType === 'initial'
+                            ? Sparkles
+                            : ver.sourceType === 'manual-edit'
+                            ? Edit3
+                            : RefreshCw;
+
+                        return (
+                          <div
+                            key={ver.id}
+                            className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-indigo-600/30 text-indigo-300 border border-indigo-500/30">
+                                  v{ver.versionNumber}
+                                </span>
+
+                                <span className="p-1 rounded bg-slate-800 text-slate-400">
+                                  <SourceIcon className="w-3.5 h-3.5 text-indigo-400" />
+                                </span>
+
+                                {/* Editable Version Name */}
+                                {isEditingThis ? (
+                                  <div className="flex items-center gap-1 flex-1">
+                                    <input
+                                      type="text"
+                                      value={editingVersion.name}
+                                      onChange={(e) =>
+                                        setEditingVersion({
+                                          ...editingVersion,
+                                          name: e.target.value,
+                                        })
+                                      }
+                                      className="px-2 py-0.5 text-xs rounded bg-slate-950 border border-indigo-500 text-white focus:outline-none"
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() => handleSaveRename(session.id, ver.id)}
+                                      className="p-1 text-emerald-400 hover:text-emerald-300"
+                                      title="Save Name"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                    <span className="text-xs font-bold text-slate-200 truncate">
+                                      {ver.name}
+                                    </span>
+                                    <button
+                                      onClick={() =>
+                                        setEditingVersion({
+                                          sessionId: session.id,
+                                          versionId: ver.id,
+                                          name: ver.name,
+                                        })
+                                      }
+                                      className="p-1 text-slate-500 hover:text-indigo-400 opacity-60 hover:opacity-100 transition-opacity"
+                                      title="Rename Version"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0 text-[11px] text-slate-400">
+                                <span>~{ver.stats?.estTokens || 0} tokens</span>
+                                <span>•</span>
+                                <span>{ver.stats?.wordCount || 0} words</span>
+                              </div>
+                            </div>
+
+                            {/* Refinement instruction if present */}
+                            {ver.refinementInstruction && (
+                              <p className="text-[11px] italic text-indigo-300/80 bg-indigo-500/10 p-1.5 rounded-lg border border-indigo-500/20">
+                                Instruction: &quot;{ver.refinementInstruction}&quot;
+                              </p>
+                            )}
+
+                            {/* Actions for this Version */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60">
+                              <button
+                                onClick={() => onSelectSession(session, ver.id)}
+                                className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 flex items-center gap-1 shadow-sm transition-colors"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                <span>Load in Generator</span>
+                              </button>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={(e) => handleCopy(ver.id, ver.content, e)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 transition-colors"
+                                  title="Copy Version Prompt"
+                                >
+                                  {copiedVersionId === ver.id ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+
+                                <button
+                                  onClick={() => onTestPrompt(ver.content)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 transition-colors"
+                                  title="Test in Sandbox"
+                                >
+                                  <Play className="w-3.5 h-3.5" />
+                                </button>
+
+                                {session.versions.length > 1 && (
+                                  <button
+                                    onClick={() => onDeleteVersion(session.id, ver.id)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 transition-colors"
+                                    title="Delete Version"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -326,11 +576,11 @@ export function HistoryPanel({
       {/* Clear All Confirm Modal */}
       <ConfirmModal
         isOpen={showClearConfirm}
-        title="Clear Entire Prompt History?"
-        message="This action will permanently remove all saved prompts from your browser storage. This cannot be undone."
-        confirmLabel="Clear History"
+        title="Clear Entire Prompt Session History?"
+        message="This action will permanently remove all saved sessions and prompt threads from your browser storage. This cannot be undone."
+        confirmLabel="Clear All Sessions"
         onConfirm={() => {
-          onClearAllHistory();
+          onClearAllSessions();
           setShowClearConfirm(false);
         }}
         onCancel={() => setShowClearConfirm(false)}
