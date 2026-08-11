@@ -37,7 +37,7 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
   const [selectedFrameworkCategory, setSelectedFrameworkCategory] = useState<string>('All');
   const [selectedToneCategory, setSelectedToneCategory] = useState<string>('All');
 
-  const frameworkCategories = ['All', 'Foundational', 'Reasoning & Agentic', 'Enterprise & Operations', 'System & Meta'];
+  const frameworkCategories = ['All', 'Foundational', 'Reasoning & Agentic', 'System & Meta'];
   const toneCategories = ['All', 'Executive & Professional', 'Analytical & Critical', 'Creative & Narrative', 'Educational & Supportive'];
 
   const filteredFrameworks = selectedFrameworkCategory === 'All'
@@ -212,13 +212,13 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                   key={cat}
                   type="button"
                   onClick={() => setSelectedToneCategory(cat)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all ${
                     selectedToneCategory === cat
                       ? 'bg-indigo-600 text-white font-semibold shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  {cat.split(' ')[0]} {/* Shortened category name for pill tabs */}
+                  {cat}
                 </button>
               ))}
             </div>

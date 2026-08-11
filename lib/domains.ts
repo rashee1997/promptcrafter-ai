@@ -146,46 +146,177 @@ export const DOMAIN_PRESETS: DomainPreset[] = [
   },
 ];
 
-export const TONE_OPTIONS: { value: ToneType; label: string; description: string }[] = [
-  { value: 'professional', label: 'Professional & Authoritative', description: 'Objective, clear, structured, and authoritative tone suitable for enterprise environments.' },
-  { value: 'concise', label: 'Concise & Direct', description: 'Eliminates fluff, focuses on direct execution, bullet points, and high signal-to-noise ratio.' },
-  { value: 'creative', label: 'Creative & Engaging', description: 'Expressive, imaginative, rich vocabulary, and dynamic tone.' },
-  { value: 'detailed', label: 'Exhaustive & Detailed', description: 'Comprehensive coverage, covering edge cases, step-by-step instructions, and thorough explanations.' },
-  { value: 'analytical', label: 'Step-by-Step Analytical', description: 'Breaks problem down systematically with logical reasoning and structured breakdown.' },
-  { value: 'academic', label: 'Academic & Scientific', description: 'Formal, evidence-grounded, precise terminology, citations, and analytical rigor.' },
-  { value: 'executive', label: 'Executive Briefing', description: 'High-level summary, key takeaways, strategic impact, and actionable recommendations.' },
+export const TONE_OPTIONS: { value: ToneType; label: string; description: string; category: string }[] = [
+  {
+    value: 'professional',
+    label: 'Professional & Authoritative',
+    description: 'Objective, clear, structured, and authoritative tone suitable for enterprise environments.',
+    category: 'Executive & Professional',
+  },
+  {
+    value: 'concise',
+    label: 'Concise & Direct',
+    description: 'Eliminates fluff, focuses on direct execution, bullet points, and high signal-to-noise ratio.',
+    category: 'Analytical & Critical',
+  },
+  {
+    value: 'creative',
+    label: 'Creative & Engaging',
+    description: 'Expressive, imaginative, rich vocabulary, and dynamic tone.',
+    category: 'Creative & Narrative',
+  },
+  {
+    value: 'detailed',
+    label: 'Exhaustive & Detailed',
+    description: 'Comprehensive coverage, covering edge cases, step-by-step instructions, and thorough explanations.',
+    category: 'Educational & Supportive',
+  },
+  {
+    value: 'analytical',
+    label: 'Step-by-Step Analytical',
+    description: 'Breaks problem down systematically with logical reasoning and structured breakdown.',
+    category: 'Analytical & Critical',
+  },
+  {
+    value: 'academic',
+    label: 'Academic & Scientific',
+    description: 'Formal, evidence-grounded, precise terminology, citations, and analytical rigor.',
+    category: 'Educational & Supportive',
+  },
+  {
+    value: 'executive',
+    label: 'Executive Briefing',
+    description: 'High-level summary, key takeaways, strategic impact, and actionable recommendations.',
+    category: 'Executive & Professional',
+  },
+  {
+    value: 'socratic',
+    label: 'Socratic Inquiry',
+    description: 'Questions assumptions, probes reasoning, and encourages critical reflection before concluding.',
+    category: 'Analytical & Critical',
+  },
+  {
+    value: 'persuasive',
+    label: 'Persuasive & Convincing',
+    description: 'Uses rhetorical structure, strong arguments, and persuasive language to influence decision-making.',
+    category: 'Executive & Professional',
+  },
+  {
+    value: 'empathic',
+    label: 'Empathic & Supportive',
+    description: 'Warm, patient, and understanding tone focused on empathy, clarity, and user comfort.',
+    category: 'Educational & Supportive',
+  },
+  {
+    value: 'adversarial',
+    label: 'Adversarial Challenge',
+    description: 'Critically tests assumptions, identifies weaknesses, and sharpens arguments through challenge.',
+    category: 'Analytical & Critical',
+  },
+  {
+    value: 'pedagogical',
+    label: 'Pedagogical & Instructional',
+    description: 'Teaches concepts clearly with examples, step-by-step explanation, and learner-centered guidance.',
+    category: 'Educational & Supportive',
+  },
+  {
+    value: 'diplomatic',
+    label: 'Diplomatic & Tactful',
+    description: 'Balances clarity with tact, preserving relationships while communicating difficult ideas.',
+    category: 'Executive & Professional',
+  },
+  {
+    value: 'narrative',
+    label: 'Narrative & Storytelling',
+    description: 'Uses storytelling structure, vivid imagery, and character-driven flow to engage readers.',
+    category: 'Creative & Narrative',
+  },
 ];
 
-export const FRAMEWORK_OPTIONS: { value: FrameworkType; label: string; tag: string; description: string }[] = [
+export const FRAMEWORK_OPTIONS: { value: FrameworkType; label: string; tag: string; description: string; category: string }[] = [
   {
     value: 'rtf',
     label: 'Role - Task - Format (RTF)',
     tag: 'Best for standard prompts',
     description: 'Establishes a persona (Role), explicit goal (Task), and exact output structure (Format).',
+    category: 'Foundational',
   },
   {
     value: 'car',
     label: 'Context - Action - Result (CAR)',
     tag: 'Best for problem solving',
     description: 'Provides background situation (Context), steps to take (Action), and expected outcome (Result).',
+    category: 'Foundational',
   },
   {
     value: 'cot',
     label: 'Chain-of-Thought (CoT)',
     tag: 'Best for reasoning & code',
     description: 'Instructs the AI to think step-by-step, explaining internal logic before producing final answers.',
+    category: 'Reasoning & Agentic',
   },
   {
     value: 'few-shot',
     label: 'Few-Shot Exemplar',
     tag: 'Best for strict consistency',
     description: 'Includes concrete input/output examples inside the prompt to anchor the expected pattern.',
+    category: 'System & Meta',
   },
   {
     value: 'system-instruction',
     label: 'System Instruction / Meta-Prompt',
     tag: 'Best for system level behavior',
     description: 'A master system prompt designed to govern AI agent behavior, guardrails, and tool usage rules.',
+    category: 'System & Meta',
+  },
+  {
+    value: 'react',
+    label: 'ReAct (Reasoning + Acting)',
+    tag: 'Best for tool-enabled workflows',
+    description: 'Enforces a stepwise Reasoning, Acting, Observation loop to integrate actions and external tools into the prompt.',
+    category: 'Reasoning & Agentic',
+  },
+  {
+    value: 'risen',
+    label: 'RISEN Structure',
+    tag: 'Best for structured plans',
+    description: 'Enforces Role, Instructions, Steps, End Goal, Narrowing Constraints for precise execution.',
+    category: 'System & Meta',
+  },
+  {
+    value: 'tot',
+    label: 'Tree-of-Thoughts (ToT)',
+    tag: 'Best for multi-branch reasoning',
+    description: 'Enforces multi-branch reasoning paths, evaluation, pruning, and synthesis of the strongest solution.',
+    category: 'Reasoning & Agentic',
+  },
+  {
+    value: 'self-refine',
+    label: 'Self-Refine & Critique',
+    tag: 'Best for iterative improvement',
+    description: 'Enforces drafting, critique against rubrics, self-correction, and a polished final output.',
+    category: 'System & Meta',
+  },
+  {
+    value: 'ape',
+    label: 'APE (Action, Purpose, Expectation)',
+    tag: 'Best for direct outcomes',
+    description: 'Emphasizes action, underlying purpose, and expected result for clear outcomes.',
+    category: 'System & Meta',
+  },
+  {
+    value: 'coast',
+    label: 'COAST (Context, Objective, Actions, Scenario, Task)',
+    tag: 'Best for contextual planning',
+    description: 'Organizes prompts by context, objective, actions, scenario, and task for well-scoped execution.',
+    category: 'Reasoning & Agentic',
+  },
+  {
+    value: 'socratic-architecture',
+    label: 'Socratic Architecture',
+    tag: 'Best for meta-cognitive logic',
+    description: 'Challenges assumptions, surfaces edge cases, and verifies reasoning with Socratic questioning.',
+    category: 'System & Meta',
   },
 ];
 
