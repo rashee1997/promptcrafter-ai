@@ -1,0 +1,8 @@
+{
+  "name": "Remix PromptCrafter - AI ",
+  "description": "An AI-powered Prompt Engineering and Optimization Studio with glassmorphism UI, custom AI provider support, domain presets, and client-side history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
