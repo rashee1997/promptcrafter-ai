@@ -17,10 +17,12 @@ import {
   Server,
   Globe,
   Sliders,
+  Edit3,
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { ProviderConfig } from '@/types';
 import { DEFAULT_BUILTIN_PROVIDER } from '@/lib/storage';
+import { normalizeBaseUrl } from '@/lib/openai-provider';
 
 interface ProviderSettingsProps {
   providers: ProviderConfig[];
@@ -39,6 +41,7 @@ export function ProviderSettings({
 }: ProviderSettingsProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [editingProviderId, setEditingProviderId] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({
     loading: false,
   });
@@ -60,15 +63,28 @@ export function ProviderSettings({
     setTemperature(0.7);
     setMaxTokens(4096);
     setDisableStreaming(false);
+    setEditingProviderId(null);
     setTestStatus({ loading: false });
     setShowAddForm(false);
+  };
+
+  const editProvider = (provider: ProviderConfig) => {
+    setName(provider.name);
+    setBaseUrl(provider.baseUrl);
+    setApiKey(provider.apiKey || '');
+    setModel(provider.model || 'gpt-4o-mini');
+    setTemperature(provider.temperature ?? 0.7);
+    setMaxTokens(provider.maxTokens ?? 4096);
+    setDisableStreaming(provider.disableStreaming ?? false);
+    setEditingProviderId(provider.id);
+    setShowAddForm(true);
+    setTestStatus({ loading: false });
   };
 
   const handleTestConnection = async () => {
     setTestStatus({ loading: true });
     try {
-      let targetUrl = baseUrl.trim().replace(/\/+$/, '');
-      targetUrl = targetUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
+      const targetUrl = normalizeBaseUrl(baseUrl);
       const endpoint = `${targetUrl}/chat/completions`;
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -107,8 +123,12 @@ export function ProviderSettings({
     e.preventDefault();
     if (!name.trim() || !baseUrl.trim()) return;
 
+    const existingProvider = editingProviderId
+      ? providers.find((p) => p.id === editingProviderId)
+      : undefined;
+
     const newProvider: ProviderConfig = {
-      id: `provider-${Date.now()}`,
+      id: editingProviderId || `provider-${Date.now()}`,
       name: name.trim(),
       baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
@@ -116,6 +136,7 @@ export function ProviderSettings({
       temperature,
       maxTokens,
       disableStreaming,
+      useBuiltInGemini: existingProvider?.useBuiltInGemini,
     };
 
     onSaveProvider(newProvider);
@@ -186,7 +207,7 @@ export function ProviderSettings({
           <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-slate-800/60">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Server className="w-4 h-4 text-indigo-500" />
-              Configure Custom OpenAI-Compatible Provider
+              {editingProviderId ? 'Edit Provider Profile' : 'Configure Custom OpenAI-Compatible Provider'}
             </h3>
             <button
               onClick={resetForm}
@@ -382,7 +403,7 @@ export function ProviderSettings({
                 type="submit"
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/20 transition-all"
               >
-                Save Provider Profile
+                {editingProviderId ? 'Update Provider Profile' : 'Save Provider Profile'}
               </button>
             </div>
           </form>
@@ -433,13 +454,22 @@ export function ProviderSettings({
                     </div>
 
                     {!p.useBuiltInGemini && (
-                      <button
-                        onClick={() => onDeleteProvider(p.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
-                        title="Delete Profile"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => editProvider(p)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
+                          title="Edit Profile"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteProvider(p.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
+                          title="Delete Profile"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
 

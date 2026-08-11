@@ -42,6 +42,21 @@ export interface DomainPreset {
   exampleTopics: string[];
 }
 
+export interface ToneOption {
+  value: ToneType;
+  label: string;
+  description: string;
+  category: string;
+}
+
+export interface FrameworkOption {
+  value: FrameworkType;
+  label: string;
+  tag: string;
+  description: string;
+  category: string;
+}
+
 export interface ProviderConfig {
   id: string;
   name: string;
