@@ -50,6 +50,7 @@ export function ProviderSettings({
   const [model, setModel] = useState('gpt-4o-mini');
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(4096);
+  const [disableStreaming, setDisableStreaming] = useState(false);
 
   const resetForm = () => {
     setName('');
@@ -58,6 +59,7 @@ export function ProviderSettings({
     setModel('gpt-4o-mini');
     setTemperature(0.7);
     setMaxTokens(4096);
+    setDisableStreaming(false);
     setTestStatus({ loading: false });
     setShowAddForm(false);
   };
@@ -65,8 +67,9 @@ export function ProviderSettings({
   const handleTestConnection = async () => {
     setTestStatus({ loading: true });
     try {
-      const targetUrl = baseUrl.replace(/\/+$/, '');
-      const endpoint = targetUrl.endsWith('/chat/completions') ? targetUrl : `${targetUrl}/chat/completions`;
+      let targetUrl = baseUrl.trim().replace(/\/+$/, '');
+      targetUrl = targetUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
+      const endpoint = `${targetUrl}/chat/completions`;
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
@@ -112,6 +115,7 @@ export function ProviderSettings({
       model: model.trim() || 'gpt-4o-mini',
       temperature,
       maxTokens,
+      disableStreaming,
     };
 
     onSaveProvider(newProvider);
@@ -332,6 +336,22 @@ export function ProviderSettings({
               </div>
             </div>
 
+            {/* Disable Streaming Per-Provider Setting */}
+            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={disableStreaming}
+                  onChange={(e) => setDisableStreaming(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 dark:border-slate-700 focus:ring-indigo-500 accent-indigo-600"
+                />
+                <span>Disable Streaming (Request complete response in a single payload)</span>
+              </label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 ml-6 leading-relaxed">
+                Check this if your provider endpoint or local self-hosted instance does not support server-sent event (SSE) streaming reliably.
+              </p>
+            </div>
+
             {/* Test Status Message */}
             {testStatus.message && (
               <div
@@ -425,7 +445,14 @@ export function ProviderSettings({
 
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono space-y-0.5 truncate bg-slate-100/60 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200/50 dark:border-slate-800/50 my-2">
                     <div className="truncate">URL: {p.baseUrl}</div>
-                    <div>Temp: {p.temperature}</div>
+                    <div className="flex items-center justify-between">
+                      <span>Temp: {p.temperature}</span>
+                      {p.disableStreaming ? (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans font-medium">Non-streaming</span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">Streaming</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

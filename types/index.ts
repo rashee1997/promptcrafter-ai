@@ -53,6 +53,7 @@ export interface ProviderConfig {
   temperature: number;
   maxTokens?: number;
   topP?: number;
+  disableStreaming?: boolean;
 }
 
 export interface PromptInput {
