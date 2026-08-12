@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         apiKey,
         httpOptions: {
           headers: {
-            'User-Agent': 'aistudio-build',
+            'User-Agent': 'promptcrafter-ai/1.0.0',
           },
         },
       });

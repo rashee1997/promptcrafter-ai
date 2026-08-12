@@ -2,8 +2,9 @@ import type {Metadata} from 'next';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
-  title: 'My Google AI Studio App',
-  description: 'My Google AI Studio App',
+  title: 'PromptCrafter AI',
+  description:
+    'Generate, refine, and version high-quality AI prompts with Gemini or any OpenAI-compatible provider.',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

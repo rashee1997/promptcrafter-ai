@@ -1,6 +1,6 @@
 {
   "name": "PromptCrafter AI",
-  "description": "An AI-powered Prompt Engineering and Optimization Studio with session-based conversational refinement, versioned prompt threads, glassmorphism UI, custom AI provider support, and IndexedDB storage.",
+  "description": "PromptCrafter AI — an AI-powered prompt engineering and optimization workbench with session-based conversational refinement, versioned prompt threads, glassmorphism UI, custom AI provider support, and IndexedDB storage.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

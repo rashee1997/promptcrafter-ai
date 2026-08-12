@@ -55,7 +55,7 @@ export function Navbar({
                   PromptCrafter<span className="text-brand font-light">AI</span>
                 </span>
                 <span className="hidden xs:inline-block px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest uppercase rounded-full bg-brand/10 text-brand border border-brand/20">
-                  v2.1
+                  v1.0.0
                 </span>
               </div>
               <p className="hidden md:block text-[11px] text-text-muted">
