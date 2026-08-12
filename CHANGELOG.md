@@ -5,6 +5,27 @@ All notable changes to PromptCrafter AI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-12
+
+### Added
+
+- **Command palette (⌘K)** — quick actions for new prompt, generate, test, copy, history, provider settings, and theme toggle, wired into the prompt form via custom `pc:` events.
+- **Sticky always-visible generate bar** with selection summary chips, so generation is one tap away without scrolling.
+- **Keyboard actions** — ⌘/Ctrl+Enter generates from anywhere in the form, `/` focuses the topic field, and `kbd` hints surface the shortcuts inline.
+- **Collapsible "Prompt Style & Options" section** to declutter the form and reduce cognitive load.
+- **Accessibility groundwork** — skip-to-content link, labeled landmark navigation, focus-on-open/restore and full focus traps in dialogs (confirm, test sandbox, palette), `aria-busy` + live regions, real label/input associations, `aria-pressed`/`aria-expanded`/`aria-controls` states, and `aria-labels` on icon buttons.
+- **Visible `focus-visible` outline**, reduced-motion overrides, and AA-contrast muted text for readable, keyboard-first use.
+- **Design documentation** — `DESIGN.md` now documents the visual system, layout, and navigation as the canonical UI reference.
+
+### Changed
+
+- Standardized on **Bun** as the package manager (`bun install` / `bun run dev|build|lint`).
+- History session rows are now real buttons, and the version badge no longer hides at narrow widths.
+
+### Fixed
+
+- Resolved the `Cannot access 'handleSubmit' before initialization` runtime error in the prompt form by deferring the command-palette handler through a ref.
+
 ## [1.0.0] - 2026-08-12
 
 ### Added

@@ -606,7 +606,7 @@ export default function HomePage() {
             <span>ENCRYPTION: AES-GCM</span>
           </div>
           <div>
-            <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI v1.0.0 // THREADED SESSION MODEL</span>
+            <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI v1.0.1 // THREADED SESSION MODEL</span>
           </div>
         </footer>
       </div>

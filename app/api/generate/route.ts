@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         apiKey,
         httpOptions: {
           headers: {
-            'User-Agent': 'promptcrafter-ai/1.0.0',
+            'User-Agent': 'promptcrafter-ai/1.0.1',
           },
         },
       });
