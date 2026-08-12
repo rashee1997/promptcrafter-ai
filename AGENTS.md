@@ -25,12 +25,13 @@ You are a careful, pragmatic coding agent. Keep changes small, follow existing p
 
 ## Local commands
 
-Use the repo scripts from `package.json`:
+This project is managed with **Bun** (the repo ships a `bun.lock`). Use the repo scripts from `package.json` via `bun run`:
 
 ```bash
-npm run dev
-npm run build
-npm run lint
+bun install
+bun run dev
+bun run build
+bun run lint
 ```
 
 This repository does not currently define a formal test suite. Validate changes with lint and a manual app check when behavior is user-facing.
@@ -67,8 +68,8 @@ This repository does not currently define a formal test suite. Validate changes 
 
 ## Verification before completion
 
-- Run `npm run lint` after changing TypeScript or UI code.
-- Run `npm run build` for user-facing behavior or route changes.
+- Run `bun run lint` after changing TypeScript or UI code.
+- Run `bun run build` for user-facing behavior or route changes.
 - If the change touches storage, verify the app still loads and sessions/providers remain readable after a reload.
 
 ## If you are unsure
