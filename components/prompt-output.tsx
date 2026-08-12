@@ -19,8 +19,10 @@ import {
   Send,
   GitCommit,
   StopCircle,
+  Eraser,
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
+import { ConfirmModal } from './confirm-modal';
 import { MarkdownRenderer } from './markdown-renderer';
 import { PromptVersion, ProviderConfig, Session } from '@/types';
 import { computePromptStats, unwrapCodeBlock } from '@/lib/prompt-stats';
@@ -37,6 +39,7 @@ interface PromptOutputProps {
   onRefinePrompt?: (instruction: string) => void;
   onSaveEditVersion?: (newContent: string) => void;
   onCancelGeneration?: () => void;
+  onClearOutput?: () => void;
 }
 
 export function PromptOutput({
@@ -51,11 +54,13 @@ export function PromptOutput({
   onRefinePrompt,
   onSaveEditVersion,
   onCancelGeneration,
+  onClearOutput,
 }: PromptOutputProps) {
   const [copiedType, setCopiedType] = useState<'prompt' | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [refineInstruction, setRefineInstruction] = useState('');
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   const outputRef = useRef<HTMLDivElement>(null);
 
@@ -342,6 +347,19 @@ export function PromptOutput({
               <span>Cancel</span>
             </button>
           )}
+
+          {/* Clear Output Button */}
+          {onClearOutput && (output || currentSession) && (
+            <button
+              type="button"
+              onClick={() => setClearConfirmOpen(true)}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-code/80 border border-border text-text-secondary hover:bg-danger/10 hover:text-danger hover:border-danger/40 flex items-center gap-1.5 transition-all"
+              title="Clear the current output (session stays saved in History)"
+            >
+              <Eraser className="w-3.5 h-3.5" />
+              <span>Clear</span>
+            </button>
+          )}
         </div>
 
         {/* Download / Export Options */}
@@ -427,6 +445,21 @@ export function PromptOutput({
           </div>
         </form>
       </div>
+
+      {/* Clear Output Confirm Modal */}
+      <ConfirmModal
+        isOpen={clearConfirmOpen}
+        title="Clear the generated prompt?"
+        message="This clears the current prompt from the workspace and returns to a blank canvas. The session remains saved in History, so you can reopen it anytime."
+        confirmLabel="Clear Prompt"
+        variant="warning"
+        onConfirm={() => {
+          setIsEditing(false);
+          setClearConfirmOpen(false);
+          if (onClearOutput) onClearOutput();
+        }}
+        onCancel={() => setClearConfirmOpen(false)}
+      />
     </GlassCard>
   );
 }

@@ -151,6 +151,13 @@ export default function HomePage() {
     setIsGenerating(false);
   };
 
+  const handleClearOutput = () => {
+    handleCancelGeneration();
+    setStreamingText('');
+    setCurrentSession(null);
+    window.dispatchEvent(new Event('pc:focus-topic'));
+  };
+
   const handleGeneratePrompt = async (input: PromptInput) => {
     handleCancelGeneration();
 
@@ -562,6 +569,7 @@ export default function HomePage() {
                   onRefinePrompt={handleRefinePrompt}
                   onSaveEditVersion={handleSaveEditVersion}
                   onCancelGeneration={handleCancelGeneration}
+                  onClearOutput={handleClearOutput}
                 />
               </div>
             </div>
