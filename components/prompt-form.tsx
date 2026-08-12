@@ -60,8 +60,7 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
   }, []);
 
   // Command palette actions (⌘K → "Generate prompt" / "New prompt")
-  const handleSubmitRef = useRef(handleSubmit);
-  handleSubmitRef.current = handleSubmit;
+  const handleSubmitRef = useRef<() => void>(() => {});
   useEffect(() => {
     const onGenerate = () => handleSubmitRef.current();
     const onFocusTopic = () => topicRef.current?.focus();
@@ -104,6 +103,9 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
       additionalNotes: additionalNotes.trim() || undefined,
     });
   };
+
+  // Keep the palette listener pointed at the latest handleSubmit closure
+  handleSubmitRef.current = handleSubmit;
 
   // ⌘/Ctrl+Enter generates from anywhere in the form (including textareas)
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
