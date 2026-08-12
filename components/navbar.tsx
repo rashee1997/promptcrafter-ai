@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  Command,
 } from 'lucide-react';
 import { ProviderConfig } from '@/types';
 
@@ -22,6 +23,7 @@ interface NavbarProps {
   historyCount: number;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
+  onOpenPalette?: () => void;
 }
 
 export function Navbar({
@@ -31,6 +33,7 @@ export function Navbar({
   historyCount,
   darkMode,
   setDarkMode,
+  onOpenPalette,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -54,7 +57,7 @@ export function Navbar({
                 <span className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-text-primary via-brand to-text-secondary bg-clip-text text-transparent">
                   PromptCrafter<span className="text-brand font-light">AI</span>
                 </span>
-                <span className="hidden xs:inline-block px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest uppercase rounded-full bg-brand/10 text-brand border border-brand/20">
+                <span className="inline-block px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest uppercase rounded-full bg-brand/10 text-brand border border-brand/20">
                   v1.0.0
                 </span>
               </div>
@@ -65,9 +68,10 @@ export function Navbar({
           </div>
 
           {/* Desktop Navigation Tabs (Hidden on mobile < md) */}
-          <nav className="hidden md:flex items-center p-1 rounded-2xl bg-surface-muted border border-border shadow-inner">
+          <nav aria-label="Primary" className="hidden md:flex items-center p-1 rounded-2xl bg-surface-muted border border-border shadow-inner">
             <button
               onClick={() => handleTabClick('generator')}
+              aria-pressed={activeTab === 'generator'}
               className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 ${
                 activeTab === 'generator'
                   ? 'bg-surface-card text-brand shadow-md shadow-brand/20 border border-border'
@@ -80,6 +84,7 @@ export function Navbar({
 
             <button
               onClick={() => handleTabClick('history')}
+              aria-pressed={activeTab === 'history'}
               className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 ${
                 activeTab === 'history'
                   ? 'bg-surface-card text-brand shadow-md shadow-brand/20 border border-border'
@@ -97,6 +102,7 @@ export function Navbar({
 
             <button
               onClick={() => handleTabClick('settings')}
+              aria-pressed={activeTab === 'settings'}
               className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 ${
                 activeTab === 'settings'
                   ? 'bg-surface-card text-brand shadow-md shadow-brand/20 border border-border'
@@ -132,11 +138,27 @@ export function Navbar({
               <span>Local Encryption</span>
             </div>
 
+            {/* Command Palette Trigger (⌘K) */}
+            {onOpenPalette && (
+              <button
+                onClick={onOpenPalette}
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-surface-muted text-text-secondary hover:bg-surface-hover transition-colors border border-border"
+                aria-label="Open command palette"
+                title="Command palette (⌘K)"
+              >
+                <Command className="w-4 h-4 text-brand" />
+                <kbd className="px-1 py-0.5 rounded-md bg-surface-card border border-border text-[10px] font-mono text-text-muted">
+                  ⌘K
+                </kbd>
+              </button>
+            )}
+
             {/* Dark / Light Theme Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-xl bg-surface-muted text-text-secondary hover:bg-surface-hover transition-colors border border-border"
-              aria-label="Toggle Theme"
+              aria-label={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+              aria-pressed={darkMode}
             >
               {darkMode ? <Sun className="w-4 h-4 text-warning" /> : <Moon className="w-4 h-4 text-brand" />}
             </button>
@@ -146,6 +168,8 @@ export function Navbar({
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-xl bg-brand/10 text-brand border border-brand/20 hover:bg-brand/20 transition-colors"
               aria-label="Toggle Navigation Menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -154,7 +178,10 @@ export function Navbar({
 
         {/* Mobile Dropdown Navigation Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden pt-2 pb-4 border-t border-border space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div
+            id="mobile-menu"
+            className="md:hidden pt-2 pb-4 border-t border-border space-y-2 animate-in fade-in slide-in-from-top-2 duration-200"
+          >
             <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-surface-muted border border-border">
               <button
                 onClick={() => handleTabClick('generator')}

@@ -48,7 +48,7 @@
 
   --text-primary: oklch(0.2 0.02 260);
   --text-secondary: oklch(0.45 0.03 260);
-  --text-muted: oklch(0.6 0.025 260);
+  --text-muted: oklch(0.52 0.03 260);
 
   --brand: oklch(0.5 0.2 270);
   --brand-muted: oklch(0.9 0.04 270);
@@ -87,6 +87,25 @@
   --warning-muted: oklch(0.22 0.05 85);
   --danger: oklch(0.58 0.16 15);
   --danger-muted: oklch(0.22 0.04 15);
+}
+
+/* ── Accessibility: visible focus indicators (WCAG 2.4.7) ── */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Accessibility: respect reduced motion (WCAG 2.3.3) ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Prose adaptation for both themes ── */

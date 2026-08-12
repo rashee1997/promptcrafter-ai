@@ -258,10 +258,11 @@ export function ProviderSettings({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Provider Name */}
               <div>
-                <label className="text-xs font-semibold text-text-secondary mb-1 block">
+                <label htmlFor="provider-name" className="text-xs font-semibold text-text-secondary mb-1 block">
                   Provider Profile Name *
                 </label>
                 <input
+                  id="provider-name"
                   type="text"
                   required
                   value={name}
@@ -273,10 +274,11 @@ export function ProviderSettings({
 
               {/* Base URL */}
               <div>
-                <label className="text-xs font-semibold text-text-secondary mb-1 block">
+                <label htmlFor="provider-base-url" className="text-xs font-semibold text-text-secondary mb-1 block">
                   Base API URL *
                 </label>
                 <input
+                  id="provider-base-url"
                   type="text"
                   required
                   value={baseUrl}
@@ -288,22 +290,26 @@ export function ProviderSettings({
 
               {/* API Key */}
               <div>
-                <label className="text-xs font-semibold text-text-secondary mb-1 block flex items-center justify-between">
+                <label htmlFor="provider-api-key" className="text-xs font-semibold text-text-secondary mb-1 block flex items-center justify-between">
                   <span>API Key</span>
                   <span className="text-[10px] text-text-muted">(Encrypted locally)</span>
                 </label>
                 <div className="relative">
                   <input
+                    id="provider-api-key"
                     type={showApiKey ? 'text' : 'password'}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="sk-..."
+                    autoComplete="off"
                     className="w-full p-2.5 pr-9 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowApiKey(!showApiKey)}
                     className="absolute right-2.5 top-2.5 text-text-muted hover:text-text-primary dark:hover:text-text-primary"
+                    aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                    aria-pressed={showApiKey}
                   >
                     {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -312,10 +318,11 @@ export function ProviderSettings({
 
               {/* Model Name */}
               <div>
-                <label className="text-xs font-semibold text-text-secondary mb-1 block">
+                <label htmlFor="provider-model" className="text-xs font-semibold text-text-secondary mb-1 block">
                   Model Identifier *
                 </label>
                 <input
+                  id="provider-model"
                   type="text"
                   required
                   value={model}
@@ -345,10 +352,11 @@ export function ProviderSettings({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-text-secondary mb-1 block">
+                <label htmlFor="provider-max-tokens" className="text-xs font-semibold text-text-secondary mb-1 block">
                   Max Tokens
                 </label>
                 <input
+                  id="provider-max-tokens"
                   type="number"
                   value={maxTokens}
                   onChange={(e) => setMaxTokens(parseInt(e.target.value) || 2048)}
@@ -459,6 +467,7 @@ export function ProviderSettings({
                           onClick={() => editProvider(p)}
                           className="p-1.5 rounded-lg text-text-muted hover:text-brand transition-colors"
                           title="Edit Profile"
+                          aria-label={`Edit ${p.name}`}
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -466,6 +475,7 @@ export function ProviderSettings({
                           onClick={() => onDeleteProvider(p.id)}
                           className="p-1.5 rounded-lg text-text-muted hover:text-rose-500 transition-colors"
                           title="Delete Profile"
+                          aria-label={`Delete ${p.name}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

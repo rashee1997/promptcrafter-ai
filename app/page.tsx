@@ -7,6 +7,17 @@ import { PromptOutput } from '@/components/prompt-output';
 import { HistoryPanel } from '@/components/history-panel';
 import { ProviderSettings } from '@/components/provider-settings';
 import { TestPromptModal } from '@/components/test-prompt-modal';
+import { CommandPalette, PaletteAction } from '@/components/command-palette';
+import {
+  Sparkles as SparklesIcon,
+  Zap,
+  Play,
+  Copy,
+  History as HistoryIcon,
+  Settings as SettingsIcon,
+  Sun,
+  Moon,
+} from 'lucide-react';
 import { PromptInput, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
 import {
   clearAllSessions,
@@ -55,6 +66,9 @@ export default function HomePage() {
   const [testModalOpen, setTestModalOpen] = useState(false);
   const [promptToTest, setPromptToTest] = useState('');
 
+  // Command palette state
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync dark mode
@@ -67,6 +81,18 @@ export default function HomePage() {
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
+
+  // ⌘K / Ctrl+K toggles the command palette
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Load app storage data
   useEffect(() => {
@@ -425,6 +451,67 @@ export default function HomePage() {
 
   const displayOutput = isGenerating ? streamingText : activeVersion?.content || '';
 
+  const paletteActions: PaletteAction[] = [
+    {
+      id: 'new-prompt',
+      label: 'New prompt',
+      hint: 'Start fresh — clears the current output',
+      icon: <SparklesIcon className="w-4 h-4" />,
+      run: () => {
+        setCurrentSession(null);
+        setStreamingText('');
+        setActiveTab('generator');
+        window.dispatchEvent(new Event('pc:focus-topic'));
+      },
+    },
+    {
+      id: 'generate',
+      label: 'Generate prompt',
+      hint: '⌘⏎ · Uses the current form settings',
+      icon: <Zap className="w-4 h-4" />,
+      run: () => window.dispatchEvent(new Event('pc:generate')),
+    },
+    {
+      id: 'test',
+      label: 'Test current prompt',
+      hint: activeVersion?.content ? 'Run the active version in the sandbox' : 'Generate a prompt first',
+      icon: <Play className="w-4 h-4" />,
+      run: () => {
+        if (activeVersion?.content) handleOpenSandboxTest(activeVersion.content);
+      },
+    },
+    {
+      id: 'copy',
+      label: 'Copy current prompt',
+      hint: 'Copy the active version to the clipboard',
+      icon: <Copy className="w-4 h-4" />,
+      run: () => {
+        if (activeVersion?.content) navigator.clipboard.writeText(activeVersion.content);
+      },
+    },
+    {
+      id: 'history',
+      label: 'Open history',
+      hint: `${sessions.length} saved session${sessions.length === 1 ? '' : 's'}`,  
+      icon: <HistoryIcon className="w-4 h-4" />,
+      run: () => setActiveTab('history'),
+    },
+    {
+      id: 'settings',
+      label: 'Open provider settings',
+      hint: 'Configure AI providers & models',
+      icon: <SettingsIcon className="w-4 h-4" />,
+      run: () => setActiveTab('settings'),
+    },
+    {
+      id: 'theme',
+      label: darkMode ? 'Switch to light theme' : 'Switch to dark theme',
+      hint: 'Toggle appearance',
+      icon: darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />,
+      run: () => setDarkMode((mode) => !mode),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-white flex flex-col justify-between">
       {/* Dynamic Atmospheric Light Glow Orbs */}
@@ -443,10 +530,15 @@ export default function HomePage() {
           historyCount={sessions.length}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
+          onOpenPalette={() => setPaletteOpen(true)}
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8"
+        >
           {activeTab === 'generator' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left Column: Generator Form Controls */}
@@ -525,6 +617,13 @@ export default function HomePage() {
         onClose={() => setTestModalOpen(false)}
         generatedPrompt={promptToTest}
         provider={activeProvider}
+      />
+
+      {/* Command Palette (⌘K) */}
+      <CommandPalette
+        isOpen={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        actions={paletteActions}
       />
     </div>
   );

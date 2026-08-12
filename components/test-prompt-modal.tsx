@@ -7,6 +7,7 @@ import { GlassCard } from './glass-card';
 import { MarkdownRenderer } from './markdown-renderer';
 import { ProviderConfig } from '@/types';
 import { testPromptExecution } from '@/lib/ai-client';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 interface TestPromptModalProps {
   isOpen: boolean;
@@ -28,6 +29,10 @@ export function TestPromptModal({
   const [copied, setCopied] = useState(false);
 
   const outputContainerRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Keep Tab/Shift+Tab cycling inside the dialog while it's open
+  useFocusTrap(dialogRef, isOpen);
 
   // Auto-scroll output container as streaming tokens arrive
   useEffect(() => {
@@ -35,6 +40,21 @@ export function TestPromptModal({
       outputContainerRef.current.scrollTop = outputContainerRef.current.scrollHeight;
     }
   }, [output, isLoading]);
+
+  // Dialog semantics: focus the dialog on open, close on Escape, restore focus on close
+  useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => dialogRef.current?.focus());
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -71,7 +91,15 @@ export function TestPromptModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-surface-code/70 backdrop-blur-lg">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="test-prompt-title"
+        aria-busy={isLoading}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-surface-code/70 backdrop-blur-lg focus:outline-none"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -86,7 +114,7 @@ export function TestPromptModal({
                   <Bot className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                  <h3 id="test-prompt-title" className="text-lg font-bold text-text-primary flex items-center gap-2">
                     Prompt Test Sandbox
                   </h3>
                   <p className="text-xs text-text-muted">
@@ -98,6 +126,7 @@ export function TestPromptModal({
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-xl text-text-muted hover:text-text-primary dark:hover:text-text-primary hover:bg-surface-hover transition-colors"
+                aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -117,10 +146,11 @@ export function TestPromptModal({
                 </div>
 
                 <div className="flex-1 flex flex-col min-h-[140px]">
-                  <label className="text-xs font-semibold text-text-secondary mb-1 block">
+                  <label htmlFor="test-input" className="text-xs font-semibold text-text-secondary mb-1 block">
                     Test User Input (Sample Query)
                   </label>
                   <textarea
+                    id="test-input"
                     value={testInput}
                     onChange={(e) => setTestInput(e.target.value)}
                     placeholder="Enter sample input data to test your prompt with (e.g. sample scenario, user question, raw text)..."
@@ -167,6 +197,7 @@ export function TestPromptModal({
 
                 <div
                   ref={outputContainerRef}
+                  aria-live="polite"
                   className="flex-1 overflow-y-auto text-xs leading-relaxed pr-1 space-y-2 scroll-smooth"
                 >
                   {error && (

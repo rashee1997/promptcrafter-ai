@@ -43,16 +43,16 @@ export function DomainSelector({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+        <span id="domain-selector-label" className="text-xs font-semibold uppercase tracking-wider text-text-muted">
           Target Domain / Field
-        </label>
-        <span className="text-xs text-brand font-medium">
+        </span>
+        <span className="text-xs text-brand font-medium" aria-hidden="true">
           {selectedDomain.name} Selected
         </span>
       </div>
 
       {/* Grid of Domain Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div role="group" aria-labelledby="domain-selector-label" className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {DOMAIN_PRESETS.map((domain) => {
           const Icon = ICON_MAP[domain.iconName] || Sliders;
           const isSelected = domain.id === selectedDomainId;
@@ -62,6 +62,7 @@ export function DomainSelector({
               key={domain.id}
               type="button"
               onClick={() => onSelectDomain(domain)}
+              aria-pressed={isSelected}
               className={`group relative p-3 rounded-xl border text-left transition-all duration-200 flex flex-col justify-between ${
                 isSelected
                   ? 'bg-brand/10 dark:bg-brand/15 border-brand text-text-primary dark:text-indigo-100 ring-2 ring-indigo-500/30 shadow-md'

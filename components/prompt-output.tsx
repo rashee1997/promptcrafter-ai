@@ -268,6 +268,7 @@ export function PromptOutput({
       ) : (
         <div
           ref={outputRef}
+          aria-busy={isGenerating}
           className="relative rounded-xl border border-border bg-surface-code text-text-primary p-4 min-h-[280px] max-h-[500px] overflow-y-auto selection:bg-brand selection:text-white scroll-smooth font-mono text-xs leading-relaxed"
         >
           <MarkdownRenderer content={output} highlightPlaceholders={true} />
@@ -324,6 +325,8 @@ export function PromptOutput({
                   : 'bg-surface-card/60 border-border text-text-secondary hover:text-warning'
               }`}
               title="Mark Session as Favorite"
+              aria-label={currentSession?.favorite ? 'Remove from favorites' : 'Mark session as favorite'}
+              aria-pressed={!!currentSession?.favorite}
             >
               <Star className={`w-4 h-4 ${currentSession?.favorite ? 'fill-current' : ''}`} />
             </button>
@@ -386,6 +389,7 @@ export function PromptOutput({
                         ? 'bg-brand text-white border-brand shadow-sm'
                         : 'bg-surface-code/60 text-text-secondary border-border/80 hover:bg-surface-hover'
                     }`}
+                    aria-pressed={isActive}
                   >
                     <span className="font-bold">v{ver.versionNumber}</span>
                     <span className="max-w-[120px] truncate">{ver.name}</span>
@@ -412,6 +416,7 @@ export function PromptOutput({
               disabled={!refineInstruction.trim() || isGenerating}
               className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-brand text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shadow-sm"
               title="Submit Refinement Instruction"
+              aria-label="Submit refinement instruction"
             >
               {isGenerating ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
