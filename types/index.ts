@@ -40,6 +40,12 @@ export interface DomainPreset {
     additionalNotes?: string;
   };
   exampleTopics: string[];
+  /**
+   * Optional domain-specific mandatory directives injected into the meta-prompt
+   * so every engineered prompt embeds the domain's full requirements
+   * (e.g., SEO deliverables + anti-AI-writing-pattern guardrails for Blog Writer).
+   */
+  domainGuidance?: string;
 }
 
 export interface ToneOption {

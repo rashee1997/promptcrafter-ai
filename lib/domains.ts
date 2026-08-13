@@ -56,6 +56,37 @@ export const DOMAIN_PRESETS: DomainPreset[] = [
     ],
   },
   {
+    id: 'blog-writer',
+    name: 'Blog Writer & SEO',
+    iconName: 'PenLine',
+    description: 'SEO-optimized blog posts from a title or rough idea — keyword-driven structure, E-E-A-T alignment, and a human voice that avoids AI writing patterns.',
+    systemPromptFragment: 'You are an award-winning SEO Content Strategist and Blog Editor who writes people-first, E-E-A-T-aligned articles that rank in Google and get cited by AI search engines — pairing keyword-driven structure with a natural, human voice that avoids every detectable AI writing pattern.',
+    placeholders: {
+      topic: 'e.g., Title or topic of the blog post (working title, idea, or paste an existing draft)',
+      audience: 'e.g., Target readers and search intent (e.g., SMB owners researching project management tools — informational)',
+      additionalNotes: 'e.g., Primary keyword, secondary keywords, competitor URLs, stats/sources to cite, target word count, internal links, brand voice, or draft content',
+    },
+    exampleTopics: [
+      'Write a complete 1,800-word guide: "How to Choose a Project Management Tool for Remote Teams" — target keyword: best project management software for remote teams',
+      'Turn my draft intro into a fully SEO-optimized pillar post on local SEO for dental clinics, with FAQ section and internal link suggestions',
+      'Write a comparison post (table + FAQ schema) of SaaS pricing models, citing the stats I provide',
+      'Expand this outline into a complete article that answers the query in the first two paragraphs so AI search engines cite it directly',
+    ],
+    domainGuidance: `Embed ALL of the following as mandatory directives inside the engineered prompt (do not summarize or drop any):
+
+1. INPUT COLLECTION — The prompt must collect (or accept as given) before writing: primary keyword + secondary/long-tail keywords, search intent (informational / commercial / transactional), target reader and stage of funnel, target word count and format (guide, listicle, comparison, opinion), competitor URLs, sources/stats/case studies to cite, internal links with anchor text, and brand voice examples.
+
+2. SEO DELIVERABLES — The prompt must require: a title tag (~50-60 chars, primary keyword near the front, CTR hook), a meta description (~150-160 chars with keyword and CTA), a keyword-based URL slug, a single H1 containing the primary keyword, a logical H2/H3 hierarchy that mirrors search intent and question phrasing, natural keyword placement in the first 100 words and in headings (never keyword stuffing), internal linking suggestions with descriptive anchors, 1-2 links to authoritative external sources, a FAQ section suitable for FAQPage schema, and a clear CTA.
+
+3. E-E-A-T & HELPFUL CONTENT — The prompt must require people-first, original analysis that goes beyond obvious advice and beyond rewriting other sources; verifiable facts with no fabricated stats; first-hand experience where relevant; and where applicable an author byline, sourcing, and transparency about AI assistance. No word-count padding and no invented answers to questions that have no answer.
+
+4. AI-PATTERN GUARDRAILS — The prompt must explicitly forbid AI tells: filler words (delve, tapestry, vibrant, landscape, realm, embark, foster, harness, unlock, navigate, seamless, robust, pivotal, game-changer, "in today's fast-paced world", "it's important to note", "in conclusion"), transition-word saturation (furthermore / moreover chains), hedged language ("arguably", "it's worth noting", "ultimately"), uniform metronomic sentence rhythm, formulaic "list of three" structures, generic hook openings, bullet-point overload, and generic examples. It must instead require varied sentence and paragraph length, contractions, first-person experience where appropriate, direct address to the reader, concrete numbers, named tools/studies, and specific examples.
+
+5. AI-SEARCH OPTIMIZATION — The prompt must require a cite-able direct answer near the top (a definitional sentence that answers the query in one breath), question-based H2s, and tables/lists where they add clarity, so the article can be pulled into AI Overviews and cited by ChatGPT/Perplexity.
+
+6. SELF-REVIEW PASS — Before delivering, the prompt must instruct the model to re-read the finished article and rewrite any sentence that still contains banned phrases, hedged language, or uniform rhythm, then deliver the final clean version.`,
+  },
+  {
     id: 'creative-writing',
     name: 'Creative & Narrative',
     iconName: 'Sparkles',
@@ -391,7 +422,10 @@ STRICT GENERATION DIRECTIVES:
 Target Domain Context:
 - Domain Name: ${domain.name}
 - Domain Expert Persona: ${domain.systemPromptFragment}
-
+${domain.domainGuidance ? `
+DOMAIN-SPECIFIC MANDATORY DIRECTIVES (embed ALL of these requirements into the engineered prompt, do not drop or soften any):
+${domain.domainGuidance}
+` : ''}
 Prompt Architecture Configuration:
 - Framework: ${input.framework.toUpperCase()} (${frameworkDesc})
   ${frameworkInstructions}

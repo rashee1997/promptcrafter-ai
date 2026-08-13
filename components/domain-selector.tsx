@@ -10,6 +10,7 @@ import {
   FileText,
   ShieldCheck,
   Sliders,
+  PenLine,
   CheckCircle2,
   Lightbulb,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   FileText,
   ShieldCheck,
   Sliders,
+  PenLine,
 };
 
 export function DomainSelector({
