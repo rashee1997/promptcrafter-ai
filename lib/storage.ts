@@ -15,6 +15,7 @@ export const DEFAULT_BUILTIN_PROVIDER: ProviderConfig = {
   baseUrl: 'https://generativelanguage.googleapis.com',
   apiKey: 'BUILTIN', // handled server side with GEMINI_API_KEY
   model: 'gemini-3.6-flash',
+  models: ['gemini-3.6-flash'],
   isDefault: true,
   useBuiltInGemini: true,
   temperature: 0.7,
@@ -27,6 +28,7 @@ const memorySessions: Session[] = [];
 const memoryHistory: HistoryItem[] = [];
 const memoryProviders: ProviderConfig[] = [DEFAULT_BUILTIN_PROVIDER];
 let memoryActiveProviderId: string = DEFAULT_BUILTIN_PROVIDER.id;
+const memoryActiveModels: Record<string, string> = {};
 
 function convertHistoryItemToSession(item: HistoryItem): Session {
   const timestamp = item.timestamp || Date.now();
@@ -474,6 +476,68 @@ export async function toggleFavoriteHistoryItem(id: string): Promise<boolean> {
 
 // --- Provider Persistence ---
 
+/**
+ * Normalizes a provider's model list: returns `models` when populated, otherwise
+ * falls back to `[model]` so older persisted configs stay fully readable.
+ */
+export function getProviderModelList(provider: ProviderConfig): string[] {
+  const explicit = Array.isArray(provider.models)
+    ? provider.models.map((m) => m?.trim()).filter(Boolean)
+    : [];
+  if (explicit.length > 0) return explicit;
+  const base = provider.model?.trim();
+  if (base) return [base];
+  return ['gpt-4o-mini'];
+}
+
+/** Reads the locally persisted active model for a provider (LocalStorage map). */
+export async function getActiveModelForProvider(providerId: string): Promise<string | null> {
+  if (typeof window === 'undefined') return memoryActiveModels[providerId] ?? null;
+  try {
+    const raw = localStorage.getItem('promptcrafter_active_models');
+    if (raw) {
+      const map = JSON.parse(raw) as Record<string, string>;
+      return map?.[providerId] ?? null;
+    }
+  } catch {
+    // Fall through to memory
+  }
+  return memoryActiveModels[providerId] ?? null;
+}
+
+/** Persists the selected model for a provider locally (LocalStorage map). */
+export async function setActiveModelForProvider(providerId: string, model: string): Promise<void> {
+  memoryActiveModels[providerId] = model;
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem('promptcrafter_active_models');
+    const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    map[providerId] = model;
+    localStorage.setItem('promptcrafter_active_models', JSON.stringify(map));
+  } catch {
+    // Ignore storage write error
+  }
+}
+
+/**
+ * Resolves the currently selected model for a provider: persisted selection first,
+ * then `activeModel`, then the first entry of the model list.
+ */
+export async function getProviderActiveModel(provider: ProviderConfig): Promise<string> {
+  const list = getProviderModelList(provider);
+  const stored = await getActiveModelForProvider(provider.id);
+  if (stored && list.includes(stored)) return stored;
+  if (provider.activeModel && list.includes(provider.activeModel)) return provider.activeModel;
+  return list[0];
+}
+
+function normalizeProviderModels(provider: ProviderConfig): ProviderConfig {
+  return {
+    ...provider,
+    models: getProviderModelList(provider),
+  };
+}
+
 export async function getSavedProviders(): Promise<ProviderConfig[]> {
   let providers: ProviderConfig[] = [DEFAULT_BUILTIN_PROVIDER];
 
@@ -490,7 +554,7 @@ export async function getSavedProviders(): Promise<ProviderConfig[]> {
     if (customList.length > 0) {
       const decrypted = await Promise.all(
         customList.map(async (p) => ({
-          ...p,
+          ...normalizeProviderModels(p),
           apiKey: p.apiKey ? await decryptSecret(p.apiKey) : '',
         }))
       );
@@ -504,7 +568,7 @@ export async function getSavedProviders(): Promise<ProviderConfig[]> {
           const customList: ProviderConfig[] = JSON.parse(raw);
           const decrypted = await Promise.all(
             customList.map(async (p) => ({
-              ...p,
+              ...normalizeProviderModels(p),
               apiKey: p.apiKey ? await decryptSecret(p.apiKey) : '',
             }))
           );

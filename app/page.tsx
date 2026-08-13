@@ -27,12 +27,14 @@ import {
   deleteSession,
   deleteVersionFromSession,
   getActiveProviderId,
+  getProviderActiveModel,
   getSavedProviders,
   getSessions,
   getStorageType,
   renameVersion,
   saveProviderConfig,
   saveSession,
+  setActiveModelForProvider,
   setActiveProviderId,
   setActiveVersion,
   addVersionToSession,
@@ -106,7 +108,8 @@ export default function HomePage() {
 
       const activeId = await getActiveProviderId();
       const current = savedProviders.find((p) => p.id === activeId) || DEFAULT_BUILTIN_PROVIDER;
-      setActiveProvider(current);
+      const activeModel = await getProviderActiveModel(current);
+      setActiveProvider({ ...current, model: activeModel, activeModel });
 
       const loadedSessions = await getSessions();
       setSessions(loadedSessions);
@@ -122,14 +125,26 @@ export default function HomePage() {
   const handleSelectActiveProvider = async (id: string) => {
     await setActiveProviderId(id);
     const target = providers.find((p) => p.id === id) || DEFAULT_BUILTIN_PROVIDER;
-    setActiveProvider(target);
+    const activeModel = await getProviderActiveModel(target);
+    setActiveProvider({ ...target, model: activeModel, activeModel });
+  };
+
+  /** Switches the active model of the current provider and persists it locally. */
+  const handleSelectActiveModel = async (model: string) => {
+    if (!activeProvider) return;
+    await setActiveModelForProvider(activeProvider.id, model);
+    setActiveProvider((prev) => ({ ...prev, model, activeModel: model }));
+    setProviders((prev) =>
+      prev.map((p) => (p.id === activeProvider.id ? { ...p, activeModel: model } : p))
+    );
   };
 
   const handleSaveProvider = async (newProvider: ProviderConfig) => {
     await saveProviderConfig(newProvider);
     const updatedList = await getSavedProviders();
     setProviders(updatedList);
-    setActiveProvider(newProvider);
+    const activeModel = await getProviderActiveModel(newProvider);
+    setActiveProvider({ ...newProvider, model: activeModel, activeModel });
     await setActiveProviderId(newProvider.id);
   };
 
@@ -541,6 +556,8 @@ export default function HomePage() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           activeProvider={activeProvider}
+          activeModel={activeProvider.model}
+          onSelectActiveModel={handleSelectActiveModel}
           historyCount={sessions.length}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
@@ -584,7 +601,12 @@ export default function HomePage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left Column: Generator Form Controls */}
               <div className="lg:col-span-6 space-y-6">
-                <PromptForm onGenerate={handleGeneratePrompt} isGenerating={isGenerating} />
+                <PromptForm
+                  onGenerate={handleGeneratePrompt}
+                  isGenerating={isGenerating}
+                  activeProvider={activeProvider}
+                  onSelectActiveModel={handleSelectActiveModel}
+                />
               </div>
 
               {/* Right Column: Live Output & Refinement Display */}
@@ -662,7 +684,7 @@ export default function HomePage() {
         onClose={() => setTestModalOpen(false)}
         generatedPrompt={promptToTest}
         provider={activeProvider}
-        providers={providers}
+        providers={providers.map((p) => ({ ...p, model: p.activeModel ?? p.model }))}
       />
 
       {/* Command Palette (⌘K) */}

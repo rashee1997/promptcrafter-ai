@@ -68,7 +68,15 @@ export interface ProviderConfig {
   name: string;
   baseUrl: string;
   apiKey: string;
+  /** Primary/default model. Always kept in sync with the first entry of `models`. */
   model: string;
+  /**
+   * All models configured for this provider. Falls back to `[model]` when absent
+   * so older persisted configs remain readable. Stored locally (IndexedDB / LocalStorage).
+   */
+  models?: string[];
+  /** Currently selected model for this provider (mirrors the persisted local selection). */
+  activeModel?: string;
   isDefault?: boolean;
   useBuiltInGemini?: boolean;
   temperature: number;

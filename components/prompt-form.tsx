@@ -11,18 +11,30 @@ import {
   BookOpen,
   Sliders,
   Check,
+  Cpu,
 } from 'lucide-react';
 import { DomainSelector } from './domain-selector';
 import { GlassCard } from './glass-card';
 import { DEFAULT_OUTPUT_CHAR_LIMIT, DOMAIN_PRESETS, FRAMEWORK_OPTIONS, TONE_OPTIONS } from '@/lib/domains';
-import { DomainPreset, FrameworkType, PromptInput, ToneType } from '@/types';
+import { getProviderModelList } from '@/lib/storage';
+import { DomainPreset, FrameworkType, PromptInput, ProviderConfig, ToneType } from '@/types';
 
 interface PromptFormProps {
   onGenerate: (input: PromptInput) => void;
   isGenerating: boolean;
+  /** Active provider, used to show/switch the current model. */
+  activeProvider?: ProviderConfig;
+  /** Called when the user switches the active model of the active provider. */
+  onSelectActiveModel?: (model: string) => void;
 }
 
-export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
+export function PromptForm({
+  onGenerate,
+  isGenerating,
+  activeProvider,
+  onSelectActiveModel,
+}: PromptFormProps) {
+  const providerModels = activeProvider ? getProviderModelList(activeProvider) : [];
   const [topic, setTopic] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<DomainPreset>(DOMAIN_PRESETS[0]);
   const [customDomainText, setCustomDomainText] = useState('');
@@ -466,6 +478,25 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
               {outputCharLimit.trim() && (
                 <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
                   ≤ {outputCharLimit.toLocaleString()} chars
+                </span>
+              )}
+              {activeProvider && onSelectActiveModel && providerModels.length > 0 && (
+                <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border">
+                  <Cpu className="w-3 h-3 text-brand shrink-0" />
+                  <select
+                    value={activeProvider.model}
+                    onChange={(e) => onSelectActiveModel(e.target.value)}
+                    disabled={isGenerating}
+                    className="bg-transparent text-xs font-mono text-text-secondary focus:outline-none disabled:opacity-50 cursor-pointer"
+                    title={`Model · ${activeProvider.name}`}
+                    aria-label="Active model"
+                  >
+                    {providerModels.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
                 </span>
               )}
               {!showStyle && (

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { ProviderConfig } from '@/types';
-import { DEFAULT_BUILTIN_PROVIDER } from '@/lib/storage';
+import { DEFAULT_BUILTIN_PROVIDER, getProviderModelList } from '@/lib/storage';
 import { normalizeBaseUrl } from '@/lib/openai-provider';
 
 interface ProviderSettingsProps {
@@ -50,7 +50,7 @@ export function ProviderSettings({
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gpt-4o-mini');
+  const [models, setModels] = useState<string[]>(['gpt-4o-mini']);
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(4096);
   const [disableStreaming, setDisableStreaming] = useState(false);
@@ -59,7 +59,7 @@ export function ProviderSettings({
     setName('');
     setBaseUrl('https://api.openai.com/v1');
     setApiKey('');
-    setModel('gpt-4o-mini');
+    setModels(['gpt-4o-mini']);
     setTemperature(0.7);
     setMaxTokens(4096);
     setDisableStreaming(false);
@@ -72,7 +72,11 @@ export function ProviderSettings({
     setName(provider.name);
     setBaseUrl(provider.baseUrl);
     setApiKey(provider.apiKey || '');
-    setModel(provider.model || 'gpt-4o-mini');
+    setModels(
+      provider.models && provider.models.length > 0
+        ? [...provider.models]
+        : [provider.model || 'gpt-4o-mini']
+    );
     setTemperature(provider.temperature ?? 0.7);
     setMaxTokens(provider.maxTokens ?? 4096);
     setDisableStreaming(provider.disableStreaming ?? false);
@@ -80,6 +84,23 @@ export function ProviderSettings({
     setShowAddForm(true);
     setTestStatus({ loading: false });
   };
+
+  const updateModelAt = (index: number, value: string) => {
+    setModels((prev) => prev.map((m, i) => (i === index ? value : m)));
+  };
+
+  const removeModelAt = (index: number) => {
+    setModels((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [''];
+    });
+  };
+
+  const addModelRow = () => {
+    setModels((prev) => [...prev, '']);
+  };
+
+  const modelListValue = models.map((m) => m.trim()).filter(Boolean);
 
   const handleTestConnection = async () => {
     setTestStatus({ loading: true });
@@ -94,7 +115,7 @@ export function ProviderSettings({
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model,
+          model: modelListValue[0] || 'gpt-4o-mini',
           messages: [{ role: 'user', content: 'Ping test' }],
           max_tokens: 5,
         }),
@@ -121,7 +142,7 @@ export function ProviderSettings({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !baseUrl.trim()) return;
+    if (!name.trim() || !baseUrl.trim() || modelListValue.length === 0) return;
 
     const existingProvider = editingProviderId
       ? providers.find((p) => p.id === editingProviderId)
@@ -132,7 +153,15 @@ export function ProviderSettings({
       name: name.trim(),
       baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
-      model: model.trim() || 'gpt-4o-mini',
+      model: modelListValue[0],
+      models: modelListValue,
+      // Keep the previously selected model if it is still part of the list
+      activeModel:
+        existingProvider?.activeModel && modelListValue.includes(existingProvider.activeModel)
+          ? existingProvider.activeModel
+          : existingProvider?.model && modelListValue.includes(existingProvider.model)
+          ? existingProvider.model
+          : undefined,
       temperature,
       maxTokens,
       disableStreaming,
@@ -147,20 +176,20 @@ export function ProviderSettings({
     if (presetType === 'openai') {
       setName('OpenAI Official');
       setBaseUrl('https://api.openai.com/v1');
-      setModel('gpt-4o-mini');
+      setModels(['gpt-4o-mini']);
     } else if (presetType === 'openrouter') {
       setName('OpenRouter AI');
       setBaseUrl('https://openrouter.ai/api/v1');
-      setModel('meta-llama/llama-3.3-70b-instruct');
+      setModels(['meta-llama/llama-3.3-70b-instruct']);
     } else if (presetType === 'groq') {
       setName('Groq Fast Inference');
       setBaseUrl('https://api.groq.com/openai/v1');
-      setModel('llama-3.3-70b-versatile');
+      setModels(['llama-3.3-70b-versatile']);
     } else if (presetType === 'ollama') {
       setName('Local Ollama Server');
       setBaseUrl('http://localhost:11434/v1');
       setApiKey('');
-      setModel('llama3');
+      setModels(['llama3']);
     }
   };
 
@@ -316,21 +345,59 @@ export function ProviderSettings({
                 </div>
               </div>
 
-              {/* Model Name */}
-              <div>
-                <label htmlFor="provider-model" className="text-xs font-semibold text-text-secondary mb-1 block">
-                  Model Identifier *
+            </div>
+
+            {/* Models List (multiple models per provider) */}
+            <div className="space-y-2.5 pt-2 border-t border-border/50">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-brand" />
+                  Model Identifiers * ({
+                    modelListValue.length > 0 ? `${modelListValue.length} configured` : 'add at least one'
+                  })
                 </label>
-                <input
-                  id="provider-model"
-                  type="text"
-                  required
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="e.g. gpt-4o-mini or llama-3.3-70b-versatile"
-                  className="w-full p-2.5 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand font-mono"
-                />
+                <button
+                  type="button"
+                  onClick={addModelRow}
+                  className="px-2.5 py-1 text-xs rounded-lg bg-surface-muted hover:bg-brand/10 text-text-secondary border border-border flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Model</span>
+                </button>
               </div>
+
+              <div className="space-y-2">
+                {models.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={m}
+                      onChange={(e) => updateModelAt(i, e.target.value)}
+                      placeholder="e.g. gpt-4o-mini or llama-3.3-70b-versatile"
+                      className="w-full p-2.5 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand font-mono"
+                    />
+                    {i === 0 && (
+                      <span className="shrink-0 px-2 py-1 text-[10px] font-bold uppercase rounded-lg bg-brand/10 text-brand border border-brand/20">
+                        Default
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeModelAt(i)}
+                      className="shrink-0 p-2 rounded-lg text-text-muted hover:text-rose-500 transition-colors"
+                      title="Remove this model"
+                      aria-label={`Remove model ${i + 1}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                Store multiple models for this endpoint. The first model is the default; switch the active
+                model per provider from the navbar or the generator bar. All models are saved locally with
+                the provider profile.
+              </p>
             </div>
 
             {/* Temperature & Max Tokens */}
@@ -455,9 +522,25 @@ export function ProviderSettings({
                             </span>
                           )}
                         </h4>
-                        <p className="text-xs text-text-muted font-mono">
-                          {p.model}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                          {getProviderModelList(p).map((m) => {
+                            const isModelActive = isActive && (p.activeModel ?? p.model) === m;
+                            return (
+                              <span
+                                key={m}
+                                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono border flex items-center gap-1 ${
+                                  isModelActive
+                                    ? 'bg-brand/10 text-brand border-brand/30 font-semibold'
+                                    : 'bg-surface-muted text-text-muted border-border/60'
+                                }`}
+                                title={isModelActive ? `Active model: ${m}` : m}
+                              >
+                                {m}
+                                {isModelActive && <CheckCircle2 className="w-3 h-3" />}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 

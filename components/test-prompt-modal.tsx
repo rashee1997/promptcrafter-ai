@@ -20,6 +20,7 @@ import { MarkdownRenderer } from './markdown-renderer';
 import { ABTestResult, ProviderConfig } from '@/types';
 import { runABTest, testPromptExecution } from '@/lib/ai-client';
 import { consistencyLabel } from '@/lib/similarity';
+import { getProviderModelList } from '@/lib/storage';
 import { useFocusTrap } from '@/lib/use-focus-trap';
 
 interface TestPromptModalProps {
@@ -46,6 +47,7 @@ export function TestPromptModal({
 
   // F2 — A/B lab state
   const [abSelected, setAbSelected] = useState<string[]>([]);
+  const [abModels, setAbModels] = useState<Record<string, string>>({});
   const [abRunning, setAbRunning] = useState(false);
   const [abResults, setAbResults] = useState<ABTestResult | null>(null);
 
@@ -55,10 +57,17 @@ export function TestPromptModal({
   // Keep Tab/Shift+Tab cycling inside the dialog while it's open
   useFocusTrap(dialogRef, isOpen);
 
-  // Default A/B selection to all available providers once
+  // Default A/B selection to all available providers once, using each provider's active model
   useEffect(() => {
     if (providers && providers.length > 0) {
       setAbSelected((prev) => (prev.length > 0 ? prev : providers.map((p) => p.id)));
+      setAbModels((prev) => {
+        const next = { ...prev };
+        for (const p of providers) {
+          if (!next[p.id]) next[p.id] = p.model || p.activeModel || getProviderModelList(p)[0];
+        }
+        return next;
+      });
     }
   }, [providers]);
 
@@ -117,7 +126,13 @@ export function TestPromptModal({
   };
 
   const handleRunABTest = async () => {
-    const chosen = (providers || []).filter((p) => abSelected.includes(p.id));
+    const chosen = (providers || [])
+      .filter((p) => abSelected.includes(p.id))
+      .map((p) => ({
+        ...p,
+        model: abModels[p.id] || p.model || getProviderModelList(p)[0],
+        activeModel: abModels[p.id] || p.model || getProviderModelList(p)[0],
+      }));
     if (chosen.length < 2) {
       setError('Select at least two providers to compare.');
       return;
@@ -248,24 +263,43 @@ export function TestPromptModal({
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="space-y-1.5">
                       {providers.map((p) => {
                         const selected = abSelected.includes(p.id);
+                        const modelList = getProviderModelList(p);
                         return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => toggleAbProvider(p.id)}
-                            aria-pressed={selected}
-                            className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
-                              selected
-                                ? 'bg-brand text-white border-brand'
-                                : 'bg-surface-card text-text-secondary border-border hover:bg-surface-hover'
-                            }`}
-                            title={`${p.name} · ${p.model}`}
-                          >
-                            {p.name.split('(')[0].trim()}
-                          </button>
+                          <div key={p.id} className="flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleAbProvider(p.id)}
+                              aria-pressed={selected}
+                              className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                                selected
+                                  ? 'bg-brand text-white border-brand'
+                                  : 'bg-surface-card text-text-secondary border-border hover:bg-surface-hover'
+                              }`}
+                              title={`${p.name} · ${p.model}`}
+                            >
+                              {p.name.split('(')[0].trim()}
+                            </button>
+                            {selected && modelList.length > 1 && (
+                              <select
+                                value={abModels[p.id] || p.model}
+                                onChange={(e) =>
+                                  setAbModels((prev) => ({ ...prev, [p.id]: e.target.value }))
+                                }
+                                className="max-w-[170px] px-1.5 py-1 rounded-lg text-[10px] font-mono bg-surface-card text-text-secondary border border-border focus:outline-none focus:ring-1 focus:ring-brand"
+                                title={`Model for ${p.name}`}
+                                aria-label={`Model for ${p.name}`}
+                              >
+                                {modelList.map((m) => (
+                                  <option key={m} value={m}>
+                                    {m}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                         );
                       })}
                     </div>

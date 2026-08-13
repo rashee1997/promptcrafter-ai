@@ -12,14 +12,21 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronDown,
   Command,
+  Check,
 } from 'lucide-react';
 import { ProviderConfig } from '@/types';
+import { getProviderModelList } from '@/lib/storage';
 
 interface NavbarProps {
   activeTab: 'generator' | 'history' | 'settings';
   setActiveTab: (tab: 'generator' | 'history' | 'settings') => void;
   activeProvider: ProviderConfig;
+  /** Currently selected model for the active provider. */
+  activeModel?: string;
+  /** Called when the user switches the active model of the active provider. */
+  onSelectActiveModel?: (model: string) => void;
   historyCount: number;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
@@ -30,12 +37,16 @@ export function Navbar({
   activeTab,
   setActiveTab,
   activeProvider,
+  activeModel,
+  onSelectActiveModel,
   historyCount,
   darkMode,
   setDarkMode,
   onOpenPalette,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const modelList = getProviderModelList(activeProvider);
 
   const handleTabClick = (tab: 'generator' | 'history' | 'settings') => {
     setActiveTab(tab);
@@ -116,18 +127,74 @@ export function Navbar({
 
           {/* Right Status & Mobile Toggle */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Active Provider Pill */}
-            <button
-              onClick={() => handleTabClick('settings')}
-              className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-muted border border-border hover:border-brand/50 text-text-secondary transition-colors"
-              title="Active AI Provider"
-            >
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <Cpu className="w-3.5 h-3.5 text-brand" />
-              <span className="max-w-[120px] truncate font-semibold text-text-primary">
-                {activeProvider.name}
-              </span>
-            </button>
+            {/* Active Provider Pill + Model Switcher */}
+            <div className="hidden lg:flex items-center gap-1.5">
+              <button
+                onClick={() => handleTabClick('settings')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-muted border border-border hover:border-brand/50 text-text-secondary transition-colors"
+                title="Active AI Provider"
+              >
+                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                <Cpu className="w-3.5 h-3.5 text-brand" />
+                <span className="max-w-[120px] truncate font-semibold text-text-primary">
+                  {activeProvider.name}
+                </span>
+              </button>
+
+              {/* Active Model Switcher (multi-model providers) */}
+              {onSelectActiveModel && modelList.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setModelMenuOpen((open) => !open)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono bg-surface-muted border border-border hover:border-brand/50 text-text-secondary transition-colors"
+                    title="Switch active model"
+                    aria-expanded={modelMenuOpen}
+                    aria-haspopup="menu"
+                  >
+                    <span className="max-w-[110px] truncate">{activeModel || activeProvider.model}</span>
+                    <ChevronDown
+                      className={`w-3 h-3 text-text-muted transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {modelMenuOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setModelMenuOpen(false)}
+                        aria-hidden="true"
+                      />
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full mt-1.5 z-20 min-w-[190px] p-1 rounded-xl bg-surface-card border border-border shadow-xl shadow-black/20"
+                      >
+                        {modelList.map((m) => {
+                          const isActive = m === (activeModel || activeProvider.model);
+                          return (
+                            <button
+                              key={m}
+                              role="menuitem"
+                              onClick={() => {
+                                onSelectActiveModel(m);
+                                setModelMenuOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between gap-2 transition-colors ${
+                                isActive
+                                  ? 'bg-brand/10 text-brand font-semibold'
+                                  : 'text-text-secondary hover:bg-surface-hover'
+                              }`}
+                            >
+                              <span className="truncate">{m}</span>
+                              {isActive && <Check className="w-3.5 h-3.5 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Privacy badge */}
             <div
@@ -227,17 +294,33 @@ export function Navbar({
               </button>
             </div>
 
-            {/* Mobile Active Provider Indicator */}
+            {/* Mobile Active Provider Indicator + Model Switcher */}
             <div
               onClick={() => handleTabClick('settings')}
-              className="flex items-center justify-between p-2.5 rounded-xl bg-surface-muted border border-border text-xs text-text-secondary cursor-pointer"
+              className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-muted border border-border text-xs text-text-secondary cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                <Cpu className="w-4 h-4 text-brand" />
-                <span className="font-semibold">Active AI: {activeProvider.name}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2 h-2 rounded-full bg-success animate-pulse shrink-0" />
+                <Cpu className="w-4 h-4 text-brand shrink-0" />
+                <span className="font-semibold truncate">Active AI: {activeProvider.name}</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-text-muted" />
+              {onSelectActiveModel && modelList.length > 0 ? (
+                <select
+                  value={activeModel || activeProvider.model}
+                  onChange={(e) => onSelectActiveModel(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="max-w-[150px] bg-surface-card border border-border rounded-lg px-1.5 py-1 text-[11px] font-mono text-text-secondary focus:outline-none focus:ring-1 focus:ring-brand"
+                  title="Switch active model"
+                >
+                  {modelList.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
+              )}
             </div>
           </div>
         )}
