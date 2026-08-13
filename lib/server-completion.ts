@@ -31,7 +31,7 @@ export async function runNonStreamingCompletion(
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: {
-        headers: { 'User-Agent': 'promptcrafter-ai/1.0.1' },
+        headers: { 'User-Agent': 'promptcrafter-ai/1.1.0' },
       },
     });
 
