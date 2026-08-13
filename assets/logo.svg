@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="268" height="48" viewBox="0 0 268 48" role="img" aria-label="PromptCrafter AI">
+  <defs>
+    <linearGradient id="pc-gradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#111827" />
+      <stop offset="0.45" stop-color="#6366f1" />
+      <stop offset="1" stop-color="#6b7280" />
+    </linearGradient>
+    <linearGradient id="pc-gradient-dark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e5e7eb" />
+      <stop offset="0.45" stop-color="#818cf8" />
+      <stop offset="1" stop-color="#9ca3af" />
+    </linearGradient>
+  </defs>
+  <style>
+    .pc-name { fill: url(#pc-gradient); }
+    @media (prefers-color-scheme: dark) {
+      .pc-name { fill: url(#pc-gradient-dark); }
+    }
+  </style>
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="#6366f1" />
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="none" stroke="#a5b4fc" stroke-opacity="0.45" stroke-width="1.5" />
+  <g transform="translate(11 11)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+    <path d="M20 3v4" />
+    <path d="M22 5h-4" />
+    <path d="M4 17v2" />
+    <path d="M5 18H3" />
+  </g>
+  <text x="62" y="32" class="pc-name" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="-0.5">
+    PromptCrafter<tspan fill="#6366f1" font-weight="300">AI</tspan>
+  </text>
+</svg>
