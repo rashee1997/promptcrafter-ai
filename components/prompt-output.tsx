@@ -623,7 +623,7 @@ export function PromptOutput({
           <button
             type="button"
             onClick={handleDownloadMd}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-white/60 dark:bg-surface-muted text-text-secondary hover:bg-surface-hover flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-surface-card text-text-secondary hover:bg-surface-hover hover:text-text-primary hover:border-brand/40 flex items-center gap-1 transition-colors"
             title="Export as Markdown .md"
           >
             <Download className="w-3.5 h-3.5" />
@@ -633,7 +633,7 @@ export function PromptOutput({
           <button
             type="button"
             onClick={handleDownloadJson}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-white/60 dark:bg-surface-muted text-text-secondary hover:bg-surface-hover flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-surface-card text-text-secondary hover:bg-surface-hover hover:text-text-primary hover:border-brand/40 flex items-center gap-1 transition-colors"
             title="Export as JSON"
           >
             <FileCode className="w-3.5 h-3.5" />
