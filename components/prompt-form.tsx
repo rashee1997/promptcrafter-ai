@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { DomainSelector } from './domain-selector';
 import { GlassCard } from './glass-card';
-import { DOMAIN_PRESETS, FRAMEWORK_OPTIONS, TONE_OPTIONS } from '@/lib/domains';
+import { DEFAULT_OUTPUT_CHAR_LIMIT, DOMAIN_PRESETS, FRAMEWORK_OPTIONS, TONE_OPTIONS } from '@/lib/domains';
 import { DomainPreset, FrameworkType, PromptInput, ToneType } from '@/types';
 
 interface PromptFormProps {
@@ -33,6 +33,8 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
   const [includeConstraints, setIncludeConstraints] = useState(true);
   const [includeExamples, setIncludeExamples] = useState(true);
   const [additionalNotes, setAdditionalNotes] = useState('');
+  // Output character limit for the engineered prompt; blank string = no limit (optional).
+  const [outputCharLimit, setOutputCharLimit] = useState<string>(String(DEFAULT_OUTPUT_CHAR_LIMIT));
   const [showStyle, setShowStyle] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedFrameworkCategory, setSelectedFrameworkCategory] = useState<string>('All');
@@ -90,6 +92,9 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
     if (e) e.preventDefault();
     if (!topic.trim()) return;
 
+    const parsedLimit = Number(outputCharLimit);
+    const hasLimit = outputCharLimit.trim() !== '' && Number.isFinite(parsedLimit) && parsedLimit > 0;
+
     onGenerate({
       topic: topic.trim(),
       domainId: selectedDomain.id,
@@ -101,6 +106,7 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
       includeConstraints,
       includeExamples,
       additionalNotes: additionalNotes.trim() || undefined,
+      outputCharLimit: hasLimit ? Math.floor(parsedLimit) : undefined,
     });
   };
 
@@ -353,6 +359,44 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
                         />
                       </div>
 
+                      {/* Output Character Limit (optional) */}
+                      <div>
+                        <label htmlFor="output-char-limit" className="text-xs font-medium text-text-secondary mb-1 block">
+                          Output Character Limit <span className="text-text-muted font-normal">(optional)</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="output-char-limit"
+                            type="number"
+                            min={1}
+                            max={100000}
+                            step={100}
+                            value={outputCharLimit}
+                            onChange={(e) => setOutputCharLimit(e.target.value)}
+                            placeholder={`Default: ${DEFAULT_OUTPUT_CHAR_LIMIT.toLocaleString()}`}
+                            className="w-full p-2.5 pr-14 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+                          />
+                          {outputCharLimit.trim() ? (
+                            <button
+                              type="button"
+                              onClick={() => setOutputCharLimit('')}
+                              title="Remove the character limit"
+                              className="absolute inset-y-0 right-0 pr-2.5 text-[11px] font-medium text-text-muted hover:text-text-primary transition-colors"
+                            >
+                              Clear
+                            </button>
+                          ) : (
+                            <span className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-[11px] text-text-muted pointer-events-none">
+                              No limit
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
+                          Maximum length of the engineered prompt in characters. Defaults to{' '}
+                          {DEFAULT_OUTPUT_CHAR_LIMIT.toLocaleString()}; leave blank for no limit.
+                        </p>
+                      </div>
+
                       {/* Preferred Output Format */}
                       <div>
                         <label htmlFor="output-format" className="text-xs font-medium text-text-secondary mb-1 block">
@@ -419,6 +463,11 @@ export function PromptForm({ onGenerate, isGenerating }: PromptFormProps) {
               <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">{selectedFrameworkLabel}</span>
               <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">{selectedToneLabel}</span>
               <span className="px-2 py-1 rounded-md bg-surface-muted border border-border capitalize">{outputFormat.replace('-', ' ')}</span>
+              {outputCharLimit.trim() && (
+                <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+                  ≤ {outputCharLimit.toLocaleString()} chars
+                </span>
+              )}
               {!showStyle && (
                 <button
                   type="button"

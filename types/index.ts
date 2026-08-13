@@ -88,6 +88,12 @@ export interface PromptInput {
   includeConstraints: boolean;
   includeExamples: boolean;
   additionalNotes?: string;
+  /**
+   * Optional hard cap on the length of the ENGINEERED prompt, in characters.
+   * When set, the generator is instructed to keep its output under this limit.
+   * Leave undefined for no limit.
+   */
+  outputCharLimit?: number;
 }
 
 /**

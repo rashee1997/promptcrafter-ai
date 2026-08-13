@@ -1,5 +1,8 @@
 import { DomainPreset, FrameworkType, PromptInput, ToneType } from '@/types';
 
+/** Default cap (in characters) applied to the engineered prompt when the user keeps the default value. */
+export const DEFAULT_OUTPUT_CHAR_LIMIT = 4000;
+
 export const DOMAIN_PRESETS: DomainPreset[] = [
   {
     id: 'software-coding',
@@ -418,6 +421,7 @@ STRICT GENERATION DIRECTIVES:
    ${formatGuide}
 4. DYNAMIC BRACKETED PLACEHOLDERS: Whenever specific variables (like tech stack, API key, domain database, product name) are contextually variable, use bracketed uppercase placeholders (e.g., [INSERT_TECH_STACK_HERE], [INSERT_PRODUCT_NAME_HERE], [INSERT_TARGET_METRIC]).
 5. HIGH-SIGNAL INSTRUCTIONS: Ensure the prompt contains an expert persona, explicit goal, step-by-step logic, edge-case handling, and strict negative constraints ("What NOT to do").
+${input.outputCharLimit ? `6. OUTPUT LENGTH CONSTRAINT: The complete engineered prompt you return MUST NOT exceed ${input.outputCharLimit} characters total (count every character, including headers and formatting). If a draft is longer than the limit, tighten wording and cut redundancy until it fits while preserving every required section and directive.` : ''}
 
 Target Domain Context:
 - Domain Name: ${domain.name}
@@ -454,6 +458,10 @@ export function buildUserPromptMessage(input: PromptInput, domain: DomainPreset)
 
   if (input.additionalNotes) {
     message += `Additional Requirements / Context: ${input.additionalNotes}\n`;
+  }
+
+  if (input.outputCharLimit) {
+    message += `Output Character Limit: the engineered prompt must not exceed ${input.outputCharLimit} characters.\n`;
   }
 
   message += `\nPlease engineer a top-tier, production-ready ${input.framework.toUpperCase()} prompt based on this goal.`;
