@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const responseStream = await chat.sendMessageStream(userRefineInstruction);
+      const responseStream = await chat.sendMessageStream({ message: userRefineInstruction });
 
       const encoder = new TextEncoder();
       const customStream = new ReadableStream({
