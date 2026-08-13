@@ -21,7 +21,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'PromptCrafter AI — engineer prompts and prove they work',
+        alt: 'PromptCrafter AI — create, test, and improve AI prompts',
       },
     ],
   },

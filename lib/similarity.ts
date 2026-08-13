@@ -82,6 +82,6 @@ export function consistencyScore(outputs: string[]): number | null {
 export function consistencyLabel(score: number | null): { label: string; tone: 'success' | 'warning' | 'danger' } {
   if (score === null) return { label: 'N/A', tone: 'warning' };
   if (score >= 80) return { label: `${score}/100 · Consistent`, tone: 'success' };
-  if (score >= 55) return { label: `${score}/100 · Drifting`, tone: 'warning' };
-  return { label: `${score}/100 · Divergent`, tone: 'danger' };
+  if (score >= 55) return { label: `${score}/100 · Varies`, tone: 'warning' };
+  return { label: `${score}/100 · Inconsistent`, tone: 'danger' };
 }

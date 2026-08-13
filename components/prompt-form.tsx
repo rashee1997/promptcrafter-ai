@@ -86,8 +86,8 @@ export function PromptForm({
     };
   }, []);
 
-  const frameworkCategories = ['All', 'Foundational', 'Reasoning & Agentic', 'System & Meta'];
-  const toneCategories = ['All', 'Executive & Professional', 'Analytical & Critical', 'Creative & Narrative', 'Educational & Supportive'];
+  const frameworkCategories = ['All', 'Essentials', 'Problem solving', 'Advanced'];
+  const toneCategories = ['All', 'Professional', 'Analytical', 'Creative', 'Supportive'];
 
   const filteredFrameworks = selectedFrameworkCategory === 'All'
     ? FRAMEWORK_OPTIONS
@@ -138,10 +138,9 @@ export function PromptForm({
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
         {/* Topic Input Area */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label htmlFor="topic-input" className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+          <div className="flex items-center justify-between">              <label htmlFor="topic-input" className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-warning" />
-              Primary Topic / Goal
+              Goal or topic
             </label>
             {topic && (
               <button
@@ -165,9 +164,9 @@ export function PromptForm({
               className="w-full p-3.5 text-sm rounded-xl border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/80 focus:border-brand transition-all shadow-inner resize-y leading-relaxed"
             />
             <div className="absolute right-3 bottom-3 text-[11px] text-text-muted pointer-events-none hidden sm:flex items-center gap-2">
-              <span>⌘+Enter to generate</span>
+              <span>⌘+Enter to create</span>
               <span>•</span>
-              <span>Press / to focus</span>
+              <span>Press / to jump here</span>
               <span>•</span>
               <span>{topic.length} chars</span>
             </div>
@@ -185,14 +184,14 @@ export function PromptForm({
         {selectedDomain.id === 'custom-domain' && (
           <div className="space-y-1.5 p-3 rounded-xl bg-brand/5 border border-brand/20">
             <label htmlFor="custom-domain-input" className="text-xs font-semibold text-text-primary">
-              Custom Domain Context / Instructions
+              Add your own context
             </label>
             <input
               id="custom-domain-input"
               type="text"
               value={customDomainText}
               onChange={(e) => setCustomDomainText(e.target.value)}
-              placeholder="e.g. Healthcare Clinical Trial Protocols or Game Mechanics Architecture"
+              placeholder="e.g. Healthcare clinical trials or game design"
               className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
@@ -209,7 +208,7 @@ export function PromptForm({
           >
             <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary group-hover:text-brand transition-colors">
               <SlidersHorizontal className="w-4 h-4 text-brand" />
-              <span>Prompt Style &amp; Options</span>
+              <span>Style &amp; options</span>
               <span className="hidden md:flex items-center gap-1.5 text-[10px] font-medium text-text-muted">
                 ({selectedFrameworkLabel} · {selectedToneLabel} · {outputFormat})
               </span>
@@ -224,7 +223,7 @@ export function PromptForm({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5 text-brand" />
-                    Prompt Architecture Framework ({FRAMEWORK_OPTIONS.length})
+                    Structure ({FRAMEWORK_OPTIONS.length})
                   </label>
 
                   {/* Framework Category Tabs */}
@@ -290,7 +289,7 @@ export function PromptForm({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-brand" />
-                    Desired Tone &amp; Style Persona ({TONE_OPTIONS.length})
+                    Tone of voice ({TONE_OPTIONS.length})
                   </label>
 
                   {/* Tone Category Filter Tabs */}
@@ -348,7 +347,7 @@ export function PromptForm({
                 >
                   <div className="flex items-center gap-2">
                     <SlidersHorizontal className="w-4 h-4 text-brand" />
-                    <span>Advanced Customization &amp; Constraints</span>
+                    <span>Advanced options</span>
                   </div>
                   {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
@@ -359,7 +358,7 @@ export function PromptForm({
                       {/* Target Audience */}
                       <div>
                         <label htmlFor="target-audience" className="text-xs font-medium text-text-secondary mb-1 block">
-                          Target Audience / Persona
+                          Target audience
                         </label>
                         <input
                           id="target-audience"
@@ -374,7 +373,7 @@ export function PromptForm({
                       {/* Output Character Limit (optional) */}
                       <div>
                         <label htmlFor="output-char-limit" className="text-xs font-medium text-text-secondary mb-1 block">
-                          Output Character Limit <span className="text-text-muted font-normal">(optional)</span>
+                          Maximum length <span className="text-text-muted font-normal">(optional)</span>
                         </label>
                         <div className="relative">
                           <input
@@ -392,7 +391,7 @@ export function PromptForm({
                             <button
                               type="button"
                               onClick={() => setOutputCharLimit('')}
-                              title="Remove the character limit"
+                              title="Remove the length limit"
                               className="absolute inset-y-0 right-0 pr-2.5 text-[11px] font-medium text-text-muted hover:text-text-primary transition-colors"
                             >
                               Clear
@@ -404,15 +403,15 @@ export function PromptForm({
                           )}
                         </div>
                         <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
-                          Maximum length of the engineered prompt in characters. Defaults to{' '}
-                          {DEFAULT_OUTPUT_CHAR_LIMIT.toLocaleString()}; leave blank for no limit.
+                          The longest the prompt can be. Defaults to{' '}
+                          {DEFAULT_OUTPUT_CHAR_LIMIT.toLocaleString()} characters; leave blank for no limit.
                         </p>
                       </div>
 
                       {/* Preferred Output Format */}
                       <div>
                         <label htmlFor="output-format" className="text-xs font-medium text-text-secondary mb-1 block">
-                          Target Output Format
+                          Output format
                         </label>
                         <select
                           id="output-format"
@@ -420,11 +419,11 @@ export function PromptForm({
                           onChange={(e: any) => setOutputFormat(e.target.value)}
                           className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
                         >
-                          <option value="markdown">Markdown Sections</option>
-                          <option value="bullet-points">Bullet-pointed List</option>
-                          <option value="json">Structured JSON Schema</option>
-                          <option value="xml">XML Tags (&lt;prompt&gt;...&lt;/prompt&gt;)</option>
-                          <option value="structured-text">Structured Plain Text</option>
+                          <option value="markdown">Sections</option>
+                          <option value="bullet-points">Bullet points</option>
+                          <option value="json">JSON</option>
+                          <option value="xml">XML</option>
+                          <option value="structured-text">Plain text</option>
                         </select>
                       </div>
                     </div>
@@ -438,14 +437,14 @@ export function PromptForm({
                           onChange={(e) => setIncludeConstraints(e.target.checked)}
                           className="w-4 h-4 rounded border-border text-brand focus:ring-brand"
                         />
-                        <span>Include Negative Constraints &amp; Guardrails (&quot;What NOT to do&quot;)</span>
+                        <span>Add &quot;what to avoid&quot; guidance</span>
                       </label>
                     </div>
 
                     {/* Additional Notes */}
                     <div>
                       <label htmlFor="additional-notes" className="text-xs font-medium text-text-secondary mb-1 block">
-                        Additional Directives / Context
+                        Additional notes
                       </label>
                       <textarea
                         id="additional-notes"
@@ -519,12 +518,12 @@ export function PromptForm({
               {isGenerating ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Engineering Prompt...</span>
+                  <span>Creating…</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  <span>Generate &amp; Optimize Prompt</span>
+                  <span>Create Prompt</span>
                   <kbd className="ml-1 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-80">
                     ⌘⏎
                   </kbd>

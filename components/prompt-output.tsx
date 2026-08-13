@@ -139,10 +139,10 @@ export function PromptOutput({
           <Sparkles className="w-8 h-8" />
         </div>
         <h3 className="text-base font-bold text-text-primary">
-          Ready to Craft Your Prompt
+          Create your first prompt
         </h3>
         <p className="mt-2 text-xs text-text-muted max-w-md leading-relaxed">
-          Select a target domain, specify your goal or topic, choose a framework like Role-Task-Format or Chain-of-Thought, and click Generate.
+          Describe what you want to create, pick a use case, and click Create Prompt.
         </p>
       </GlassCard>
     );
@@ -246,7 +246,7 @@ export function PromptOutput({
     let latestRun: TestRun | null = null;
     try {
       for (const version of currentSession.versions) {
-        setSuiteProgress(`Testing v${version.versionNumber} (${testSuite.length} case${testSuite.length === 1 ? '' : 's'})...`);
+        setSuiteProgress(`Testing version ${version.versionNumber} (${testSuite.length} case${testSuite.length === 1 ? '' : 's'})...`);
         const cases = [];
         for (const input of testSuite) {
           const result = await runCaseEvaluation({
@@ -277,7 +277,7 @@ export function PromptOutput({
       }
       setSuiteProgress('');
     } catch (err: any) {
-      setSuiteError(err?.message || 'Suite run failed.');
+      setSuiteError(err?.message || 'The test run failed.');
     } finally {
       setSuiteRunning(false);
     }
@@ -318,10 +318,10 @@ export function PromptOutput({
     ? [
         { key: 'Clarity', value: quality.dimensions.clarity, note: quality.dimensions.clarity.notes },
         { key: 'Structure', value: quality.dimensions.structure, note: quality.dimensions.structure.notes },
-        { key: 'Output Spec', value: quality.dimensions.outputSpec, note: quality.dimensions.outputSpec.notes },
+        { key: 'Output format', value: quality.dimensions.outputSpec, note: quality.dimensions.outputSpec.notes },
         { key: 'Context', value: quality.dimensions.context, note: quality.dimensions.context.notes },
-        { key: 'Error Handling', value: quality.dimensions.errorHandling, note: quality.dimensions.errorHandling.notes },
-        { key: 'Token Efficiency', value: quality.dimensions.tokenEfficiency, note: quality.dimensions.tokenEfficiency.notes },
+        { key: 'Safeguards', value: quality.dimensions.errorHandling, note: quality.dimensions.errorHandling.notes },
+        { key: 'Conciseness', value: quality.dimensions.tokenEfficiency, note: quality.dimensions.tokenEfficiency.notes },
       ]
     : [];
 
@@ -342,7 +342,7 @@ export function PromptOutput({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-bold text-text-primary">
-                Engineered Raw Prompt
+                Your prompt
               </h3>
 
               {activeVersion && (
@@ -354,12 +354,12 @@ export function PromptOutput({
 
               {isGenerating && (
                 <span className="flex items-center gap-1 text-[11px] font-semibold text-indigo-500 animate-pulse">
-                  <RefreshCw className="w-3 h-3 animate-spin" /> Streaming response...
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Generating…
                 </span>
               )}
             </div>
             <p className="text-[11px] text-text-muted">
-              Generated via {activeVersion?.providerName || activeProvider.name}
+              Created with {activeVersion?.providerName || activeProvider.name}
             </p>
           </div>
         </div>
@@ -369,7 +369,7 @@ export function PromptOutput({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 px-3 py-1 rounded-xl text-brand text-xs font-semibold">
               <Cpu className="w-3.5 h-3.5 text-indigo-500" />
-              <span>~{estTokens.toLocaleString()} Tokens</span>
+              <span>{wordCount.toLocaleString()} words</span>
             </div>
             <button
               type="button"
@@ -379,7 +379,7 @@ export function PromptOutput({
                   ? 'bg-brand text-white border-brand'
                   : 'bg-success/10 border-success/20 text-success hover:bg-success/20'
               }`}
-              title="Open the quality scorecard"
+              title="Open the quality score"
               aria-expanded={scoreOpen}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -395,15 +395,13 @@ export function PromptOutput({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 font-semibold text-brand">
             <Cpu className="w-3.5 h-3.5" />
-            <span>Estimated Tokens: ~{estTokens.toLocaleString()}</span>
+            <span>{wordCount.toLocaleString()} words</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
             <Layers className="w-3.5 h-3.5 text-text-muted" />
-            <span>{wordCount.toLocaleString()} Words</span>
+            <span>{charCount.toLocaleString()} characters</span>
           </div>
-          <span>•</span>
-          <div>{charCount.toLocaleString()} Characters</div>
         </div>
       </div>
 
@@ -413,9 +411,9 @@ export function PromptOutput({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Gauge className="w-4 h-4 text-brand" />
-              <span className="text-xs font-bold text-text-primary">Prompt Quality Scorecard</span>
+              <span className="text-xs font-bold text-text-primary">Quality check</span>
               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-surface-hover text-text-muted border border-border uppercase tracking-wide">
-                {quality.source === 'llm-judge' ? 'AI Judge' : 'Heuristic'}
+                {quality.source === 'llm-judge' ? 'AI Review' : 'Quick Check'}
               </span>
             </div>
             <div className="text-right">
@@ -424,7 +422,7 @@ export function PromptOutput({
               <p className="text-[10px] text-text-muted">
                 {quality.source === 'llm-judge'
                   ? `via ${quality.providerName}`
-                  : 'local rules · click "Score with AI" for a judge'}
+                  : 'Quick estimate · run a full review for a detailed score'}
               </p>
             </div>
           </div>
@@ -494,7 +492,7 @@ export function PromptOutput({
             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 disabled:opacity-50 flex items-center gap-1.5 transition-colors shadow-sm"
           >
             {isScoring ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Gauge className="w-3.5 h-3.5" />}
-            <span>{isScoring ? 'Scoring with AI...' : 'Score with AI Judge'}</span>
+            <span>{isScoring ? 'Reviewing…' : 'Run AI Review'}</span>
           </button>
         </div>
       )}
@@ -506,7 +504,7 @@ export function PromptOutput({
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
             className="w-full h-[320px] p-4 rounded-xl border border-brand/50 bg-surface-code text-text-primary font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand selection:bg-brand selection:text-white"
-            placeholder="Edit prompt content directly..."
+            placeholder="Edit the prompt…"
           />
           <div className="flex items-center justify-end gap-2">
             <button
@@ -523,7 +521,7 @@ export function PromptOutput({
               className="px-4 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 shadow-md flex items-center gap-1.5 transition-colors"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>Save Edit as New Version</span>
+              <span>Save as New Version</span>
             </button>
           </div>
         </div>
@@ -547,7 +545,7 @@ export function PromptOutput({
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/25 flex items-center gap-2 transition-all active:scale-95"
           >
             {copiedType === 'prompt' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-            <span>{copiedType === 'prompt' ? 'Copied Raw Prompt!' : 'Copy Prompt'}</span>
+            <span>{copiedType === 'prompt' ? 'Copied!' : 'Copy'}</span>
           </button>
 
           {/* Edit Mode Toggle Button */}
@@ -559,10 +557,10 @@ export function PromptOutput({
                 ? 'bg-indigo-500/20 border-brand/40 text-brand'
                 : 'bg-surface-code/80 text-text-primary hover:bg-surface-hover border-border'
             }`}
-            title="Edit prompt in place"
+            title="Edit the prompt"
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>{isEditing ? 'Editing Mode' : 'Edit Prompt'}</span>
+            <span>{isEditing ? 'Editing' : 'Edit'}</span>
           </button>
 
           {/* Test Sandbox Button */}
@@ -570,10 +568,10 @@ export function PromptOutput({
             type="button"
             onClick={() => onTestPrompt(rawPromptText)}
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-code text-text-primary hover:bg-surface-hover border border-border flex items-center gap-1.5 transition-all shadow-sm"
-            title="Execute this prompt live against an AI model"
+            title="See how this prompt responds with your AI model"
           >
             <Play className="w-3.5 h-3.5 text-success fill-current" />
-            <span>Test in Sandbox</span>
+            <span>Test</span>
           </button>
 
           {/* Favorite Toggle */}
@@ -586,7 +584,7 @@ export function PromptOutput({
                   ? 'bg-warning/20 border-warning/40 text-warning'
                   : 'bg-surface-card/60 border-border text-text-secondary hover:text-warning'
               }`}
-              title="Mark Session as Favorite"
+              title="Save to favorites"
               aria-label={currentSession?.favorite ? 'Remove from favorites' : 'Mark session as favorite'}
               aria-pressed={!!currentSession?.favorite}
             >
@@ -611,7 +609,7 @@ export function PromptOutput({
               type="button"
               onClick={() => setClearConfirmOpen(true)}
               className="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-code/80 border border-border text-text-secondary hover:bg-danger/10 hover:text-danger hover:border-danger/40 flex items-center gap-1.5 transition-all"
-              title="Clear the current output (session stays saved in History)"
+              title="Clear the current prompt (saved items stay in History)"
             >
               <Eraser className="w-3.5 h-3.5" />
               <span>Clear</span>
@@ -654,14 +652,14 @@ export function PromptOutput({
           >
             <span className="flex items-center gap-2">
               <Wand2 className="w-4 h-4 text-warning" />
-              <span className="text-xs font-bold text-text-primary">Placeholder Audit &amp; Fill</span>
+              <span className="text-xs font-bold text-text-primary">Custom fields</span>
               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-warning/20 text-warning border border-warning/30">
-                {audit.keys.length} variable{audit.keys.length === 1 ? '' : 's'}
+                {audit.keys.length} field{audit.keys.length === 1 ? '' : 's'}
               </span>
               {audit.issues.length > 0 && (
                 <span className="hidden sm:flex items-center gap-1 text-[10px] font-semibold text-warning">
                   <AlertTriangle className="w-3 h-3" />
-                  {audit.issues.length} issue{audit.issues.length === 1 ? '' : 's'} found
+                  {audit.issues.length} item{audit.issues.length === 1 ? '' : 's'} to fix
                 </span>
               )}
             </span>
@@ -693,7 +691,7 @@ export function PromptOutput({
                         type="text"
                         value={fillValues[key] || ''}
                         onChange={(e) => setFillValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                        placeholder="Sample value for this variable..."
+                        placeholder="Value for this field..."
                         className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
                       />
                     </label>
@@ -708,10 +706,10 @@ export function PromptOutput({
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   {copiedType === 'filled' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedType === 'filled' ? 'Filled Prompt Copied!' : 'Copy Filled Prompt'}</span>
+                  <span>{copiedType === 'filled' ? 'Copied!' : 'Copy with values'}</span>
                 </button>
                 <span className="text-[10px] text-text-muted">
-                  Unfilled variables stay bracketed so you can spot them before pasting.
+                  Unfilled fields stay in brackets so you can spot them before copying.
                 </span>
               </div>
             </div>
@@ -730,9 +728,9 @@ export function PromptOutput({
           >
             <span className="flex items-center gap-2 text-xs font-bold text-text-primary">
               <Braces className="w-4 h-4 text-brand" />
-              Export for Target Model
+              Export
               <span className="hidden sm:inline text-[10px] font-medium text-text-muted">
-                — same prompt, formatted for each model family&apos;s conventions
+                — same prompt, formatted for different tools
               </span>
             </span>
             <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
@@ -772,7 +770,7 @@ export function PromptOutput({
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   {copiedType === 'export' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedType === 'export' ? 'Copied!' : 'Copy Export'}</span>
+                  <span>{copiedType === 'export' ? 'Copied!' : 'Copy'}</span>
                 </button>
                 <button
                   type="button"
@@ -799,9 +797,9 @@ export function PromptOutput({
           >
             <span className="flex items-center gap-2 text-xs font-bold text-text-primary">
               <FlaskConical className="w-4 h-4 text-brand" />
-              Prompt Regression Suite
+              Consistency checks
               <span className="hidden sm:inline text-[10px] font-medium text-text-muted">
-                — catch silent regressions when you refine a prompt
+                — make sure changes don&apos;t break what already works
               </span>
             </span>
             <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${suiteOpen ? 'rotate-180' : ''}`} />
@@ -814,7 +812,7 @@ export function PromptOutput({
                 <textarea
                   value={suiteInput}
                   onChange={(e) => setSuiteInput(e.target.value)}
-                  placeholder="Add a test input (e.g. a sample query or edge case) and run it against every version..."
+                  placeholder="Add a sample question or scenario to check against every version…"
                   className="flex-1 p-2.5 text-xs rounded-xl border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand resize-y min-h-[56px]"
                 />
                 <button
@@ -857,12 +855,12 @@ export function PromptOutput({
                   {suiteRunning ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>{suiteProgress || 'Running suite...'}</span>
+                      <span>{suiteProgress || 'Running checks…'}</span>
                     </>
                   ) : (
                     <>
                       <ListChecks className="w-3.5 h-3.5" />
-                      <span>Run Suite ({versions.length} version{versions.length === 1 ? '' : 's'} × {testSuite.length} case{testSuite.length === 1 ? '' : 's'})</span>
+                      <span>Run checks ({versions.length} version{versions.length === 1 ? '' : 's'} × {testSuite.length} case{testSuite.length === 1 ? '' : 's'})</span>
                     </>
                   )}
                 </button>
@@ -879,7 +877,7 @@ export function PromptOutput({
               {runsByVersion.size > 0 && (
                 <div className="space-y-2 pt-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block">
-                    Latest results (pass ≥ {PASS_THRESHOLD}/100)
+                    Latest results ({PASS_THRESHOLD} or higher passes)
                   </span>
                   <div className="overflow-x-auto">
                     <table className="w-full text-[11px] border-collapse">
@@ -904,7 +902,7 @@ export function PromptOutput({
                                   return <td key={i} className="py-1.5 px-2 text-text-muted">—</td>;
                                 }
                                 if (result.error) {
-                                  return <td key={i} className="py-1.5 px-2 text-danger">err</td>;
+                                  return <td key={i} className="py-1.5 px-2 text-danger">Error</td>;
                                 }
                                 return (
                                   <td key={i} className="py-1.5 px-2">
@@ -916,7 +914,7 @@ export function PromptOutput({
                                       }`}
                                       title={result.score !== null ? `${result.score}/100` : 'no score'}
                                     >
-                                      {result.score !== null ? `${result.score}` : 'ok'}
+                                      {result.score !== null ? `${result.score}` : 'OK'}
                                     </button>
                                   </td>
                                 );
@@ -974,7 +972,7 @@ export function PromptOutput({
         {versions.length > 0 && (
           <div className="space-y-1.5">
             <span className="text-[11px] font-semibold text-text-muted flex items-center gap-1">
-              <GitCommit className="w-3.5 h-3.5 text-indigo-500" /> Version Chain ({versions.length}):
+              <GitCommit className="w-3.5 h-3.5 text-indigo-500" /> Versions ({versions.length}):
             </span>
             <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-indigo-500/20">
               {versions.map((ver) => {
@@ -1013,15 +1011,15 @@ export function PromptOutput({
               onChange={(e) => setRefineInstruction(e.target.value)}
               onKeyDown={handleKeyDownRefine}
               disabled={isGenerating}
-              placeholder="Refine this prompt — e.g. 'make it more concise' or 'add error handling constraints' (⌘/Ctrl+Enter)"
+              placeholder="Adjust this prompt — e.g. 'make it more concise' (⌘/Ctrl+Enter)"
               className="w-full p-3 pr-12 text-xs rounded-xl border border-border bg-surface-code text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 resize-y min-h-[64px]"
             />
             <button
               type="submit"
               disabled={!refineInstruction.trim() || isGenerating}
               className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-brand text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shadow-sm"
-              title="Submit Refinement Instruction"
-              aria-label="Submit refinement instruction"
+              title="Submit changes"
+              aria-label="Submit changes"
             >
               {isGenerating ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1036,9 +1034,9 @@ export function PromptOutput({
       {/* Clear Output Confirm Modal */}
       <ConfirmModal
         isOpen={clearConfirmOpen}
-        title="Clear the generated prompt?"
-        message="This clears the current prompt from the workspace and returns to a blank canvas. The session remains saved in History, so you can reopen it anytime."
-        confirmLabel="Clear Prompt"
+        title="Clear this prompt?"
+        message="This removes the prompt from your workspace and returns to a blank page. It stays saved in History, so you can reopen it anytime."
+        confirmLabel="Clear"
         variant="warning"
         onConfirm={() => {
           setIsEditing(false);

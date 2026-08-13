@@ -30,7 +30,6 @@ import {
   getProviderActiveModel,
   getSavedProviders,
   getSessions,
-  getStorageType,
   renameVersion,
   saveProviderConfig,
   saveSession,
@@ -58,7 +57,6 @@ export default function HomePage() {
   const [providers, setProviders] = useState<ProviderConfig[]>([DEFAULT_BUILTIN_PROVIDER]);
   const [activeProvider, setActiveProvider] = useState<ProviderConfig>(DEFAULT_BUILTIN_PROVIDER);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [storageMode, setStorageMode] = useState<string>('INDEXED_DB');
 
   // Generation & Session state
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
@@ -100,9 +98,6 @@ export default function HomePage() {
   // Load app storage data
   useEffect(() => {
     const loadAppData = async () => {
-      const type = await getStorageType();
-      setStorageMode(type);
-
       const savedProviders = await getSavedProviders();
       setProviders(savedProviders);
 
@@ -207,7 +202,7 @@ export default function HomePage() {
         const initialVersion: PromptVersion = {
           id: v1Id,
           versionNumber: 1,
-          name: 'Initial Generation',
+          name: 'Original',
           sourceType: 'initial',
           createdAt: timestamp,
           content: completedText,
@@ -218,7 +213,7 @@ export default function HomePage() {
 
         const newSession: Session = {
           id: sessId,
-          title: input.topic || 'Initial Generation',
+          title: input.topic || 'Original',
           domainId: input.domainId,
           domainName: domain.name,
           originalInput: input,
@@ -251,7 +246,7 @@ export default function HomePage() {
       },
       (error) => {
         setIsGenerating(false);
-        setStreamingText(`⚠️ Generation Error: ${error.message}`);
+        setStreamingText(`⚠️ Couldn't create the prompt: ${error.message}`);
       },
       controller.signal
     );
@@ -341,7 +336,7 @@ export default function HomePage() {
       },
       (error) => {
         setIsGenerating(false);
-        setStreamingText(`⚠️ Refinement Error: ${error.message}`);
+        setStreamingText(`⚠️ Couldn't update the prompt: ${error.message}`);
       },
       controller.signal
     );
@@ -484,7 +479,7 @@ export default function HomePage() {
     {
       id: 'new-prompt',
       label: 'New prompt',
-      hint: 'Start fresh — clears the current output',
+      hint: 'Start fresh — clears the current prompt',
       icon: <SparklesIcon className="w-4 h-4" />,
       run: () => {
         setCurrentSession(null);
@@ -495,15 +490,15 @@ export default function HomePage() {
     },
     {
       id: 'generate',
-      label: 'Generate prompt',
-      hint: '⌘⏎ · Uses the current form settings',
+      label: 'Create prompt',
+      hint: '⌘⏎ · Create with the current settings',
       icon: <Zap className="w-4 h-4" />,
       run: () => window.dispatchEvent(new Event('pc:generate')),
     },
     {
       id: 'test',
       label: 'Test current prompt',
-      hint: activeVersion?.content ? 'Run the active version in the sandbox' : 'Generate a prompt first',
+      hint: activeVersion?.content ? 'Run the current prompt to see how it responds' : 'Create a prompt first',
       icon: <Play className="w-4 h-4" />,
       run: () => {
         if (activeVersion?.content) handleOpenSandboxTest(activeVersion.content);
@@ -512,7 +507,7 @@ export default function HomePage() {
     {
       id: 'copy',
       label: 'Copy current prompt',
-      hint: 'Copy the active version to the clipboard',
+      hint: 'Copy the current prompt to the clipboard',
       icon: <Copy className="w-4 h-4" />,
       run: () => {
         if (activeVersion?.content) navigator.clipboard.writeText(activeVersion.content);
@@ -521,14 +516,14 @@ export default function HomePage() {
     {
       id: 'history',
       label: 'Open history',
-      hint: `${sessions.length} saved session${sessions.length === 1 ? '' : 's'}`,  
+      hint: `${sessions.length} saved prompt${sessions.length === 1 ? '' : 's'}`,  
       icon: <HistoryIcon className="w-4 h-4" />,
       run: () => setActiveTab('history'),
     },
     {
       id: 'settings',
-      label: 'Open provider settings',
-      hint: 'Configure AI providers & models',
+      label: 'Open settings',
+      hint: 'Manage AI connections and models',
       icon: <SettingsIcon className="w-4 h-4" />,
       run: () => setActiveTab('settings'),
     },
@@ -576,16 +571,15 @@ export default function HomePage() {
               id="home-intro-heading"
               className="text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-text-primary"
             >
-              Generate, measure, and version production-ready AI prompts
+              Create clear prompts, refine them, and keep every version
             </h1>
             <p className="mt-3 text-sm sm:text-base text-text-secondary leading-relaxed">
-              PromptCrafter AI turns prompt writing into a structured workflow: describe what you
-              want, and it engineers a role-aware prompt, scores it across six quality dimensions,
-              tests it live against any model you configure, and versions every change. No accounts,
-              no cloud database — your work stays in your browser with your own API keys.
+              Describe what you want, and PromptCrafter writes a complete prompt, checks its quality,
+              and lets you test and adjust it before you use it. Every change is saved as a new
+              version you can compare and reuse. No account needed — your work stays in your browser.
             </p>
             <p className="mt-2 text-xs sm:text-sm text-text-muted">
-              Learn how the measurement loop works in the{' '}
+              See how it works in the{' '}
               <Link href="/blog" className="font-semibold text-brand hover:underline">
                 blog
               </Link>
@@ -665,16 +659,11 @@ export default function HomePage() {
 
         {/* Footer */}
         <footer className="mt-auto border-t border-border py-4 px-4 sm:px-8 text-[11px] text-text-muted font-mono flex flex-wrap items-center justify-between gap-2 max-w-7xl w-full mx-auto">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              STORAGE: {storageMode} OK
-            </span>
-            <span>ENCRYPTION: AES-GCM</span>
-          </div>
-          <div>
-            <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI v1.1.0 // THREADED SESSION MODEL</span>
-          </div>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            SAVED LOCALLY IN YOUR BROWSER
+          </span>
+          <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI</span>
         </footer>
       </div>
 

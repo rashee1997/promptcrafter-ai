@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/site-footer';
 export const metadata: Metadata = {
   title: 'FAQ',
   description:
-    'Frequently asked questions about PromptCrafter AI: how it works, where data is stored, which providers are supported, and known limitations.',
+    'Frequently asked questions about PromptCrafter AI: how it works, where your data is stored, which AI services it supports, and known limitations.',
 };
 
 /**
@@ -18,7 +18,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: 'How does PromptCrafter AI work?',
     answer:
-      'You describe what you want in a short topic line, and PromptCrafter AI generates a structured, role-aware prompt using a prompt framework and tone preset you choose. You can then refine it conversationally — for example "make it more concise" or "add edge-case handling" — and every change is saved as an immutable version you can diff, rename, favorite, or roll back. A test sandbox lets you run any version as a system instruction against a sample query before you use it anywhere.',
+      'You describe what you want in a few words, and PromptCrafter AI writes a complete prompt using the structure and tone you choose. You can then refine it in plain language — for example, "make it more concise" — and every change is saved as a new version you can compare, rename, or go back to. A test area lets you run any version against a sample question to see how it responds before you use it.',
   },
   {
     question: 'Do I need an account to use PromptCrafter AI?',
@@ -28,12 +28,12 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: 'Where is my data stored?',
     answer:
-      'Everything lives in your browser. Sessions and prompt versions are stored in IndexedDB, with localStorage and in-memory fallbacks for restricted environments. API keys for custom providers are encrypted on-device with AES-GCM using a key derived from a per-device salt, so keys are not stored in plaintext.',
+      'Everything lives in your browser. Your prompts and settings are saved locally on your device, and API keys for your own AI services are encrypted before they are stored.',
   },
   {
-    question: 'Which AI providers are supported?',
+    question: 'Which AI services are supported?',
     answer:
-      'PromptCrafter AI supports any OpenAI-compatible provider — OpenAI, Groq, OpenRouter, Ollama, or a self-hosted endpoint — plus a built-in Google Gemini integration that reads GEMINI_API_KEY server-side. You configure base URL, model, and API key in the Providers view, and keys are encrypted before being written to local storage.',
+      'PromptCrafter AI works with any major AI service — Google Gemini (built in), OpenAI, Groq, OpenRouter, or your own private server. You connect the service in Settings, and your API keys are encrypted before they are stored.',
   },
   {
     question: 'Does PromptCrafter AI cost money?',
@@ -41,19 +41,19 @@ const FAQS: { question: string; answer: string }[] = [
       'PromptCrafter AI itself is free and has no subscription or paid tier. You bring your own model API keys: the built-in Gemini integration uses your GEMINI_API_KEY, and custom providers use the keys you configure. Any usage charges come directly from the model provider you choose.',
   },
   {
-    question: 'How does the prompt quality scorecard work?',
+    question: 'How does the prompt quality score work?',
     answer:
-      'Every generated or refined version can be scored 0–100 across six rubric dimensions: clarity and specificity, structure and organization, output specification, contextual guidance, error handling, and token efficiency. Scores come from an LLM-judge prompt or a local heuristic fallback, and each dimension includes a note and a concrete one-line fix suggestion. Scores are stored per version, so you can see how quality changes as you iterate.',
+      'Every version can be scored 0–100 across six areas: clarity, structure, output format, context, safeguards, and conciseness. Each area comes with a note and a suggestion for improvement, and scores are saved per version so you can see how quality changes as you refine.',
   },
   {
     question: 'Can I test one prompt across different models?',
     answer:
-      'Yes. The cross-model A/B lab runs the same prompt and test input through two or more configured providers side by side, then reports a consistency score based on semantic similarity between the answers and a diff view showing where they diverge.',
+      'Yes. The compare view runs the same prompt and test input through two or more AI services side by side, then shows how consistent the answers are and where they differ.',
   },
   {
     question: 'What are the known limitations?',
     answer:
-      'Sessions are tied to the browser they were created in — there is no cross-device sync yet. Custom provider API keys are stored client-side (encrypted) and are sent to the provider you configure at request time; they are never transmitted anywhere else.',
+      'Sessions stay in the browser where they were created — there is no cross-device sync yet. Your API keys are stored encrypted on your device and are only sent to the AI service you connected.',
   },
 ];
 

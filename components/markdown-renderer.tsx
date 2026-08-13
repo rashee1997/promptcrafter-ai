@@ -62,7 +62,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
       <div className="my-3 p-3 rounded-xl bg-surface-code border border-border font-mono text-xs text-text-muted">
         <div className="text-warning font-semibold mb-1 flex items-center gap-1.5">
           <Code className="w-3.5 h-3.5" />
-          <span>Mermaid Diagram Blueprint</span>
+          <span>Diagram preview</span>
         </div>
         <pre className="overflow-x-auto whitespace-pre text-text-secondary bg-surface-code p-2 rounded border border-border">
           {chart}
@@ -163,7 +163,7 @@ export function MarkdownRenderer({
               <span
                 key={i}
                 className="px-1.5 py-0.5 mx-0.5 rounded bg-warning/20 text-warning border border-warning/40 font-mono text-[11px] font-bold inline-block shadow-sm"
-                title="Dynamic Placeholder Variable"
+                title="Fill in this field"
               >
                 {part}
               </span>

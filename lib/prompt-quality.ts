@@ -62,44 +62,44 @@ export function heuristicPromptQuality(prompt: string): PromptQuality {
     estTokens > 1200 ? 55 : estTokens > 800 ? 65 : estTokens > 500 ? 78 : estTokens > 250 ? 88 : 95;
 
   const dimensions = {
-    clarity: { score: clarityScore, notes: hasClearTask ? 'Clear task is stated explicitly.' : 'Add a single explicit goal sentence.' },
+    clarity: { score: clarityScore, notes: hasClearTask ? 'States the goal clearly.' : 'Add one sentence stating the goal.' },
     structure: {
       score: structureScore,
-      notes: headingCount > 0 ? `Uses ${headingCount} section header${headingCount === 1 ? '' : 's'}.` : 'Add labeled sections (role, steps, constraints, output).',
+      notes: headingCount > 0 ? `Uses ${headingCount} clearly labeled section${headingCount === 1 ? '' : 's'}.` : 'Add labeled sections (goal, steps, rules, output).',
     },
     outputSpec: {
       score: outputSpecScore,
-      notes: hasFormat ? 'Output format is specified.' : 'Specify the exact output format (markdown, JSON, XML, bullet points).',
+      notes: hasFormat ? 'Output format is specified.' : 'Specify the exact output format (sections, bullet points, JSON, XML).',
     },
     context: {
       score: contextScore,
-      notes: hasContext ? 'Provides contextual grounding.' : 'Add context/background so the model does not assume.',
+      notes: hasContext ? 'Provides helpful background.' : 'Add background so the AI does not have to guess.',
     },
     errorHandling: {
       score: errorHandlingScore,
-      notes: hasConstraints ? 'Negative constraints present.' : 'Add explicit "what NOT to do" guardrails and edge-case handling.',
+      notes: hasConstraints ? 'Includes "what to avoid" guidance.' : 'Add clear rules about what to avoid.',
     },
     tokenEfficiency: {
       score: tokenEfficiencyScore,
-      notes: estTokens > 800 ? `~${estTokens} tokens — likely bloated; aim under 600.` : `Lean prompt (~${estTokens} tokens).`,
+      notes: estTokens > 800 ? `~${estTokens} tokens — may be too long; aim under 600.` : `Concise prompt (~${estTokens} tokens).`,
     },
   };
 
   const strengths: string[] = [];
-  if (hasRole) strengths.push('Defines a role/persona for the model.');
+  if (hasRole) strengths.push('Defines who the AI should act as.');
   if (hasClearTask) strengths.push('States a concrete task or goal.');
   if (hasFormat) strengths.push('Specifies the desired output format.');
-  if (hasConstraints) strengths.push('Includes guardrails and negative constraints.');
-  if (hasExamples) strengths.push('Uses examples to anchor expected output.');
-  if (strengths.length === 0) strengths.push('Has a defined structure to iterate on.');
+  if (hasConstraints) strengths.push('Includes "what to avoid" guidance.');
+  if (hasExamples) strengths.push('Uses examples to show the expected result.');
+  if (strengths.length === 0) strengths.push('Has a clear structure to build on.');
 
   const improvements: { issue: string; fix: string }[] = [];
-  if (!hasRole) improvements.push({ issue: 'No role or persona defined.', fix: 'Open with "You are a [expert role]..."' });
-  if (!hasClearTask) improvements.push({ issue: 'Task is vague.', fix: 'Add one sentence with a single verb: "Build/Draft/Write [deliverable]."' });
-  if (!hasFormat) improvements.push({ issue: 'Output format unspecified.', fix: 'State the exact format: markdown, JSON schema, XML, or bullet points.' });
-  if (!hasContext) improvements.push({ issue: 'Missing context.', fix: 'Provide background, target audience, and any reference material.' });
-  if (!hasConstraints) improvements.push({ issue: 'No guardrails.', fix: 'Add "Do NOT..." rules and edge-case fallbacks.' });
-  if (estTokens > 800) improvements.push({ issue: 'Prompt may be bloated.', fix: 'Cut redundant boilerplate; aim under ~600 tokens.' });
+  if (!hasRole) improvements.push({ issue: 'No clear role is defined.', fix: 'Open with "You are a [expert role]..."' });
+  if (!hasClearTask) improvements.push({ issue: 'Task is vague.', fix: 'Add one sentence stating the goal: "Build/Draft/Write [deliverable]."' });
+  if (!hasFormat) improvements.push({ issue: 'Output format is not specified.', fix: 'State the exact format: sections, bullet points, JSON, or XML.' });
+  if (!hasContext) improvements.push({ issue: 'Missing context.', fix: 'Provide background, the audience, and any reference material.' });
+  if (!hasConstraints) improvements.push({ issue: 'No "what to avoid" guidance.', fix: 'Add clear rules about what the AI should not do.' });
+  if (estTokens > 800) improvements.push({ issue: 'The prompt may be too long.', fix: 'Remove repeated text and keep it concise (aim under ~600 tokens).' });
 
   const overall = clamp(
     (clarityScore + structureScore + outputSpecScore + contextScore + errorHandlingScore + tokenEfficiencyScore) / 6
@@ -121,6 +121,6 @@ export function heuristicPromptQuality(prompt: string): PromptQuality {
 export function formatQualityLabel(quality: PromptQuality | undefined | null): string {
   if (!quality) return '—';
   const grade =
-    quality.overall >= 90 ? 'Production-ready' : quality.overall >= 75 ? 'Functional' : quality.overall >= 50 ? 'Unreliable' : 'Broken';
+    quality.overall >= 90 ? 'Ready to use' : quality.overall >= 75 ? 'Good' : quality.overall >= 50 ? 'Needs improvement' : 'Needs a rewrite';
   return `${quality.overall}/100 · ${grade}`;
 }

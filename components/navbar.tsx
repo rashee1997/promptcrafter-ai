@@ -73,7 +73,7 @@ export function Navbar({
                 </span>
               </div>
               <p className="hidden md:block text-[11px] text-text-muted">
-                Atmospheric Prompt Engineering &amp; Optimization
+                Create, refine, and test prompts
               </p>
             </div>
           </div>
@@ -90,7 +90,7 @@ export function Navbar({
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Generator</span>
+              <span>Create</span>
             </button>
 
             <button
@@ -121,7 +121,7 @@ export function Navbar({
               }`}
             >
               <Settings className="w-3.5 h-3.5" />
-              <span>Providers</span>
+              <span>Settings</span>
             </button>
           </nav>
 
@@ -132,7 +132,7 @@ export function Navbar({
               <button
                 onClick={() => handleTabClick('settings')}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-muted border border-border hover:border-brand/50 text-text-secondary transition-colors"
-                title="Active AI Provider"
+                title="Active connection"
               >
                 <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
                 <Cpu className="w-3.5 h-3.5 text-brand" />
@@ -147,7 +147,7 @@ export function Navbar({
                   <button
                     onClick={() => setModelMenuOpen((open) => !open)}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono bg-surface-muted border border-border hover:border-brand/50 text-text-secondary transition-colors"
-                    title="Switch active model"
+                    title="Choose model"
                     aria-expanded={modelMenuOpen}
                     aria-haspopup="menu"
                   >
@@ -199,10 +199,10 @@ export function Navbar({
             {/* Privacy badge */}
             <div
               className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-medium bg-success/10 text-success border border-success/20"
-              title="Local Client Encryption"
+              title="Your data stays in your browser"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Local Encryption</span>
+              <span>Private &amp; local</span>
             </div>
 
             {/* Command Palette Trigger (⌘K) */}
@@ -210,8 +210,8 @@ export function Navbar({
               <button
                 onClick={onOpenPalette}
                 className="hidden md:flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-surface-muted text-text-secondary hover:bg-surface-hover transition-colors border border-border"
-                aria-label="Open command palette"
-                title="Command palette (⌘K)"
+                aria-label="Open quick actions"
+                title="Quick actions (⌘K)"
               >
                 <Command className="w-4 h-4 text-brand" />
                 <kbd className="px-1 py-0.5 rounded-md bg-surface-card border border-border text-[10px] font-mono text-text-muted">
@@ -259,7 +259,7 @@ export function Navbar({
                 }`}
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Generator</span>
+                <span>Create</span>
               </button>
 
               <button
@@ -290,7 +290,7 @@ export function Navbar({
                 }`}
               >
                 <Settings className="w-4 h-4" />
-                <span>Providers</span>
+                <span>Settings</span>
               </button>
             </div>
 
@@ -302,7 +302,7 @@ export function Navbar({
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-2 h-2 rounded-full bg-success animate-pulse shrink-0" />
                 <Cpu className="w-4 h-4 text-brand shrink-0" />
-                <span className="font-semibold truncate">Active AI: {activeProvider.name}</span>
+                <span className="font-semibold truncate">Active: {activeProvider.name}</span>
               </div>
               {onSelectActiveModel && modelList.length > 0 ? (
                 <select
@@ -310,7 +310,7 @@ export function Navbar({
                   onChange={(e) => onSelectActiveModel(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   className="max-w-[150px] bg-surface-card border border-border rounded-lg px-1.5 py-1 text-[11px] font-mono text-text-secondary focus:outline-none focus:ring-1 focus:ring-brand"
-                  title="Switch active model"
+                  title="Choose model"
                 >
                   {modelList.map((m) => (
                     <option key={m} value={m}>

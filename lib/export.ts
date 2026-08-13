@@ -8,11 +8,11 @@
 export type ExportTarget = 'markdown' | 'claude' | 'gpt' | 'gemini' | 'json';
 
 export const EXPORT_TARGETS: { value: ExportTarget; label: string; hint: string }[] = [
-  { value: 'markdown', label: 'Markdown (generic)', hint: 'Plain markdown, works everywhere' },
-  { value: 'claude', label: 'Claude (XML tags)', hint: 'Anthropic-style <role> / <instructions> tags' },
-  { value: 'gpt', label: 'GPT (structured text)', hint: 'OpenAI-friendly plain structured prompt' },
-  { value: 'gemini', label: 'Gemini (bold labels)', hint: 'Google-friendly concise labeled directives' },
-  { value: 'json', label: 'JSON payload', hint: '{"system_prompt": ...} for API usage' },
+  { value: 'markdown', label: 'Plain text', hint: 'Simple text, works everywhere' },
+  { value: 'claude', label: 'Claude', hint: 'Formatted for Claude' },
+  { value: 'gpt', label: 'ChatGPT', hint: 'Formatted for ChatGPT' },
+  { value: 'gemini', label: 'Gemini', hint: 'Formatted for Gemini' },
+  { value: 'json', label: 'JSON', hint: 'For API use' },
 ];
 
 const HEADING_RE = /^(#{1,6})\s+(.+)$/gm;

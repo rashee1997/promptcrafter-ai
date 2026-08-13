@@ -134,7 +134,7 @@ export function TestPromptModal({
         activeModel: abModels[p.id] || p.model || getProviderModelList(p)[0],
       }));
     if (chosen.length < 2) {
-      setError('Select at least two providers to compare.');
+      setError('Select at least two AI services to compare.');
       return;
     }
     setAbRunning(true);
@@ -146,7 +146,7 @@ export function TestPromptModal({
     if (result) {
       setAbResults(result);
     } else {
-      setError('A/B lab failed to run. Check your provider configurations.');
+      setError("The comparison couldn't run. Check your AI service settings.");
     }
   };
 
@@ -191,10 +191,10 @@ export function TestPromptModal({
                 </div>
                 <div>
                   <h3 id="test-prompt-title" className="text-lg font-bold text-text-primary flex items-center gap-2">
-                    Prompt Test Sandbox
+                    Test your prompt
                   </h3>
                   <p className="text-xs text-text-muted">
-                    Test how your generated system prompt responds using {provider.name}
+                    See how your prompt responds with {provider.name}
                   </p>
                 </div>
               </div>
@@ -214,7 +214,7 @@ export function TestPromptModal({
               <div className="flex flex-col gap-3 overflow-y-auto pr-1">
                 <div>
                   <label className="text-xs font-semibold text-text-secondary mb-1 block">
-                    System Prompt Under Test
+                    Your prompt
                   </label>
                   <div className="p-3 rounded-xl bg-surface-muted dark:bg-surface-muted border border-border text-xs font-mono text-text-secondary max-h-40 overflow-y-auto leading-relaxed">
                     <MarkdownRenderer content={generatedPrompt} highlightPlaceholders={true} />
@@ -223,13 +223,13 @@ export function TestPromptModal({
 
                 <div className="flex-1 flex flex-col min-h-[140px]">
                   <label htmlFor="test-input" className="text-xs font-semibold text-text-secondary mb-1 block">
-                    Test User Input (Sample Query)
+                    Sample input
                   </label>
                   <textarea
                     id="test-input"
                     value={testInput}
                     onChange={(e) => setTestInput(e.target.value)}
-                    placeholder="Enter sample input data to test your prompt with (e.g. sample scenario, user question, raw text)..."
+                    placeholder="Enter an example question or scenario to test your prompt with…"
                     className="w-full flex-1 p-3 text-xs rounded-xl border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand min-h-[100px] resize-none"
                   />
                 </div>
@@ -242,12 +242,12 @@ export function TestPromptModal({
                   {isLoading ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Executing Prompt...</span>
+                      <span>Running test…</span>
                     </>
                   ) : (
                     <>
                       <Play className="w-4 h-4 fill-current" />
-                      <span>Run Test Execution</span>
+                      <span>Run test</span>
                     </>
                   )}
                 </button>
@@ -257,9 +257,9 @@ export function TestPromptModal({
                   <div className="rounded-xl border border-brand/25 bg-brand/5 p-3 space-y-2.5">
                     <div className="flex items-center gap-2">
                       <GitCompare className="w-4 h-4 text-brand" />
-                      <span className="text-xs font-bold text-text-primary">Cross-Model A/B Lab</span>
+                      <span className="text-xs font-bold text-text-primary">Compare models</span>
                       <span className="text-[10px] text-text-muted hidden sm:inline">
-                        — same prompt, every model, side by side
+                        — run the same prompt on different models, side by side
                       </span>
                     </div>
 
@@ -313,12 +313,12 @@ export function TestPromptModal({
                       {abRunning ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Running {abSelected.length} models...</span>
+                          <span>Comparing {abSelected.length} models…</span>
                         </>
                       ) : (
                         <>
                           <GitCompare className="w-3.5 h-3.5" />
-                          <span>Run A/B Lab ({abSelected.length} models)</span>
+                          <span>Compare models ({abSelected.length})</span>
                         </>
                       )}
                     </button>
@@ -331,7 +331,7 @@ export function TestPromptModal({
                 <div className="flex items-center justify-between pb-2 border-b border-border mb-2 shrink-0">
                   <span className="text-xs font-mono font-medium text-brand flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
-                    {abResults ? `A/B Results · ${abResults.results.length} models` : 'Live AI Output'}
+                    {abResults ? `Comparison · ${abResults.results.length} models` : 'AI output'}
                   </span>
 
                   {abResults && abResults.consistency !== null && (
@@ -343,7 +343,7 @@ export function TestPromptModal({
                           ? 'bg-warning/10 border-warning/30 text-warning'
                           : 'bg-danger/10 border-danger/30 text-danger'
                       }`}
-                      title="Semantic similarity across model outputs"
+                      title="How similar the answers are across models"
                     >
                       {consistency.tone === 'success' ? (
                         <CheckCircle2 className="w-3 h-3" />
@@ -402,10 +402,10 @@ export function TestPromptModal({
                       {!output && !isLoading && !error && (
                         <div className="h-full flex flex-col items-center justify-center text-center text-text-muted py-12">
                           <Send className="w-8 h-8 mb-2 opacity-40" />
-                          <p>Click &quot;Run Test Execution&quot; to test your prompt live.</p>
+                          <p>Enter a sample input, then click &quot;Run test&quot; to see your prompt in action.</p>
                           {providers && providers.length > 1 && (
                             <p className="mt-1 text-[11px] opacity-80">
-                              Or run the A/B lab to compare every model side by side.
+                              Or compare multiple models side by side.
                             </p>
                           )}
                         </div>

@@ -6,7 +6,7 @@ import { SITE_URL } from '@/lib/site';
  * no-cloud-database positioning).
  */
 export const SITE_DESCRIPTION =
-  'PromptCrafter AI is a browser-based prompt engineering workbench. Describe what you want and it engineers a structured, role-aware AI prompt, then lets you refine it conversationally, version every change, and test it live against any model before you ship it. No accounts, no cloud database, no vendor lock-in — sessions and provider keys stay on your device.';
+  'PromptCrafter AI turns a short description into a clear, ready-to-use AI prompt. Refine it, save every version, and test it with your own AI services — all in your browser, with no account needed and no cloud database.';
 
 /**
  * SoftwareApplication structured data (schema.org), injected into the root

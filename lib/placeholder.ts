@@ -46,7 +46,7 @@ export function auditPlaceholders(content: string): PlaceholderAudit {
     else if (ch === ']') openCount = Math.max(0, openCount - 1);
   }
   if (openCount > 0) {
-    issues.push({ kind: 'unclosed-bracket', message: `${openCount} unclosed bracket${openCount === 1 ? '' : 's'} detected — fill in or remove them.` });
+    issues.push({ kind: 'unclosed-bracket', message: `${openCount} unfinished field${openCount === 1 ? '' : 's'} — add a value or remove the brackets.` });
   }
 
   // Inconsistent names: multiple distinct raw names sharing a normalized key
@@ -60,11 +60,11 @@ export function auditPlaceholders(content: string): PlaceholderAudit {
     if (distinctNames.size > 1) {
       issues.push({
         kind: 'inconsistent-name',
-        message: `Inconsistent placeholder naming: ${group.map((t) => t.raw).join(', ')} refer to the same variable — standardize on one.`,
+        message: `Fields ${group.map((t) => t.raw).join(', ')} mean the same thing — use one name for both.`,
       });
     }
     if (group.length > 3) {
-      issues.push({ kind: 'duplicate-group', message: `"${group[0].raw}" appears ${group.length} times — repeated placeholders reduce signal.` });
+      issues.push({ kind: 'duplicate-group', message: `"${group[0].raw}" appears ${group.length} times — use it once to keep the prompt clear.` });
     }
   }
 

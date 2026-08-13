@@ -135,7 +135,7 @@ export function ProviderSettings({
       setTestStatus({
         loading: false,
         success: false,
-        message: err?.message || 'Failed to connect. Check URL/CORS.',
+        message: err?.message || "Couldn't connect. Check the service URL and try again.",
       });
     }
   };
@@ -204,10 +204,10 @@ export function ProviderSettings({
             </div>
             <div>
               <h2 className="text-base font-bold text-text-primary">
-                AI Provider Management
+                AI connections
               </h2>
               <p className="text-xs text-text-muted">
-                Bring Your Own AI Endpoint or use built-in Google Gemini 3.6
+                Connect your own AI service or use the built-in Google Gemini
               </p>
             </div>
           </div>
@@ -217,7 +217,7 @@ export function ProviderSettings({
             className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-brand text-white hover:bg-brand/80 shadow-md shadow-brand/20 flex items-center gap-1.5 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Custom Provider</span>
+            <span>Add AI service</span>
           </button>
         </div>
 
@@ -225,7 +225,7 @@ export function ProviderSettings({
         <div className="p-3 rounded-xl bg-success/10 border border-success/20 text-xs text-success flex items-start gap-2.5">
           <ShieldCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong className="font-bold">Zero Telemetry & Key Security:</strong> Custom API keys are encrypted locally using browser Web Crypto API (AES-GCM) before being saved. Credentials are proxy-forwarded to your chosen endpoint and never logged on our servers.
+            <strong className="font-bold">Security:</strong> API keys are encrypted on your device before saving and are only sent to the AI service you choose. They are never stored on our servers.
           </p>
         </div>
       </GlassCard>
@@ -236,7 +236,7 @@ export function ProviderSettings({
           <div className="flex items-center justify-between pb-3 border-b border-border">
             <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
               <Server className="w-4 h-4 text-brand" />
-              {editingProviderId ? 'Edit Provider Profile' : 'Configure Custom OpenAI-Compatible Provider'}
+              {editingProviderId ? 'Edit connection' : 'Connect an AI service'}
             </h3>
             <button
               onClick={resetForm}
@@ -249,7 +249,7 @@ export function ProviderSettings({
           {/* Preset Helper Pills */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-semibold text-text-muted">
-              Quick Endpoint Presets:
+              Quick setup:
             </span>
             <div className="flex flex-wrap gap-2">
               <button
@@ -278,7 +278,7 @@ export function ProviderSettings({
                 onClick={() => applyPreset('ollama')}
                 className="px-2.5 py-1 text-xs rounded-lg bg-surface-muted hover:bg-brand/10 text-text-secondary border border-border transition-colors"
               >
-                Local Ollama
+                Local server
               </button>
             </div>
           </div>
@@ -288,7 +288,7 @@ export function ProviderSettings({
               {/* Provider Name */}
               <div>
                 <label htmlFor="provider-name" className="text-xs font-semibold text-text-secondary mb-1 block">
-                  Provider Profile Name *
+                  Connection name *
                 </label>
                 <input
                   id="provider-name"
@@ -304,7 +304,7 @@ export function ProviderSettings({
               {/* Base URL */}
               <div>
                 <label htmlFor="provider-base-url" className="text-xs font-semibold text-text-secondary mb-1 block">
-                  Base API URL *
+                  Service URL *
                 </label>
                 <input
                   id="provider-base-url"
@@ -321,7 +321,7 @@ export function ProviderSettings({
               <div>
                 <label htmlFor="provider-api-key" className="text-xs font-semibold text-text-secondary mb-1 block flex items-center justify-between">
                   <span>API Key</span>
-                  <span className="text-[10px] text-text-muted">(Encrypted locally)</span>
+                  <span className="text-[10px] text-text-muted">(Encrypted on your device)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -352,7 +352,7 @@ export function ProviderSettings({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <label className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5 text-brand" />
-                  Model Identifiers * ({
+                  Models * ({
                     modelListValue.length > 0 ? `${modelListValue.length} configured` : 'add at least one'
                   })
                 </label>
@@ -362,7 +362,7 @@ export function ProviderSettings({
                   className="px-2.5 py-1 text-xs rounded-lg bg-surface-muted hover:bg-brand/10 text-text-secondary border border-border flex items-center gap-1 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Model</span>
+                  <span>Add model</span>
                 </button>
               </div>
 
@@ -394,9 +394,8 @@ export function ProviderSettings({
                 ))}
               </div>
               <p className="text-[11px] text-text-muted leading-relaxed">
-                Store multiple models for this endpoint. The first model is the default; switch the active
-                model per provider from the navbar or the generator bar. All models are saved locally with
-                the provider profile.
+                Add the models you want to use. The first one is the default. You can switch models
+                from the top bar or the Create page.
               </p>
             </div>
 
@@ -420,7 +419,7 @@ export function ProviderSettings({
 
               <div>
                 <label htmlFor="provider-max-tokens" className="text-xs font-semibold text-text-secondary mb-1 block">
-                  Max Tokens
+                  Maximum length
                 </label>
                 <input
                   id="provider-max-tokens"
@@ -441,10 +440,10 @@ export function ProviderSettings({
                   onChange={(e) => setDisableStreaming(e.target.checked)}
                   className="w-4 h-4 text-brand rounded border-border focus:ring-brand accent-brand"
                 />
-                <span>Disable Streaming (Request complete response in a single payload)</span>
+                <span>Wait for the complete response</span>
               </label>
               <p className="text-[11px] text-text-muted mt-1 ml-6 leading-relaxed">
-                Check this if your provider endpoint or local self-hosted instance does not support server-sent event (SSE) streaming reliably.
+                Turn this on if your AI service does not support real-time streaming.
               </p>
             </div>
 
@@ -471,14 +470,14 @@ export function ProviderSettings({
                 className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface-muted text-text-secondary hover:bg-surface-hover dark:hover:bg-surface-hover border border-border flex items-center gap-1.5 transition-colors"
               >
                 {testStatus.loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5 text-brand" />}
-                <span>Test Connection</span>
+                <span>Test connection</span>
               </button>
 
               <button
                 type="submit"
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand/80 shadow-md shadow-brand/20 transition-all"
               >
-                {editingProviderId ? 'Update Provider Profile' : 'Save Provider Profile'}
+                {editingProviderId ? 'Update connection' : 'Save connection'}
               </button>
             </div>
           </form>
@@ -488,7 +487,7 @@ export function ProviderSettings({
       {/* Provider Profiles Grid */}
       <div className="space-y-3">
         <label className="text-xs font-semibold uppercase tracking-wider text-text-muted block">
-          Available Provider Profiles
+          Your AI connections
         </label>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -549,7 +548,7 @@ export function ProviderSettings({
                         <button
                           onClick={() => editProvider(p)}
                           className="p-1.5 rounded-lg text-text-muted hover:text-brand transition-colors"
-                          title="Edit Profile"
+                          title="Edit"
                           aria-label={`Edit ${p.name}`}
                         >
                           <Edit3 className="w-4 h-4" />
@@ -557,7 +556,7 @@ export function ProviderSettings({
                         <button
                           onClick={() => onDeleteProvider(p.id)}
                           className="p-1.5 rounded-lg text-text-muted hover:text-rose-500 transition-colors"
-                          title="Delete Profile"
+                          title="Delete"
                           aria-label={`Delete ${p.name}`}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -567,11 +566,11 @@ export function ProviderSettings({
                   </div>
 
                   <div className="text-[11px] text-text-muted font-mono space-y-0.5 truncate bg-surface-muted p-2 rounded-lg border border-border/50 my-2">
-                    <div className="truncate">URL: {p.baseUrl}</div>
+                    <div className="truncate">Service: {p.baseUrl}</div>
                     <div className="flex items-center justify-between">
-                      <span>Temp: {p.temperature}</span>
+                      <span>Temperature: {p.temperature}</span>
                       {p.disableStreaming ? (
-                        <span className="text-[10px] text-warning font-sans font-medium">Non-streaming</span>
+                        <span className="text-[10px] text-warning font-sans font-medium">Full response</span>
                       ) : (
                         <span className="text-[10px] text-success font-sans font-medium">Streaming</span>
                       )}
@@ -583,14 +582,14 @@ export function ProviderSettings({
                   {isActive ? (
                     <div className="w-full py-1.5 px-3 rounded-xl bg-brand/10 border border-brand/20 text-brand text-xs font-bold flex items-center justify-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>Active Provider</span>
+                      <span>Active</span>
                     </div>
                   ) : (
                     <button
                       onClick={() => onSelectActiveProvider(p.id)}
                       className="w-full py-1.5 px-3 rounded-xl border border-border hover:border-brand text-text-secondary text-xs font-semibold transition-colors"
                     >
-                      Set as Active
+                      Set as active
                     </button>
                   )}
                 </div>
