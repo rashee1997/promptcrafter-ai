@@ -43,12 +43,14 @@ export function Sparkline({
   fill = false,
   ariaLabel = 'sparkline',
 }: SparklineProps) {
+  // Hook must run unconditionally (rules-of-hooks); the id is only used in the SVG below.
+  const id = React.useId().replace(/:/g, '');
+
   if (values.length === 0) {
     return <div className="h-[24px] text-[10px] text-text-muted flex items-center">—</div>;
   }
 
   const points = toPoints(values, width, height);
-  const id = React.useId().replace(/:/g, '');
 
   return (
     <svg

@@ -1,0 +1,20 @@
+# PromptCrafter AI
+
+> PromptCrafter AI is a browser-based prompt engineering workbench. Users describe a task and it generates a structured, role-aware system prompt, then supports conversational refinement, immutable versioning, live testing against configured models, and quality scoring across six rubric dimensions. The app is local-first: sessions and provider settings are stored in the browser, and users bring their own model API keys through a built-in Gemini integration or any OpenAI-compatible provider. It has no accounts and no backend database.
+
+## Docs
+
+- [README](https://github.com/rashee1997/promptcrafter-ai/blob/main/README.md): product overview, key features, setup, usage guide, and known limitations
+- [DESIGN.md](https://github.com/rashee1997/promptcrafter-ai/blob/main/DESIGN.md): visual system, layout, and UI direction
+- [CHANGELOG.md](https://github.com/rashee1997/promptcrafter-ai/blob/main/CHANGELOG.md): version history
+
+## Blog
+
+- [Why we built a measurement loop for prompts](/blog/why-we-built-a-measurement-loop-for-prompts)
+- [PromptCrafter AI vs Promptfoo](/blog/promptcrafter-vs-promptfoo)
+- [PromptCrafter AI vs SurePrompts and Jotform](/blog/promptcrafter-vs-sureprompts-jotform)
+- [The Prompt Measurement Lab is here](/blog/prompt-measurement-lab-launch)
+
+## FAQ
+
+- [Frequently asked questions](/faq)

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { Navbar } from '@/components/navbar';
 import { PromptForm } from '@/components/prompt-form';
 import { PromptOutput } from '@/components/prompt-output';
@@ -552,6 +553,33 @@ export default function HomePage() {
           tabIndex={-1}
           className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8"
         >
+          {/* Static intro block — server-rendered into the initial HTML for SEO/AEO */}
+          <section aria-labelledby="home-intro-heading" className="mb-6 lg:mb-8 max-w-3xl">
+            <h1
+              id="home-intro-heading"
+              className="text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-text-primary"
+            >
+              Generate, measure, and version production-ready AI prompts
+            </h1>
+            <p className="mt-3 text-sm sm:text-base text-text-secondary leading-relaxed">
+              PromptCrafter AI turns prompt writing into a structured workflow: describe what you
+              want, and it engineers a role-aware prompt, scores it across six quality dimensions,
+              tests it live against any model you configure, and versions every change. No accounts,
+              no cloud database — your work stays in your browser with your own API keys.
+            </p>
+            <p className="mt-2 text-xs sm:text-sm text-text-muted">
+              Learn how the measurement loop works in the{' '}
+              <Link href="/blog" className="font-semibold text-brand hover:underline">
+                blog
+              </Link>
+              , or read the{' '}
+              <Link href="/faq" className="font-semibold text-brand hover:underline">
+                FAQ
+              </Link>
+              .
+            </p>
+          </section>
+
           {activeTab === 'generator' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left Column: Generator Form Controls */}

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@plugin "@tailwindcss/typography";
+
 /* ── Semantic Design Tokens ── */
 @theme {
   /* Surfaces */
