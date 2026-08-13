@@ -1,4 +1,4 @@
-import { HistoryItem, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
+import { HistoryItem, PromptQuality, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
 import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
 
@@ -294,6 +294,63 @@ export async function addVersionToSession(
     versions: updatedVersions,
     messages: updatedMessages,
     activeVersionId: version.id,
+    updatedAt: Date.now(),
+  };
+
+  await saveSession(updatedSession);
+  return updatedSession;
+}
+
+// --- Measurement APIs (F1 scorecard, F3 regression suite, F6 health) ---
+
+export async function setVersionQuality(sessionId: string, versionId: string, quality: PromptQuality): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+
+  const updatedVersions = session.versions.map((v) =>
+    v.id === versionId ? { ...v, quality } : v
+  );
+
+  const updatedSession: Session = {
+    ...session,
+    versions: updatedVersions,
+    updatedAt: Date.now(),
+  };
+
+  await saveSession(updatedSession);
+  return updatedSession;
+}
+
+export async function saveTestSuite(sessionId: string, testSuite: string[]): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+
+  const updatedSession: Session = {
+    ...session,
+    testSuite,
+    updatedAt: Date.now(),
+  };
+
+  await saveSession(updatedSession);
+  return updatedSession;
+}
+
+export async function saveTestRun(sessionId: string, testRun: TestRun): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+
+  // Keep the last 20 runs per session to bound storage growth
+  const updatedRuns = [testRun, ...(session.testRuns || [])].slice(0, 20);
+
+  const updatedSession: Session = {
+    ...session,
+    testRuns: updatedRuns,
     updatedAt: Date.now(),
   };
 

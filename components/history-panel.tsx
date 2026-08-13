@@ -23,9 +23,12 @@ import {
 import { GlassCard } from './glass-card';
 import { ConfirmModal } from './confirm-modal';
 import { MarkdownRenderer } from './markdown-renderer';
-import { PromptVersion, Session } from '@/types';
+import { PromptVersion, ProviderConfig, Session } from '@/types';
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { computeWordDiff } from '@/lib/diff';
+import { evaluatePromptQuality } from '@/lib/ai-client';
+import { setVersionQuality } from '@/lib/storage';
+import { PASS_THRESHOLD } from '@/lib/prompt-quality';
 
 interface HistoryPanelProps {
   sessions: Session[];
@@ -37,6 +40,10 @@ interface HistoryPanelProps {
   onRenameVersion: (sessionId: string, versionId: string, newName: string) => void;
   onTestPrompt: (promptText: string) => void;
   onImportSessions?: (sessions: Session[]) => void;
+  /** F6 — current provider used to re-verify prompt health. */
+  activeProvider: ProviderConfig;
+  /** F6 — propagate storage updates (new quality scores) back to the page. */
+  onSessionUpdate?: (session: Session) => void;
 }
 
 export function HistoryPanel({
@@ -49,6 +56,8 @@ export function HistoryPanel({
   onRenameVersion,
   onTestPrompt,
   onImportSessions,
+  activeProvider,
+  onSessionUpdate,
 }: HistoryPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<string>('all');
@@ -70,6 +79,11 @@ export function HistoryPanel({
     versionAId: string;
     versionBId: string;
   }>({ sessionId: null, versionAId: '', versionBId: '' });
+
+  // F6 — per-session prompt-health re-verification state
+  const [reVerify, setReVerify] = useState<
+    Record<string, { checking: boolean; oldScore: number | null; newScore: number | null; message?: string }>
+  >({});
 
   const filteredSessions = sessions.filter((s) => {
     const topicMatch = s.originalInput?.topic?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
@@ -128,6 +142,51 @@ export function HistoryPanel({
       onRenameVersion(sessionId, versionId, editingVersion.name.trim());
     }
     setEditingVersion(null);
+  };
+
+  // F6 — re-run the AI judge against the active version and compare with the stored score
+  const handleReVerify = async (session: Session) => {
+    const activeVersion =
+      session.versions.find((v) => v.id === session.activeVersionId) ||
+      session.versions[session.versions.length - 1];
+    if (!activeVersion) return;
+
+    const oldScore = activeVersion.quality?.overall ?? null;
+    setReVerify((prev) => ({
+      ...prev,
+      [session.id]: { checking: true, oldScore, newScore: null },
+    }));
+
+    const quality = await evaluatePromptQuality(activeProvider, activeVersion.content);
+    if (!quality) {
+      setReVerify((prev) => ({
+        ...prev,
+        [session.id]: { checking: false, oldScore, newScore: null, message: 'Re-verify failed — check your provider.' },
+      }));
+      return;
+    }
+
+    try {
+      const updated = await setVersionQuality(session.id, activeVersion.id, quality);
+      onSessionUpdate?.(updated);
+    } catch {
+      // storage failure — still show the computed result
+    }
+
+    const delta = oldScore !== null ? quality.overall - oldScore : null;
+    let message: string;
+    if (delta === null) {
+      message = `Scored ${quality.overall}/100 — baseline set.`;
+    } else if (Math.abs(delta) >= 8) {
+      message = `⚠ Prompt drifted: ${oldScore} → ${quality.overall} (${delta > 0 ? '+' : ''}${delta} pts).`;
+    } else {
+      message = `Stable: ${oldScore} → ${quality.overall} (${delta > 0 ? '+' : ''}${delta} pts).`;
+    }
+
+    setReVerify((prev) => ({
+      ...prev,
+      [session.id]: { checking: false, oldScore, newScore: quality.overall, message },
+    }));
   };
 
   return (
@@ -242,6 +301,7 @@ export function HistoryPanel({
       ) : (
         <div className="space-y-3">
           {filteredSessions.map((session) => {
+            const rv = reVerify[session.id];
             const isExpanded = expandedSessionId === session.id;
             const formattedDate = new Date(session.updatedAt).toLocaleString(undefined, {
               month: 'short',
@@ -286,9 +346,48 @@ export function HistoryPanel({
                     <h4 className="text-sm font-bold text-text-primary line-clamp-1">
                       &quot;{session.title}&quot;
                     </h4>
-                    <p className="text-xs text-text-muted  line-clamp-1 mt-0.5">
-                      Latest: v{activeVersion?.versionNumber} ({activeVersion?.name})
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      <p className="text-xs text-text-muted line-clamp-1">
+                        Latest: v{activeVersion?.versionNumber} ({activeVersion?.name})
+                      </p>
+
+                      {/* F6 — stored quality badge */}
+                      {activeVersion?.quality && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                            activeVersion.quality.overall >= PASS_THRESHOLD
+                              ? 'bg-success/10 border-success/25 text-success'
+                              : activeVersion.quality.overall >= 50
+                              ? 'bg-warning/10 border-warning/25 text-warning'
+                              : 'bg-danger/10 border-danger/25 text-danger'
+                          }`}
+                        >
+                          Quality {activeVersion.quality.overall}/100
+                        </span>
+                      )}
+
+                      {/* F6 — model changed since the score was stored */}
+                      {activeVersion?.quality && activeProvider.model !== activeVersion.modelUsed && (
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-warning/10 border border-warning/25 text-warning">
+                          Model now {activeProvider.model} — re-verify
+                        </span>
+                      )}
+                    </div>
+
+                    {/* F6 — re-verification result / drift alert */}
+                    {rv?.message && (
+                      <p
+                        className={`text-[11px] font-semibold mt-1 ${
+                          rv.message.includes('Drifted')
+                            ? 'text-warning'
+                            : rv.message.includes('failed')
+                            ? 'text-danger'
+                            : 'text-success'
+                        }`}
+                      >
+                        {rv.message}
+                      </p>
+                    )}
                   </button>
 
                   {/* Quick Session Actions */}
@@ -303,6 +402,17 @@ export function HistoryPanel({
                       aria-pressed={!!session.favorite}
                     >
                       <Star className={`w-4 h-4 ${session.favorite ? 'fill-current' : ''}`} />
+                    </button>
+
+                    {/* F6 — re-verify prompt health with the AI judge */}
+                    <button
+                      onClick={() => handleReVerify(session)}
+                      disabled={rv?.checking}
+                      className="p-1.5 rounded-lg text-text-muted hover:text-brand transition-colors disabled:opacity-40"
+                      title="Re-verify prompt health (re-score with the AI judge and compare)"
+                      aria-label="Re-verify prompt health"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${rv?.checking ? 'animate-spin' : ''}`} />
                     </button>
 
                     <button

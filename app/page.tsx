@@ -446,6 +446,12 @@ export default function HomePage() {
     }
   };
 
+  // F1/F3/F6 — propagate storage-backed measurement updates (quality, suite, runs)
+  const handleSessionUpdate = (session: Session) => {
+    setCurrentSession(session);
+    getSessions().then(setSessions);
+  };
+
   const handleOpenSandboxTest = (promptText: string) => {
     setPromptToTest(promptText);
     setTestModalOpen(true);
@@ -570,6 +576,7 @@ export default function HomePage() {
                   onSaveEditVersion={handleSaveEditVersion}
                   onCancelGeneration={handleCancelGeneration}
                   onClearOutput={handleClearOutput}
+                  onSessionUpdate={handleSessionUpdate}
                 />
               </div>
             </div>
@@ -587,6 +594,8 @@ export default function HomePage() {
                 onRenameVersion={handleRenameVersion}
                 onTestPrompt={handleOpenSandboxTest}
                 onImportSessions={handleImportSessions}
+                activeProvider={activeProvider}
+                onSessionUpdate={handleSessionUpdate}
               />
             </div>
           )}
@@ -625,6 +634,7 @@ export default function HomePage() {
         onClose={() => setTestModalOpen(false)}
         generatedPrompt={promptToTest}
         provider={activeProvider}
+        providers={providers}
       />
 
       {/* Command Palette (⌘K) */}

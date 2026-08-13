@@ -1,4 +1,14 @@
-import { GenerationRequest, RefineRequest, TestPromptRequest } from '@/types';
+import {
+  ABTestRequest,
+  ABTestResult,
+  CaseEvaluationRequest,
+  CaseEvaluationResult,
+  GenerationRequest,
+  PromptQuality,
+  ProviderConfig,
+  RefineRequest,
+  TestPromptRequest,
+} from '@/types';
 
 export async function generatePromptStream(
   request: GenerationRequest,
@@ -135,5 +145,59 @@ export async function testPromptExecution(
   } catch (err: any) {
     if (err.name === 'AbortError') return;
     onError(err instanceof Error ? err : new Error(String(err)));
+  }
+}
+
+/** F1 — score a prompt against the quality rubric via the LLM judge. */
+export async function evaluatePromptQuality(
+  provider: ProviderConfig,
+  prompt: string
+): Promise<PromptQuality | null> {
+  try {
+    const res = await fetch('/api/evaluate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, prompt }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.quality || null;
+  } catch (err) {
+    console.error('evaluatePromptQuality failed:', err);
+    return null;
+  }
+}
+
+/** F2 — run the same prompt + test input across multiple providers. */
+export async function runABTest(request: ABTestRequest): Promise<ABTestResult | null> {
+  try {
+    const res = await fetch('/api/ab-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error('runABTest failed:', err);
+    return null;
+  }
+}
+
+/** F3 — execute a prompt against one test input and judge the output. */
+export async function runCaseEvaluation(
+  request: CaseEvaluationRequest
+): Promise<CaseEvaluationResult | null> {
+  try {
+    const res = await fetch('/api/evaluate-output', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error('runCaseEvaluation failed:', err);
+    return null;
   }
 }
