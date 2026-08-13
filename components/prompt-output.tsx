@@ -86,6 +86,7 @@ export function PromptOutput({
 
   // F4 placeholder fill state
   const [fillValues, setFillValues] = useState<Record<string, string>>({});
+  const [fillOpen, setFillOpen] = useState(false);
 
   // F5 export adapter state
   const [exportTarget, setExportTarget] = useState<ExportTarget>('markdown');
@@ -644,67 +645,77 @@ export function PromptOutput({
 
       {/* F4 — Placeholder audit & variable fill */}
       {!isGenerating && (audit.keys.length > 0 || audit.issues.length > 0) && (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 space-y-2.5">
+          <button
+            type="button"
+            onClick={() => setFillOpen((open) => !open)}
+            className="w-full flex items-center justify-between gap-2 text-left"
+            aria-expanded={fillOpen}
+          >
+            <span className="flex items-center gap-2">
               <Wand2 className="w-4 h-4 text-warning" />
               <span className="text-xs font-bold text-text-primary">Placeholder Audit &amp; Fill</span>
               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-warning/20 text-warning border border-warning/30">
                 {audit.keys.length} variable{audit.keys.length === 1 ? '' : 's'}
               </span>
-            </div>
-            {audit.issues.length > 0 && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-warning">
-                <AlertTriangle className="w-3 h-3" />
-                {audit.issues.length} issue{audit.issues.length === 1 ? '' : 's'} found
-              </span>
-            )}
-          </div>
-
-          {audit.issues.length > 0 && (
-            <ul className="space-y-1">
-              {audit.issues.map((issue, i) => (
-                <li key={i} className="text-[11px] text-warning flex gap-1.5">
-                  <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-                  <span>{issue.message}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {audit.keys.map((key) => {
-              const sample = audit.tokens.find((t) => t.normalized === key);
-              return (
-                <label key={key} className="block">
-                  <span className="text-[10px] font-semibold text-text-muted block mb-1 uppercase tracking-wide">
-                    {sample?.raw || key}
-                  </span>
-                  <input
-                    type="text"
-                    value={fillValues[key] || ''}
-                    onChange={(e) => setFillValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                    placeholder="Sample value for this variable..."
-                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
-                  />
-                </label>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleCopy(filledPrompt, 'filled')}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1.5 transition-colors shadow-sm"
-            >
-              {copiedType === 'filled' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedType === 'filled' ? 'Filled Prompt Copied!' : 'Copy Filled Prompt'}</span>
-            </button>
-            <span className="text-[10px] text-text-muted">
-              Unfilled variables stay bracketed so you can spot them before pasting.
+              {audit.issues.length > 0 && (
+                <span className="hidden sm:flex items-center gap-1 text-[10px] font-semibold text-warning">
+                  <AlertTriangle className="w-3 h-3" />
+                  {audit.issues.length} issue{audit.issues.length === 1 ? '' : 's'} found
+                </span>
+              )}
             </span>
-          </div>
+            <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${fillOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {fillOpen && (
+            <div className="space-y-3 pt-1">
+              {audit.issues.length > 0 && (
+                <ul className="space-y-1">
+                  {audit.issues.map((issue, i) => (
+                    <li key={i} className="text-[11px] text-warning flex gap-1.5">
+                      <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span>{issue.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {audit.keys.map((key) => {
+                  const sample = audit.tokens.find((t) => t.normalized === key);
+                  return (
+                    <label key={key} className="block">
+                      <span className="text-[10px] font-semibold text-text-muted block mb-1 uppercase tracking-wide">
+                        {sample?.raw || key}
+                      </span>
+                      <input
+                        type="text"
+                        value={fillValues[key] || ''}
+                        onChange={(e) => setFillValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                        placeholder="Sample value for this variable..."
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopy(filledPrompt, 'filled')}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  {copiedType === 'filled' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedType === 'filled' ? 'Filled Prompt Copied!' : 'Copy Filled Prompt'}</span>
+                </button>
+                <span className="text-[10px] text-text-muted">
+                  Unfilled variables stay bracketed so you can spot them before pasting.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
