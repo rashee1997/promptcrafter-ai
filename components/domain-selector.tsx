@@ -67,7 +67,7 @@ export function DomainSelector({
               aria-pressed={isSelected}
               className={`group relative p-3 rounded-xl border text-left transition-all duration-200 flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-brand/10 dark:bg-brand/15 border-brand text-text-primary dark:text-indigo-100 ring-2 ring-indigo-500/30 shadow-md'
+                  ? 'bg-brand/10 dark:bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30 shadow-md'
                   : 'bg-surface-card/50 border-border text-text-secondary hover:border-border-hover hover:bg-surface-card/80'
               }`}
             >

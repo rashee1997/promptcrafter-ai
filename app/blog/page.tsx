@@ -25,11 +25,11 @@ export default function BlogIndexPage() {
           {posts.map((post) => (
             <article
               key={post.slug}
-              className="border border-border rounded-xl bg-surface-card p-5 sm:p-6"
+              className="border border-border rounded-xl bg-surface-card p-5 sm:p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
             >
               <time
                 dateTime={post.date}
-                className="text-[11px] font-semibold uppercase tracking-wider text-text-muted"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-text-muted bg-surface-muted border border-border"
               >
                 {post.date}
               </time>

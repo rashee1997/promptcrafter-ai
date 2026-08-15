@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ChevronDown } from 'lucide-react';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 
@@ -78,15 +79,25 @@ export default function FaqPage() {
         <p className="mt-2 text-sm sm:text-base text-text-secondary">
           Questions about how PromptCrafter AI works, where your data lives, and what it can do.
         </p>
-        <div className="mt-8 space-y-6">
+        <div className="mt-8 space-y-3">
           {FAQS.map((faq) => (
-            <section
+            <details
               key={faq.question}
-              className="border border-border rounded-xl bg-surface-card p-5 sm:p-6"
+              className="faq-item group border border-border rounded-xl bg-surface-card p-5 sm:p-6"
             >
-              <h2 className="text-base sm:text-lg font-bold leading-snug">{faq.question}</h2>
-              <p className="mt-2 text-sm text-text-secondary leading-relaxed">{faq.answer}</p>
-            </section>
+              <summary className="flex items-center justify-between gap-3">
+                <h2 className="text-base sm:text-lg font-bold leading-snug">{faq.question}</h2>
+                <ChevronDown
+                  className="w-4 h-4 shrink-0 text-text-muted transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+              <div className="faq-body">
+                <div className="pt-3">
+                  <p className="text-sm text-text-secondary leading-relaxed">{faq.answer}</p>
+                </div>
+              </div>
+            </details>
           ))}
         </div>
       </main>

@@ -22,6 +22,7 @@ import { runABTest, testPromptExecution } from '@/lib/ai-client';
 import { consistencyLabel } from '@/lib/similarity';
 import { getProviderModelList } from '@/lib/storage';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { useScrollLock } from '@/lib/use-scroll-lock';
 
 interface TestPromptModalProps {
   isOpen: boolean;
@@ -56,6 +57,9 @@ export function TestPromptModal({
 
   // Keep Tab/Shift+Tab cycling inside the dialog while it's open
   useFocusTrap(dialogRef, isOpen);
+
+  // Prevent the page behind the modal from scrolling
+  useScrollLock(isOpen);
 
   // Default A/B selection to all available providers once, using each provider's active model
   useEffect(() => {
@@ -186,7 +190,7 @@ export function TestPromptModal({
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-border shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-brand/10 text-indigo-500 border border-brand/20">
+                <div className="p-2.5 rounded-xl bg-brand/10 text-brand border border-brand/20">
                   <Bot className="w-5 h-5" />
                 </div>
                 <div>
@@ -237,7 +241,7 @@ export function TestPromptModal({
                 <button
                   onClick={handleRunTest}
                   disabled={isLoading || abRunning}
-                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all shrink-0"
+                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all shrink-0"
                 >
                   {isLoading ? (
                     <>

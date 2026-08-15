@@ -14,6 +14,7 @@ import {
   Cpu,
 } from 'lucide-react';
 import { DomainSelector } from './domain-selector';
+import { Expandable } from './expandable';
 import { GlassCard } from './glass-card';
 import { DEFAULT_OUTPUT_CHAR_LIMIT, DOMAIN_PRESETS, FRAMEWORK_OPTIONS, TONE_OPTIONS } from '@/lib/domains';
 import { getProviderModelList } from '@/lib/storage';
@@ -216,8 +217,7 @@ export function PromptForm({
             {showStyle ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
-          {showStyle && (
-            <div id="style-panel" className="mt-4 space-y-6">
+          <Expandable open={showStyle} id="style-panel" className="mt-4 space-y-6">
               {/* Prompt Framework Selector */}
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -352,8 +352,7 @@ export function PromptForm({
                   {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
 
-                {showAdvanced && (
-                  <div id="advanced-panel" className="mt-4 space-y-4 p-4 rounded-xl bg-surface-muted border border-border">
+                <Expandable open={showAdvanced} id="advanced-panel" className="mt-4 space-y-4 p-4 rounded-xl bg-surface-muted border border-border">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Target Audience */}
                       <div>
@@ -455,11 +454,9 @@ export function PromptForm({
                         className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand resize-none"
                       />
                     </div>
-                  </div>
-                )}
+                  </Expandable>
               </div>
-            </div>
-          )}
+            </Expandable>
         </div>
 
         {/* Sticky Action Bar: Generate is always visible */}
@@ -513,7 +510,7 @@ export function PromptForm({
             <button
               type="submit"
               disabled={isGenerating || !topic.trim()}
-              className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:via-indigo-400 hover:to-cyan-400 text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.99]"
+              className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.985]"
             >
               {isGenerating ? (
                 <>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   History,
   Search,
@@ -29,6 +29,8 @@ import { computeWordDiff } from '@/lib/diff';
 import { evaluatePromptQuality } from '@/lib/ai-client';
 import { setVersionQuality } from '@/lib/storage';
 import { PASS_THRESHOLD } from '@/lib/prompt-quality';
+import { toast } from '@/components/toast';
+import { Sparkline } from '@/components/sparkline';
 
 interface HistoryPanelProps {
   sessions: Session[];
@@ -44,6 +46,10 @@ interface HistoryPanelProps {
   activeProvider: ProviderConfig;
   /** F6 — propagate storage updates (new quality scores) back to the page. */
   onSessionUpdate?: (session: Session) => void;
+  /** Deep link from the workspace version picker: open this session's diff for the given versions. */
+  pendingDiff?: { sessionId: string; versionAId: string; versionBId: string } | null;
+  /** Called once a pending diff has been applied (so the page can clear it). */
+  onPendingDiffHandled?: () => void;
 }
 
 export function HistoryPanel({
@@ -58,6 +64,8 @@ export function HistoryPanel({
   onImportSessions,
   activeProvider,
   onSessionUpdate,
+  pendingDiff,
+  onPendingDiffHandled,
 }: HistoryPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<string>('all');
@@ -73,17 +81,31 @@ export function HistoryPanel({
     name: string;
   } | null>(null);
 
-  // Diff comparison state for expanded session: { sessionId, versionAId, versionBId }
+  // Diff comparison state for expanded session: { sessionId, versionAId, versionBId, diffMode }
   const [diffState, setDiffState] = useState<{
     sessionId: string | null;
     versionAId: string;
     versionBId: string;
-  }>({ sessionId: null, versionAId: '', versionBId: '' });
+    diffMode: 'unified' | 'split';
+  }>({ sessionId: null, versionAId: '', versionBId: '', diffMode: 'unified' });
 
   // F6 — per-session prompt-health re-verification state
   const [reVerify, setReVerify] = useState<
     Record<string, { checking: boolean; oldScore: number | null; newScore: number | null; message?: string }>
   >({});
+
+  // Deep link from the workspace version picker — apply + expand the target session once.
+  useEffect(() => {
+    if (!pendingDiff) return;
+    setExpandedSessionId(pendingDiff.sessionId);
+    setDiffState({
+      sessionId: pendingDiff.sessionId,
+      versionAId: pendingDiff.versionAId,
+      versionBId: pendingDiff.versionBId,
+      diffMode: 'split',
+    });
+    onPendingDiffHandled?.();
+  }, [pendingDiff, onPendingDiffHandled]);
 
   const filteredSessions = sessions.filter((s) => {
     const topicMatch = s.originalInput?.topic?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
@@ -131,7 +153,7 @@ export function HistoryPanel({
           onImportSessions(parsed);
         }
       } catch (err) {
-        alert("That file couldn't be read. Choose a valid export file.");
+        toast.error("Couldn't read that file", 'Choose a valid PromptCrafter export file.');
       }
     };
     reader.readAsText(file);
@@ -216,12 +238,12 @@ export function HistoryPanel({
               className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-card/80 border border-border hover:border-brand/40 text-text-secondary flex items-center gap-1.5 transition-colors disabled:opacity-40"
               title="Export saved prompts"
             >
-              <Download className="w-3.5 h-3.5 text-indigo-500" />
+              <Download className="w-3.5 h-3.5 text-brand" />
               <span className="hidden sm:inline">Export</span>
             </button>
 
             <label className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-card/80 border border-border hover:border-brand/40 text-text-secondary flex items-center gap-1.5 cursor-pointer transition-colors">
-              <Upload className="w-3.5 h-3.5 text-indigo-500" />
+              <Upload className="w-3.5 h-3.5 text-brand" />
               <span className="hidden sm:inline">Import</span>
               <input
                 type="file"
@@ -234,7 +256,7 @@ export function HistoryPanel({
             {sessions.length > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-danger/10 border border-danger/20 text-rose-600 dark:text-danger hover:bg-danger/20 flex items-center gap-1.5 transition-colors"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-danger/10 border border-danger/20 text-danger hover:bg-danger/20 flex items-center gap-1.5 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Clear All</span>
@@ -293,10 +315,17 @@ export function HistoryPanel({
 
       {/* Sessions List */}
       {filteredSessions.length === 0 ? (
-        <GlassCard variant="subtle" className="p-8 text-center text-text-muted">
+        <GlassCard variant="subtle" className="p-10 text-center text-text-muted">
           <History className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm font-semibold">No saved prompts match your search.</p>
           <p className="text-xs mt-1">Try a different search or create a new prompt.</p>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('pc:new-prompt'))}
+            className="mt-5 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow transition-all active:scale-[0.985]"
+          >
+            Create a prompt
+          </button>
         </GlassCard>
       ) : (
         <div className="space-y-3">
@@ -354,14 +383,16 @@ export function HistoryPanel({
                       {/* F6 — stored quality badge */}
                       {activeVersion?.quality && (
                         <span
-                          className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
                             activeVersion.quality.overall >= PASS_THRESHOLD
                               ? 'bg-success/10 border-success/25 text-success'
                               : activeVersion.quality.overall >= 50
                               ? 'bg-warning/10 border-warning/25 text-warning'
                               : 'bg-danger/10 border-danger/25 text-danger'
                           }`}
+                          title={`Health: ${activeVersion.quality.overall}/100`}
                         >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
                           Quality {activeVersion.quality.overall}/100
                         </span>
                       )}
@@ -374,19 +405,19 @@ export function HistoryPanel({
                       )}
                     </div>
 
-                    {/* F6 — re-verification result / drift alert */}
+                    {/* F6 — re-verification result / drift alert chip */}
                     {rv?.message && (
-                      <p
-                        className={`text-[11px] font-semibold mt-1 ${
-                          rv.message.includes('Drifted')
-                            ? 'text-warning'
-                            : rv.message.includes('failed')
-                            ? 'text-danger'
-                            : 'text-success'
+                      <span
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 mt-1 rounded-md text-[10px] font-bold border ${
+                          rv.message.includes('Quality changed')
+                            ? 'bg-warning/10 border-warning/25 text-warning'
+                            : rv.message.includes("Couldn't")
+                            ? 'bg-danger/10 border-danger/25 text-danger'
+                            : 'bg-success/10 border-success/25 text-success'
                         }`}
                       >
                         {rv.message}
-                      </p>
+                      </span>
                     )}
                   </button>
 
@@ -395,7 +426,7 @@ export function HistoryPanel({
                     <button
                       onClick={() => onToggleFavorite(session.id)}
                       className={`p-1.5 rounded-lg text-text-muted hover:text-warning transition-colors ${
-                        session.favorite ? 'text-warning fill-amber-500' : ''
+                        session.favorite ? 'text-warning fill-warning' : ''
                       }`}
                       title="Save to favorites"
                       aria-label={session.favorite ? 'Remove session from favorites' : 'Mark session as favorite'}
@@ -417,7 +448,7 @@ export function HistoryPanel({
 
                     <button
                       onClick={() => onDeleteSession(session.id)}
-                      className="p-1.5 rounded-lg text-text-muted hover:text-rose-500 transition-colors"
+                      className="p-1.5 rounded-lg text-text-muted hover:text-danger transition-colors"
                       title="Delete session"
                       aria-label="Delete session"
                     >
@@ -451,11 +482,11 @@ export function HistoryPanel({
                       <button
                         onClick={() => {
                           if (isDiffActive) {
-                            setDiffState({ sessionId: null, versionAId: '', versionBId: '' });
+                            setDiffState({ sessionId: null, versionAId: '', versionBId: '', diffMode: 'unified' });
                           } else {
                             const vA = session.versions[0]?.id || '';
                             const vB = session.versions[session.versions.length - 1]?.id || '';
-                            setDiffState({ sessionId: session.id, versionAId: vA, versionBId: vB });
+                            setDiffState({ sessionId: session.id, versionAId: vA, versionBId: vB, diffMode: 'unified' });
                           }
                         }}
                         className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
@@ -512,41 +543,108 @@ export function HistoryPanel({
                           </div>
                         </div>
 
-                        {/* Rendered Word Diff */}
-                        <div className="p-3 rounded-lg bg-surface-code text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-                          {(() => {
-                            const verA = session.versions.find((v) => v.id === diffState.versionAId);
-                            const verB = session.versions.find((v) => v.id === diffState.versionBId);
-                            if (!verA || !verB) return <span>Select versions to compare.</span>;
+                        {/* Diff view toggle: unified vs side-by-side split */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                            {diffState.diffMode === 'unified' ? 'Unified diff' : 'Side-by-side'}
+                          </span>
+                          <div className="flex items-center gap-0.5 bg-surface-muted p-0.5 rounded-lg border border-border">
+                            {(['unified', 'split'] as const).map((mode) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setDiffState({ ...diffState, diffMode: mode })}
+                                aria-pressed={diffState.diffMode === mode}
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
+                                  diffState.diffMode === mode
+                                    ? 'bg-brand text-white shadow-sm'
+                                    : 'text-text-secondary hover:text-text-primary'
+                                }`}
+                              >
+                                {mode === 'unified' ? 'Unified' : 'Split'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                            const diffs = computeWordDiff(verA.content, verB.content);
-                            return diffs.map((chunk, idx) => {
+                        {/* Rendered Word Diff */}
+                        {(() => {
+                          const verA = session.versions.find((v) => v.id === diffState.versionAId);
+                          const verB = session.versions.find((v) => v.id === diffState.versionBId);
+                          if (!verA || !verB) return <span>Select versions to compare.</span>;
+
+                          const diffs = computeWordDiff(verA.content, verB.content);
+
+                          const renderChunks = (chunks: typeof diffs) =>
+                            chunks.map((chunk, idx) => {
                               if (chunk.added) {
                                 return (
-                                  <span
-                                    key={idx}
-                                    className="bg-success/25 text-success font-bold px-0.5 rounded"
-                                  >
+                                  <span key={idx} className="bg-success/25 text-success font-bold px-0.5 rounded">
                                     {chunk.value}
                                   </span>
                                 );
                               }
                               if (chunk.removed) {
                                 return (
-                                  <span
-                                    key={idx}
-                                    className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70"
-                                  >
+                                  <span key={idx} className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70">
                                     {chunk.value}
                                   </span>
                                 );
                               }
                               return <span key={idx}>{chunk.value}</span>;
                             });
-                          })()}
-                        </div>
+
+                          if (diffState.diffMode === 'split') {
+                            // Left: original with removals highlighted. Right: newer with additions highlighted.
+                            const leftChunks = diffs.filter((c) => !c.added);
+                            const rightChunks = diffs.filter((c) => !c.removed);
+                            return (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="rounded-lg border border-danger/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                                  {renderChunks(leftChunks)}
+                                </div>
+                                <div className="rounded-lg border border-success/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                                  {renderChunks(rightChunks)}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="p-3 rounded-lg bg-surface-code text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                              {renderChunks(diffs)}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
+
+                    {/* Score trend sparkline (§9.15) — shown once ≥2 versions are scored */}
+                    {(() => {
+                      const scored = session.versions.filter((v) => v.quality);
+                      if (scored.length < 2) return null;
+                      const series = scored.map((v) => v.quality!.overall);
+                      const firstV = scored[0];
+                      const lastV = scored[scored.length - 1];
+                      return (
+                        <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-surface-card/60 border border-border/70">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                            Score trend
+                          </span>
+                          <Sparkline
+                            values={series}
+                            stroke="var(--brand)"
+                            width={150}
+                            height={28}
+                            ariaLabel={`Quality trend for ${session.title}`}
+                            unitLabel="/100"
+                          />
+                          <span className="text-[11px] font-mono text-text-muted">
+                            v{firstV.versionNumber} → v{lastV.versionNumber}
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     {/* Versions List */}
                     <div className="space-y-2">
@@ -642,11 +740,32 @@ export function HistoryPanel({
                               </p>
                             )}
 
+                            {/* Mini quality bar when scored */}
+                            {ver.quality && (
+                              <div className="flex items-center gap-2">
+                                <div className="h-1 flex-1 rounded-full bg-surface-hover overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      ver.quality.overall >= PASS_THRESHOLD
+                                        ? 'bg-success'
+                                        : ver.quality.overall >= 50
+                                        ? 'bg-warning'
+                                        : 'bg-danger'
+                                    }`}
+                                    style={{ width: `${ver.quality.overall}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-bold tabular-nums text-text-muted">
+                                  {ver.quality.overall}
+                                </span>
+                              </div>
+                            )}
+
                             {/* Actions for this Version */}
                             <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/60">
                               <button
                                 onClick={() => onSelectSession(session, ver.id)}
-                                className="px-3 py-1 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1 shadow-sm transition-colors"
+                                className="px-3 py-1 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-brand-hover flex items-center gap-1 shadow-sm transition-colors"
                               >
                                 <Sparkles className="w-3 h-3" />
                                 <span>Open</span>

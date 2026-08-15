@@ -20,6 +20,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
+import { Expandable } from './expandable';
 import { ProviderConfig } from '@/types';
 import { DEFAULT_BUILTIN_PROVIDER, getProviderModelList } from '@/lib/storage';
 import { normalizeBaseUrl } from '@/lib/openai-provider';
@@ -230,8 +231,8 @@ export function ProviderSettings({
         </div>
       </GlassCard>
 
-      {/* Add Custom Provider Drawer/Form */}
-      {showAddForm && (
+      {/* Add Custom Provider Drawer/Form (animated slide-in) */}
+      <Expandable open={showAddForm} className="w-full">
         <GlassCard variant="glowing" className="p-5 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-border">
             <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
@@ -384,7 +385,7 @@ export function ProviderSettings({
                     <button
                       type="button"
                       onClick={() => removeModelAt(i)}
-                      className="shrink-0 p-2 rounded-lg text-text-muted hover:text-rose-500 transition-colors"
+                      className="shrink-0 p-2 rounded-lg text-text-muted hover:text-danger transition-colors"
                       title="Remove this model"
                       aria-label={`Remove model ${i + 1}`}
                     >
@@ -453,7 +454,7 @@ export function ProviderSettings({
                 className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
                   testStatus.success
                     ? 'bg-success/10 border border-success/20 text-success'
-                    : 'bg-danger/10 border border-danger/20 text-rose-600 dark:text-danger'
+                    : 'bg-danger/10 border border-danger/20 text-danger'
                 }`}
               >
                 {testStatus.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
@@ -482,7 +483,7 @@ export function ProviderSettings({
             </div>
           </form>
         </GlassCard>
-      )}
+      </Expandable>
 
       {/* Provider Profiles Grid */}
       <div className="space-y-3">
@@ -555,7 +556,7 @@ export function ProviderSettings({
                         </button>
                         <button
                           onClick={() => onDeleteProvider(p.id)}
-                          className="p-1.5 rounded-lg text-text-muted hover:text-rose-500 transition-colors"
+                          className="p-1.5 rounded-lg text-text-muted hover:text-danger transition-colors"
                           title="Delete"
                           aria-label={`Delete ${p.name}`}
                         >

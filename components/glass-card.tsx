@@ -25,7 +25,7 @@ export function GlassCard({
     hoverable:
       'bg-surface-card/80 border-border shadow-lg hover:shadow-2xl hover:-translate-y-0.5 hover:border-brand/40 cursor-pointer',
     glowing:
-      'bg-gradient-to-b from-surface-elevated to-brand-muted/50 border-brand/50 shadow-2xl shadow-brand/10 dark:shadow-[0_0_30px_rgba(99,102,241,0.15)]',
+      'bg-gradient-to-b from-surface-elevated to-brand-muted/50 border-brand/50 shadow-2xl shadow-brand/10 dark:shadow-orb',
     subtle:
       'bg-surface-card/50 border-border shadow-sm',
     accent:

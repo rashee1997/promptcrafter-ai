@@ -25,13 +25,17 @@ import {
   Braces,
   AlertTriangle,
   ChevronDown,
+  ChevronsUpDown,
   Wand2,
   ListChecks,
   FileDown,
   Plus,
   Trash2,
+  FileText,
+  GitCompare,
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
+import { Expandable } from './expandable';
 import { ConfirmModal } from './confirm-modal';
 import { MarkdownRenderer } from './markdown-renderer';
 import { PromptVersion, ProviderConfig, Session, TestRun } from '@/types';
@@ -41,6 +45,9 @@ import { setVersionQuality, saveTestSuite, saveTestRun } from '@/lib/storage';
 import { auditPlaceholders, fillPlaceholders } from '@/lib/placeholder';
 import { exportPromptFor, EXPORT_TARGETS, ExportTarget } from '@/lib/export';
 import { heuristicPromptQuality, PASS_THRESHOLD } from '@/lib/prompt-quality';
+import { buildCostLedger } from '@/lib/ledger';
+import { formatCostDollars } from '@/lib/model-pricing';
+import { toast } from '@/components/toast';
 
 interface PromptOutputProps {
   output: string;
@@ -57,6 +64,8 @@ interface PromptOutputProps {
   onClearOutput?: () => void;
   /** Called whenever a storage-backed measurement (score, suite, run) updates the session. */
   onSessionUpdate?: (session: Session) => void;
+  /** §9.6 — jump to the History diff comparing two versions of the current session. */
+  onOpenHistoryDiff?: (versionAId: string, versionBId: string) => void;
 }
 
 export function PromptOutput({
@@ -73,6 +82,7 @@ export function PromptOutput({
   onCancelGeneration,
   onClearOutput,
   onSessionUpdate,
+  onOpenHistoryDiff,
 }: PromptOutputProps) {
   const [copiedType, setCopiedType] = useState<'prompt' | 'filled' | 'export' | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -102,6 +112,28 @@ export function PromptOutput({
 
   const outputRef = useRef<HTMLDivElement>(null);
 
+  // §9.6 — version picker popover (per-version score bars + "compare" shortcut)
+  const [versionPickerOpen, setVersionPickerOpen] = useState(false);
+  const versionPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!versionPickerOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (versionPickerRef.current && !versionPickerRef.current.contains(e.target as Node)) {
+        setVersionPickerOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setVersionPickerOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [versionPickerOpen]);
+
   // Sync editContent when switching active version or when output updates
   useEffect(() => {
     if (!isEditing) {
@@ -109,11 +141,33 @@ export function PromptOutput({
     }
   }, [output, activeVersion?.id, isEditing]);
 
-  // Auto-scroll output container as stream chunks arrive
+  // Streaming auto-scroll contract (DESIGN §6.2): follow the stream only while
+  // the user is near the bottom (60px threshold); pause when they scroll up;
+  // resume only when they return to the bottom. Never fight the reader.
+  const userScrolledRef = useRef(false);
+
+  // Reset the flag at the start of every new stream.
   useEffect(() => {
-    if (isGenerating && outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    }
+    if (isGenerating) userScrolledRef.current = false;
+  }, [isGenerating]);
+
+  // Track manual scrolls against the 60px bottom threshold.
+  useEffect(() => {
+    const el = outputRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+      userScrolledRef.current = gap > 60;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [output, isGenerating]);
+
+  // Pin to the live stream edge only when the user hasn't scrolled away.
+  useEffect(() => {
+    const el = outputRef.current;
+    if (!el || !isGenerating || userScrolledRef.current) return;
+    el.scrollTop = el.scrollHeight;
   }, [output, isGenerating]);
 
   // Derived text content (computed before the early return so hooks stay ordered)
@@ -138,11 +192,14 @@ export function PromptOutput({
         <div className="w-16 h-16 rounded-2xl bg-brand/10  text-brand flex items-center justify-center mb-4 border border-brand/20">
           <Sparkles className="w-8 h-8" />
         </div>
-        <h3 className="text-base font-bold text-text-primary">
+        <h3 className="text-xl font-bold tracking-tight text-text-primary">
           Create your first prompt
         </h3>
         <p className="mt-2 text-xs text-text-muted max-w-md leading-relaxed">
           Describe what you want to create, pick a use case, and click Create Prompt.
+        </p>
+        <p className="mt-1 text-[11px] text-text-muted max-w-md leading-relaxed">
+          Every prompt gets a quality score, live tests, and version history — so you can prove it works.
         </p>
       </GlassCard>
     );
@@ -154,6 +211,20 @@ export function PromptOutput({
   const heuristicQuality = heuristicPromptQuality(rawPromptText);
   const quality = activeVersion?.quality || (!isGenerating && output ? heuristicQuality : null);
   const displayScore = quality?.overall ?? heuristicQuality.overall;
+
+  // Score rail data: delta vs the previous version + cost chip (local ledger math).
+  const ledger =
+    currentSession && currentSession.versions.length > 0
+      ? buildCostLedger(currentSession.versions)
+      : [];
+  const activeLedgerRow = activeVersion
+    ? ledger.find((r) => r.version.id === activeVersion.id)
+    : null;
+  const scoreDelta = activeLedgerRow?.scoreDelta ?? null;
+  const costChip =
+    activeLedgerRow && activeLedgerRow.costPer1kCompletions > 0
+      ? formatCostDollars(activeLedgerRow.costPer1kCompletions)
+      : null;
 
   const handleCopy = (text: string, type: 'prompt' | 'filled' | 'export') => {
     navigator.clipboard.writeText(text);
@@ -215,6 +286,7 @@ export function PromptOutput({
         onSessionUpdate?.(updated);
       }
       setScoreOpen(true);
+      toast.success(`Version scored ${finalQuality.overall}/100`, 'Score saved to this version.');
     } finally {
       setIsScoring(false);
     }
@@ -353,7 +425,7 @@ export function PromptOutput({
               )}
 
               {isGenerating && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-indigo-500 animate-pulse">
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-brand animate-pulse">
                   <RefreshCw className="w-3 h-3 animate-spin" /> Generating…
                 </span>
               )}
@@ -368,7 +440,7 @@ export function PromptOutput({
         {!isGenerating && output && (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 px-3 py-1 rounded-xl text-brand text-xs font-semibold">
-              <Cpu className="w-3.5 h-3.5 text-indigo-500" />
+              <Cpu className="w-3.5 h-3.5 text-brand" />
               <span>{wordCount.toLocaleString()} words</span>
             </div>
             <button
@@ -384,6 +456,16 @@ export function PromptOutput({
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Quality: {displayScore}/100</span>
+              {scoreDelta !== null && (
+                <span
+                  className={`text-[10px] font-bold ${
+                    scoreDelta >= 0 ? 'text-success' : 'text-danger'
+                  }`}
+                  title={`vs previous version (${scoreDelta >= 0 ? '+' : ''}${scoreDelta})`}
+                >
+                  {scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(scoreDelta)}
+                </span>
+              )}
               <ChevronDown className={`w-3 h-3 transition-transform ${scoreOpen ? 'rotate-180' : ''}`} />
             </button>
           </div>
@@ -392,7 +474,7 @@ export function PromptOutput({
 
       {/* Analytics Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-text-muted bg-surface-muted p-2.5 rounded-xl border border-border/50">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="flex items-center gap-1.5 font-semibold text-brand">
             <Cpu className="w-3.5 h-3.5" />
             <span>{wordCount.toLocaleString()} words</span>
@@ -402,12 +484,25 @@ export function PromptOutput({
             <Layers className="w-3.5 h-3.5 text-text-muted" />
             <span>{charCount.toLocaleString()} characters</span>
           </div>
+          <span>•</span>
+          <div className="flex items-center gap-1 tabular-nums">
+            <FileText className="w-3.5 h-3.5 text-text-muted" />
+            <span>~{estTokens.toLocaleString()} tokens</span>
+          </div>
+          {costChip && (
+            <>
+              <span>•</span>
+              <div className="flex items-center gap-1">
+                <span>≈ {costChip} / 1k runs</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* F1 — Quality Scorecard */}
       {quality && scoreOpen && (
-        <div className="space-y-3 p-4 rounded-xl bg-surface-muted/70 border border-brand/25">
+      <Expandable open={true} className="space-y-3 p-4 rounded-xl bg-surface-muted/70 border border-brand/25">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Gauge className="w-4 h-4 text-brand" />
@@ -489,12 +584,12 @@ export function PromptOutput({
             type="button"
             onClick={handleScoreVersion}
             disabled={isScoring}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 disabled:opacity-50 flex items-center gap-1.5 transition-colors shadow-sm"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50 flex items-center gap-1.5 transition-colors shadow-sm"
           >
             {isScoring ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Gauge className="w-3.5 h-3.5" />}
             <span>{isScoring ? 'Reviewing…' : 'Run AI Review'}</span>
           </button>
-        </div>
+      </Expandable>
       )}
 
       {/* Main Output Box (View or Monospace Edit Mode) */}
@@ -518,7 +613,7 @@ export function PromptOutput({
             <button
               type="button"
               onClick={handleSaveEdit}
-              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 shadow-md flex items-center gap-1.5 transition-colors"
+              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover shadow-glow flex items-center gap-1.5 transition-colors"
             >
               <Save className="w-3.5 h-3.5" />
               <span>Save as New Version</span>
@@ -531,7 +626,19 @@ export function PromptOutput({
           aria-busy={isGenerating}
           className="relative rounded-xl border border-border bg-surface-code text-text-primary p-4 min-h-[280px] max-h-[500px] overflow-y-auto selection:bg-brand selection:text-white scroll-smooth font-mono text-xs leading-relaxed"
         >
-          <MarkdownRenderer content={output} highlightPlaceholders={true} />
+          {isGenerating ? (
+            /* Stable streaming view: raw text grows in place + live caret.
+               Full markdown rendering happens only once the stream completes. */
+            <div className="whitespace-pre-wrap break-words">
+              {output}
+              <span
+                className="animate-caret-blink inline-block w-[2px] h-[1.05em] bg-caret align-middle ml-0.5 rounded-[1px]"
+                aria-hidden="true"
+              />
+            </div>
+          ) : (
+            <MarkdownRenderer content={output} highlightPlaceholders={true} />
+          )}
         </div>
       )}
 
@@ -542,7 +649,7 @@ export function PromptOutput({
           <button
             type="button"
             onClick={() => handleCopy(rawPromptText, 'prompt')}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/25 flex items-center gap-2 transition-all active:scale-95"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center gap-2 transition-all active:scale-95"
           >
             {copiedType === 'prompt' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
             <span>{copiedType === 'prompt' ? 'Copied!' : 'Copy'}</span>
@@ -554,7 +661,7 @@ export function PromptOutput({
             onClick={() => setIsEditing(!isEditing)}
             className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
               isEditing
-                ? 'bg-indigo-500/20 border-brand/40 text-brand'
+                ? 'bg-brand/15 border-brand/40 text-brand'
                 : 'bg-surface-code/80 text-text-primary hover:bg-surface-hover border-border'
             }`}
             title="Edit the prompt"
@@ -596,7 +703,7 @@ export function PromptOutput({
             <button
               type="button"
               onClick={onCancelGeneration}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-danger/20 border border-danger/40 text-danger hover:bg-rose-500/30 flex items-center gap-1.5 transition-all"
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-danger/20 border border-danger/40 text-danger hover:bg-danger/30 flex items-center gap-1.5 transition-all"
             >
               <StopCircle className="w-3.5 h-3.5" />
               <span>Cancel</span>
@@ -666,8 +773,7 @@ export function PromptOutput({
             <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${fillOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {fillOpen && (
-            <div className="space-y-3 pt-1">
+          <Expandable open={fillOpen} className="space-y-3 pt-1">
               {audit.issues.length > 0 && (
                 <ul className="space-y-1">
                   {audit.issues.map((issue, i) => (
@@ -703,7 +809,7 @@ export function PromptOutput({
                 <button
                   type="button"
                   onClick={() => handleCopy(filledPrompt, 'filled')}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1.5 transition-colors shadow-sm"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   {copiedType === 'filled' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedType === 'filled' ? 'Copied!' : 'Copy with values'}</span>
@@ -712,8 +818,7 @@ export function PromptOutput({
                   Unfilled fields stay in brackets so you can spot them before copying.
                 </span>
               </div>
-            </div>
-          )}
+          </Expandable>
         </div>
       )}
 
@@ -736,8 +841,7 @@ export function PromptOutput({
             <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {exportOpen && (
-            <div className="space-y-2.5 pt-1">
+          <Expandable open={exportOpen} className="space-y-2.5 pt-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 {EXPORT_TARGETS.map((t) => (
                   <button
@@ -767,7 +871,7 @@ export function PromptOutput({
                 <button
                   type="button"
                   onClick={() => handleCopy(exportedText, 'export')}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 flex items-center gap-1.5 transition-colors shadow-sm"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   {copiedType === 'export' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedType === 'export' ? 'Copied!' : 'Copy'}</span>
@@ -781,8 +885,7 @@ export function PromptOutput({
                   <span>Download</span>
                 </button>
               </div>
-            </div>
-          )}
+          </Expandable>
         </div>
       )}
 
@@ -805,8 +908,7 @@ export function PromptOutput({
             <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${suiteOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {suiteOpen && (
-            <div className="space-y-3 pt-1">
+          <Expandable open={suiteOpen} className="space-y-3 pt-1">
               {/* Add case */}
               <div className="flex gap-2">
                 <textarea
@@ -819,7 +921,7 @@ export function PromptOutput({
                   type="button"
                   onClick={handleAddSuiteCase}
                   disabled={!suiteInput.trim()}
-                  className="px-3 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-indigo-500 disabled:opacity-40 flex items-center gap-1.5 transition-colors shrink-0"
+                  className="px-3 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-40 flex items-center gap-1.5 transition-colors shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add
@@ -850,7 +952,7 @@ export function PromptOutput({
                   type="button"
                   onClick={handleRunSuite}
                   disabled={suiteRunning}
-                  className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                  className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
                 >
                   {suiteRunning ? (
                     <>
@@ -961,8 +1063,7 @@ export function PromptOutput({
                   })()}
                 </div>
               )}
-            </div>
-          )}
+          </Expandable>
         </div>
       )}
 
@@ -971,10 +1072,114 @@ export function PromptOutput({
         {/* Thread Version History Strip */}
         {versions.length > 0 && (
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-text-muted flex items-center gap-1">
-              <GitCommit className="w-3.5 h-3.5 text-indigo-500" /> Versions ({versions.length}):
-            </span>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-indigo-500/20">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-semibold text-text-muted flex items-center gap-1">
+                <GitCommit className="w-3.5 h-3.5 text-brand" /> Versions ({versions.length}):
+              </span>
+
+              {/* §9.6 — version picker popover with per-version score bars */}
+              <div className="relative" ref={versionPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setVersionPickerOpen((open) => !open)}
+                  aria-expanded={versionPickerOpen}
+                  aria-haspopup="true"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-text-muted hover:text-brand border border-border/70 bg-surface-code/60 hover:border-brand/40 transition-colors"
+                  title="Browse all versions and compare"
+                >
+                  <ChevronsUpDown className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">All versions</span>
+                </button>
+
+                {versionPickerOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-1.5 z-50 w-72 max-h-72 overflow-y-auto rounded-xl border border-border bg-surface-elevated shadow-lg p-1.5 space-y-0.5"
+                    aria-label="All versions"
+                  >
+                    {versions.map((ver) => {
+                      const isActive = ver.id === activeVersionId;
+                      const score = ver.quality?.overall;
+                      return (
+                        <div
+                          key={ver.id}
+                          className={`flex items-center gap-2 p-1 rounded-lg transition-colors ${
+                            isActive ? 'bg-brand/10' : 'hover:bg-surface-hover'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectVersion?.(ver.id);
+                              setVersionPickerOpen(false);
+                            }}
+                            className="flex-1 min-w-0 flex items-center gap-2 text-left"
+                            title={`Open v${ver.versionNumber}: ${ver.name}`}
+                          >
+                            <span
+                              className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                isActive
+                                  ? 'bg-brand text-white'
+                                  : 'bg-surface-muted text-text-secondary border border-border'
+                              }`}
+                            >
+                              v{ver.versionNumber}
+                            </span>
+                            <span className="flex-1 min-w-0 truncate text-xs font-medium text-text-primary">
+                              {ver.name}
+                            </span>
+                            {score !== undefined ? (
+                              <>
+                                <div className="w-10 h-1 rounded-full bg-surface-hover overflow-hidden shrink-0">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      score >= PASS_THRESHOLD
+                                        ? 'bg-success'
+                                        : score >= 50
+                                        ? 'bg-warning'
+                                        : 'bg-danger'
+                                    }`}
+                                    style={{ width: `${score}%` }}
+                                  />
+                                </div>
+                                <span
+                                  className={`shrink-0 text-[10px] font-bold tabular-nums ${
+                                    score >= PASS_THRESHOLD
+                                      ? 'text-success'
+                                      : score >= 50
+                                      ? 'text-warning'
+                                      : 'text-danger'
+                                  }`}
+                                >
+                                  {score}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="shrink-0 text-[10px] text-text-muted">—</span>
+                            )}
+                          </button>
+
+                          {onOpenHistoryDiff && activeVersionId && ver.id !== activeVersionId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onOpenHistoryDiff(activeVersionId, ver.id);
+                                setVersionPickerOpen(false);
+                              }}
+                              className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors"
+                              title={`Compare v${ver.versionNumber} with the current version in History`}
+                              aria-label={`Compare v${ver.versionNumber} with the current version in History`}
+                            >
+                              <GitCompare className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-brand/20">
               {versions.map((ver) => {
                 const isActive = ver.id === activeVersionId;
                 return (
@@ -1003,6 +1208,20 @@ export function PromptOutput({
           </div>
         )}
 
+        {/* Last-change hint chip */}
+        {(() => {
+          const lastVer = versions[versions.length - 1];
+          if (!lastVer?.refinementInstruction) return null;
+          return (
+            <p className="text-[10px] text-text-muted flex items-center gap-1.5">
+              <GitCommit className="w-3 h-3 text-brand shrink-0" />
+              <span className="truncate">
+                Last change: &quot;{lastVer.refinementInstruction}&quot;
+              </span>
+            </p>
+          );
+        })()}
+
         {/* Refine Input Form */}
         <form onSubmit={handleSubmitRefine} className="space-y-2">
           <div className="relative">
@@ -1017,7 +1236,7 @@ export function PromptOutput({
             <button
               type="submit"
               disabled={!refineInstruction.trim() || isGenerating}
-              className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-brand text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shadow-sm"
+              className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-brand text-white hover:bg-brand-hover disabled:opacity-40 transition-colors shadow-sm"
               title="Submit changes"
               aria-label="Submit changes"
             >
