@@ -10,6 +10,7 @@ import {
   FileText,
   ShieldCheck,
   Sliders,
+  PenLine,
   CheckCircle2,
   Lightbulb,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   FileText,
   ShieldCheck,
   Sliders,
+  PenLine,
 };
 
 export function DomainSelector({
@@ -44,10 +46,10 @@ export function DomainSelector({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <span id="domain-selector-label" className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-          Target Domain / Field
+          Use case
         </span>
         <span className="text-xs text-brand font-medium" aria-hidden="true">
-          {selectedDomain.name} Selected
+          {selectedDomain.name} selected
         </span>
       </div>
 
@@ -102,7 +104,7 @@ export function DomainSelector({
         <div className="p-3 rounded-xl bg-brand/5 border border-brand/10 dark:border-brand/20 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
             <Lightbulb className="w-3.5 h-3.5 text-warning shrink-0" />
-            <span>Click an example topic to populate:</span>
+            <span>Try an example:</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {selectedDomain.exampleTopics.map((topic, i) => (

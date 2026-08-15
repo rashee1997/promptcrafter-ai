@@ -5,6 +5,36 @@ All notable changes to PromptCrafter AI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-13
+
+### Added
+
+- **Prompt Measurement Lab** — close the generate → score → test → compare → ship loop with five integrated capabilities:
+  - **Prompt Quality Scorecard (F1)** — every generated, refined, or edited version is scored 0–100 across six rubric dimensions (clarity, structure, output specification, context, error handling, token efficiency), with concrete strengths and one-line actionable fixes. Scored by an LLM judge with an instant local heuristic fallback, cached per version so quality deltas are visible across version history.
+  - **Cross-Model A/B Lab (F2)** — run the same prompt against the same test input through multiple providers/models side by side, with a semantic consistency score for the outputs; each selected provider can pick which of its models participates.
+  - **Prompt Regression Suite (F3)** — save a set of test inputs per session and run any version against the whole suite for a per-case pass/fail + score table (pass threshold 75), with run history persisted per session. No-code regression testing for prompts.
+  - **Placeholder Linter & Variable Fill (F4)** — audits every `[BRACKETED_PLACEHOLDER]` for inconsistent naming, unclosed brackets, and duplicate groups, then fills in sample values for a copy-paste-ready prompt.
+  - **Multi-Model Export Adapters (F5)** — export any version formatted for the target conventions: Claude (XML tags), GPT (structured text), Gemini (bold labels), generic Markdown, or JSON payload.
+  - **Prompt Health Monitor (F6)** — sessions detect when the underlying model changed since a version was scored and surface a "model changed — re-verify" state in history, so saved prompts can be re-checked against current models.
+- **Cost-Per-Quality Ledger** — every version shows estimated cost per 1,000 production completions, one-shot generation cost, score-per-dollar, and "silent cost blowout" flags when cost rises without a score gain; score and cost sparklines chart trends across versions.
+- **Adversarial red-team probes** — one-click auto-probes (prompt injection, contradictory instruction, out-of-scope request, role-confusion jailbreak) run through the same execution + judge pipeline as the regression suite.
+- **Multiple models per provider** — providers now store a full model list (first entry is the default) with the per-provider active model persisted locally; switch models from the navbar, the generator bar, or the A/B lab. Backward compatible with existing single-model configs.
+- **Blog Writer & SEO domain** — a complete content-marketing preset whose generated prompts embed mandatory SEO deliverables, E-E-A-T / helpful-content requirements, anti-AI-writing-pattern guardrails, AI-search (AIO) optimization, and a self-review pass.
+- **Optional output character limit** — cap the length of the engineered prompt (default 4,000 characters) so generated prompts stay lean.
+- **Collapsible placeholder audit & fill section** in the output pane to keep the view uncluttered.
+- **Clear button** to dismiss the generated prompt output with one click.
+- **Blog, FAQ, and SEO pages** — blog index with JSON-driven posts, FAQ page, XML sitemap, robots.txt, marketing header/footer, and an OG image.
+
+### Changed
+
+- Refinement requests use the **Gemini v2 API call signature** (`sendMessageStream({ message })`).
+- Download/copy actions in the output pane restyled (hover state).
+
+### Fixed
+
+- Restored project typechecking (valid `ignoreDeprecations` value for TypeScript 5.9, excluded stray `isolate/` directory) and the Gemini v2 refinement call.
+- `*.tsbuildinfo` artifacts are no longer tracked in version control.
+
 ## [1.0.1] - 2026-08-12
 
 ### Added

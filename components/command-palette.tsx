@@ -89,7 +89,7 @@ export function CommandPalette({ isOpen, onClose, actions }: CommandPaletteProps
       ref={containerRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Command palette"
+      aria-label="Quick actions"
       className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4 bg-surface-code/60 backdrop-blur-md"
       onClick={onClose}
     >
@@ -106,8 +106,8 @@ export function CommandPalette({ isOpen, onClose, actions }: CommandPaletteProps
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or search…"
-            aria-label="Search commands"
+            placeholder="Search actions…"
+            aria-label="Search actions"
             role="combobox"
             aria-expanded="true"
             aria-controls="palette-list"
@@ -125,12 +125,12 @@ export function CommandPalette({ isOpen, onClose, actions }: CommandPaletteProps
           id="palette-list"
           ref={listRef}
           role="listbox"
-          aria-label="Commands"
+          aria-label="Actions"
           className="max-h-[46vh] overflow-y-auto p-1.5 space-y-0.5"
         >
           {filtered.length === 0 && (
             <p className="px-3 py-6 text-center text-xs text-text-muted">
-              No matching commands for “{query}”
+              No matching actions for “{query}”
             </p>
           )}
           {filtered.map((action, i) => (

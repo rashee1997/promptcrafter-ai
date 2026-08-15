@@ -40,6 +40,12 @@ export interface DomainPreset {
     additionalNotes?: string;
   };
   exampleTopics: string[];
+  /**
+   * Optional domain-specific mandatory directives injected into the meta-prompt
+   * so every engineered prompt embeds the domain's full requirements
+   * (e.g., SEO deliverables + anti-AI-writing-pattern guardrails for Blog Writer).
+   */
+  domainGuidance?: string;
 }
 
 export interface ToneOption {
@@ -62,7 +68,15 @@ export interface ProviderConfig {
   name: string;
   baseUrl: string;
   apiKey: string;
+  /** Primary/default model. Always kept in sync with the first entry of `models`. */
   model: string;
+  /**
+   * All models configured for this provider. Falls back to `[model]` when absent
+   * so older persisted configs remain readable. Stored locally (IndexedDB / LocalStorage).
+   */
+  models?: string[];
+  /** Currently selected model for this provider (mirrors the persisted local selection). */
+  activeModel?: string;
   isDefault?: boolean;
   useBuiltInGemini?: boolean;
   temperature: number;
@@ -82,6 +96,40 @@ export interface PromptInput {
   includeConstraints: boolean;
   includeExamples: boolean;
   additionalNotes?: string;
+  /**
+   * Optional hard cap on the length of the ENGINEERED prompt, in characters.
+   * When set, the generator is instructed to keep its output under this limit.
+   * Leave undefined for no limit.
+   */
+  outputCharLimit?: number;
+}
+
+/**
+ * F1 — Prompt Quality Scorecard.
+ * A 0-100 production-readiness assessment across a fixed rubric,
+ * produced by an LLM judge (with a client-side heuristic fallback).
+ */
+export interface QualityDimension {
+  score: number; // 0-100
+  notes: string;
+}
+
+export interface PromptQuality {
+  overall: number; // 0-100 arithmetic mean of dimensions
+  dimensions: {
+    clarity: QualityDimension; // Clarity & Specificity
+    structure: QualityDimension; // Structure & Organization
+    outputSpec: QualityDimension; // Output Specification
+    context: QualityDimension; // Contextual Guidance
+    errorHandling: QualityDimension; // Error Handling / Guardrails
+    tokenEfficiency: QualityDimension; // Leanness vs bloat
+  };
+  strengths: string[];
+  improvements: { issue: string; fix: string }[];
+  modelUsed: string;
+  providerName: string;
+  evaluatedAt: number;
+  source: 'llm-judge' | 'heuristic';
 }
 
 export type VersionSourceType = 'initial' | 'refinement' | 'manual-edit';
@@ -100,6 +148,8 @@ export interface PromptVersion {
   modelUsed: string;
   // Token/word/char stats snapshot, computed at save time
   stats: { wordCount: number; charCount: number; estTokens: number };
+  // F1 — cached prompt-quality assessment for this version (optional)
+  quality?: PromptQuality;
 }
 
 export interface ThreadMessage {
@@ -108,6 +158,26 @@ export interface ThreadMessage {
   content: string;             // user's refinement instruction, or assistant's short ack/prompt output
   createdAt: number;
   resultingVersionId?: string; // links assistant turns to the PromptVersion they produced
+}
+
+// F3 — one executed regression-suite case (a prompt version run against one test input)
+export interface TestCaseResult {
+  input: string;
+  output: string;
+  score: number | null; // 0-100 output-quality score, null when execution failed
+  passed: boolean; // score >= pass threshold
+  error?: string;
+}
+
+// F3 — a full regression-suite run for one prompt version
+export interface TestRun {
+  id: string;
+  versionId: string;
+  versionNumber: number;
+  ranAt: number;
+  providerName: string;
+  modelUsed: string;
+  cases: TestCaseResult[];
 }
 
 export interface Session {
@@ -121,8 +191,53 @@ export interface Session {
   activeVersionId: string;     // which version is currently shown in the output pane
   favorite?: boolean;
   tags?: string[];
+  // F3 — saved regression-suite test inputs and historical run results
+  testSuite?: string[];
+  testRuns?: TestRun[];
   createdAt: number;
   updatedAt: number;
+}
+
+// F1 — request to score a prompt against the quality rubric
+export interface EvaluateRequest {
+  provider: ProviderConfig;
+  prompt: string;
+}
+
+// F2 — run the same prompt + test input across multiple providers
+export interface ABTestRequest {
+  providers: ProviderConfig[];
+  generatedPrompt: string;
+  testInput: string;
+}
+
+export interface ABTestResultItem {
+  providerId: string;
+  providerName: string;
+  model: string;
+  output: string;
+  error?: string;
+}
+
+export interface ABTestResult {
+  results: ABTestResultItem[];
+  consistency: number | null; // 0-100 semantic similarity across successful outputs
+  ranAt: number;
+}
+
+// F3 — execute a prompt against one test input and judge the output
+export interface CaseEvaluationRequest {
+  provider: ProviderConfig;
+  prompt: string;
+  testInput: string;
+}
+
+export interface CaseEvaluationResult {
+  output: string;
+  score: number | null;
+  passed: boolean;
+  notes?: string;
+  error?: string;
 }
 
 /**

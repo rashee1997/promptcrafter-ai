@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { Navbar } from '@/components/navbar';
 import { PromptForm } from '@/components/prompt-form';
 import { PromptOutput } from '@/components/prompt-output';
@@ -26,12 +27,13 @@ import {
   deleteSession,
   deleteVersionFromSession,
   getActiveProviderId,
+  getProviderActiveModel,
   getSavedProviders,
   getSessions,
-  getStorageType,
   renameVersion,
   saveProviderConfig,
   saveSession,
+  setActiveModelForProvider,
   setActiveProviderId,
   setActiveVersion,
   addVersionToSession,
@@ -55,7 +57,6 @@ export default function HomePage() {
   const [providers, setProviders] = useState<ProviderConfig[]>([DEFAULT_BUILTIN_PROVIDER]);
   const [activeProvider, setActiveProvider] = useState<ProviderConfig>(DEFAULT_BUILTIN_PROVIDER);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [storageMode, setStorageMode] = useState<string>('INDEXED_DB');
 
   // Generation & Session state
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
@@ -97,15 +98,13 @@ export default function HomePage() {
   // Load app storage data
   useEffect(() => {
     const loadAppData = async () => {
-      const type = await getStorageType();
-      setStorageMode(type);
-
       const savedProviders = await getSavedProviders();
       setProviders(savedProviders);
 
       const activeId = await getActiveProviderId();
       const current = savedProviders.find((p) => p.id === activeId) || DEFAULT_BUILTIN_PROVIDER;
-      setActiveProvider(current);
+      const activeModel = await getProviderActiveModel(current);
+      setActiveProvider({ ...current, model: activeModel, activeModel });
 
       const loadedSessions = await getSessions();
       setSessions(loadedSessions);
@@ -121,14 +120,26 @@ export default function HomePage() {
   const handleSelectActiveProvider = async (id: string) => {
     await setActiveProviderId(id);
     const target = providers.find((p) => p.id === id) || DEFAULT_BUILTIN_PROVIDER;
-    setActiveProvider(target);
+    const activeModel = await getProviderActiveModel(target);
+    setActiveProvider({ ...target, model: activeModel, activeModel });
+  };
+
+  /** Switches the active model of the current provider and persists it locally. */
+  const handleSelectActiveModel = async (model: string) => {
+    if (!activeProvider) return;
+    await setActiveModelForProvider(activeProvider.id, model);
+    setActiveProvider((prev) => ({ ...prev, model, activeModel: model }));
+    setProviders((prev) =>
+      prev.map((p) => (p.id === activeProvider.id ? { ...p, activeModel: model } : p))
+    );
   };
 
   const handleSaveProvider = async (newProvider: ProviderConfig) => {
     await saveProviderConfig(newProvider);
     const updatedList = await getSavedProviders();
     setProviders(updatedList);
-    setActiveProvider(newProvider);
+    const activeModel = await getProviderActiveModel(newProvider);
+    setActiveProvider({ ...newProvider, model: activeModel, activeModel });
     await setActiveProviderId(newProvider.id);
   };
 
@@ -191,7 +202,7 @@ export default function HomePage() {
         const initialVersion: PromptVersion = {
           id: v1Id,
           versionNumber: 1,
-          name: 'Initial Generation',
+          name: 'Original',
           sourceType: 'initial',
           createdAt: timestamp,
           content: completedText,
@@ -202,7 +213,7 @@ export default function HomePage() {
 
         const newSession: Session = {
           id: sessId,
-          title: input.topic || 'Initial Generation',
+          title: input.topic || 'Original',
           domainId: input.domainId,
           domainName: domain.name,
           originalInput: input,
@@ -235,7 +246,7 @@ export default function HomePage() {
       },
       (error) => {
         setIsGenerating(false);
-        setStreamingText(`⚠️ Generation Error: ${error.message}`);
+        setStreamingText(`⚠️ Couldn't create the prompt: ${error.message}`);
       },
       controller.signal
     );
@@ -325,7 +336,7 @@ export default function HomePage() {
       },
       (error) => {
         setIsGenerating(false);
-        setStreamingText(`⚠️ Refinement Error: ${error.message}`);
+        setStreamingText(`⚠️ Couldn't update the prompt: ${error.message}`);
       },
       controller.signal
     );
@@ -446,6 +457,12 @@ export default function HomePage() {
     }
   };
 
+  // F1/F3/F6 — propagate storage-backed measurement updates (quality, suite, runs)
+  const handleSessionUpdate = (session: Session) => {
+    setCurrentSession(session);
+    getSessions().then(setSessions);
+  };
+
   const handleOpenSandboxTest = (promptText: string) => {
     setPromptToTest(promptText);
     setTestModalOpen(true);
@@ -462,7 +479,7 @@ export default function HomePage() {
     {
       id: 'new-prompt',
       label: 'New prompt',
-      hint: 'Start fresh — clears the current output',
+      hint: 'Start fresh — clears the current prompt',
       icon: <SparklesIcon className="w-4 h-4" />,
       run: () => {
         setCurrentSession(null);
@@ -473,15 +490,15 @@ export default function HomePage() {
     },
     {
       id: 'generate',
-      label: 'Generate prompt',
-      hint: '⌘⏎ · Uses the current form settings',
+      label: 'Create prompt',
+      hint: '⌘⏎ · Create with the current settings',
       icon: <Zap className="w-4 h-4" />,
       run: () => window.dispatchEvent(new Event('pc:generate')),
     },
     {
       id: 'test',
       label: 'Test current prompt',
-      hint: activeVersion?.content ? 'Run the active version in the sandbox' : 'Generate a prompt first',
+      hint: activeVersion?.content ? 'Run the current prompt to see how it responds' : 'Create a prompt first',
       icon: <Play className="w-4 h-4" />,
       run: () => {
         if (activeVersion?.content) handleOpenSandboxTest(activeVersion.content);
@@ -490,7 +507,7 @@ export default function HomePage() {
     {
       id: 'copy',
       label: 'Copy current prompt',
-      hint: 'Copy the active version to the clipboard',
+      hint: 'Copy the current prompt to the clipboard',
       icon: <Copy className="w-4 h-4" />,
       run: () => {
         if (activeVersion?.content) navigator.clipboard.writeText(activeVersion.content);
@@ -499,14 +516,14 @@ export default function HomePage() {
     {
       id: 'history',
       label: 'Open history',
-      hint: `${sessions.length} saved session${sessions.length === 1 ? '' : 's'}`,  
+      hint: `${sessions.length} saved prompt${sessions.length === 1 ? '' : 's'}`,  
       icon: <HistoryIcon className="w-4 h-4" />,
       run: () => setActiveTab('history'),
     },
     {
       id: 'settings',
-      label: 'Open provider settings',
-      hint: 'Configure AI providers & models',
+      label: 'Open settings',
+      hint: 'Manage AI connections and models',
       icon: <SettingsIcon className="w-4 h-4" />,
       run: () => setActiveTab('settings'),
     },
@@ -534,6 +551,8 @@ export default function HomePage() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           activeProvider={activeProvider}
+          activeModel={activeProvider.model}
+          onSelectActiveModel={handleSelectActiveModel}
           historyCount={sessions.length}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
@@ -546,11 +565,42 @@ export default function HomePage() {
           tabIndex={-1}
           className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8"
         >
+          {/* Static intro block — server-rendered into the initial HTML for SEO/AEO */}
+          <section aria-labelledby="home-intro-heading" className="mb-6 lg:mb-8 max-w-3xl">
+            <h1
+              id="home-intro-heading"
+              className="text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-text-primary"
+            >
+              Create clear prompts, refine them, and keep every version
+            </h1>
+            <p className="mt-3 text-sm sm:text-base text-text-secondary leading-relaxed">
+              Describe what you want, and PromptCrafter writes a complete prompt, checks its quality,
+              and lets you test and adjust it before you use it. Every change is saved as a new
+              version you can compare and reuse. No account needed — your work stays in your browser.
+            </p>
+            <p className="mt-2 text-xs sm:text-sm text-text-muted">
+              See how it works in the{' '}
+              <Link href="/blog" className="font-semibold text-brand hover:underline">
+                blog
+              </Link>
+              , or read the{' '}
+              <Link href="/faq" className="font-semibold text-brand hover:underline">
+                FAQ
+              </Link>
+              .
+            </p>
+          </section>
+
           {activeTab === 'generator' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left Column: Generator Form Controls */}
               <div className="lg:col-span-6 space-y-6">
-                <PromptForm onGenerate={handleGeneratePrompt} isGenerating={isGenerating} />
+                <PromptForm
+                  onGenerate={handleGeneratePrompt}
+                  isGenerating={isGenerating}
+                  activeProvider={activeProvider}
+                  onSelectActiveModel={handleSelectActiveModel}
+                />
               </div>
 
               {/* Right Column: Live Output & Refinement Display */}
@@ -570,6 +620,7 @@ export default function HomePage() {
                   onSaveEditVersion={handleSaveEditVersion}
                   onCancelGeneration={handleCancelGeneration}
                   onClearOutput={handleClearOutput}
+                  onSessionUpdate={handleSessionUpdate}
                 />
               </div>
             </div>
@@ -587,6 +638,8 @@ export default function HomePage() {
                 onRenameVersion={handleRenameVersion}
                 onTestPrompt={handleOpenSandboxTest}
                 onImportSessions={handleImportSessions}
+                activeProvider={activeProvider}
+                onSessionUpdate={handleSessionUpdate}
               />
             </div>
           )}
@@ -606,16 +659,11 @@ export default function HomePage() {
 
         {/* Footer */}
         <footer className="mt-auto border-t border-border py-4 px-4 sm:px-8 text-[11px] text-text-muted font-mono flex flex-wrap items-center justify-between gap-2 max-w-7xl w-full mx-auto">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              STORAGE: {storageMode} OK
-            </span>
-            <span>ENCRYPTION: AES-GCM</span>
-          </div>
-          <div>
-            <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI v1.0.1 // THREADED SESSION MODEL</span>
-          </div>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            SAVED LOCALLY IN YOUR BROWSER
+          </span>
+          <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI</span>
         </footer>
       </div>
 
@@ -625,6 +673,7 @@ export default function HomePage() {
         onClose={() => setTestModalOpen(false)}
         generatedPrompt={promptToTest}
         provider={activeProvider}
+        providers={providers.map((p) => ({ ...p, model: p.activeModel ?? p.model }))}
       />
 
       {/* Command Palette (⌘K) */}

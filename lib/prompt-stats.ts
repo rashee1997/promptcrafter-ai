@@ -24,10 +24,10 @@ export function generateVersionName(
   sourceType: VersionSourceType
 ): string {
   if (versionNumber === 1 || sourceType === 'initial') {
-    return 'Initial Generation';
+    return 'Original';
   }
   if (sourceType === 'manual-edit') {
-    return 'Manual Edit';
+    return 'Manual edit';
   }
 
   if (!instruction || !instruction.trim()) {
@@ -49,7 +49,7 @@ export function generateVersionName(
   const chosenWords = significantWords.length > 0 ? significantWords.slice(0, 5) : words.slice(0, 5);
 
   if (chosenWords.length === 0) {
-    return `Refinement ${versionNumber}`;
+    return `Adjustment ${versionNumber}`;
   }
 
   const titleCased = chosenWords

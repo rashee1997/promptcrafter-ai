@@ -29,7 +29,7 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const titleId = React.useId();
   const messageId = React.useId();
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 

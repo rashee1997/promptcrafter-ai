@@ -1,10 +1,36 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css'; // Global styles
+import { SITE_URL } from '@/lib/site';
+import { SITE_DESCRIPTION, SOFTWARE_APPLICATION_LD } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'PromptCrafter AI',
-  description:
-    'Generate, refine, and version high-quality AI prompts with Gemini or any OpenAI-compatible provider.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'PromptCrafter AI',
+    template: '%s | PromptCrafter AI',
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: 'website',
+    url: SITE_URL,
+    siteName: 'PromptCrafter AI',
+    title: 'PromptCrafter AI',
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'PromptCrafter AI — create, test, and improve AI prompts',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PromptCrafter AI',
+    description: SITE_DESCRIPTION,
+    images: ['/og-image.png'],
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
@@ -14,6 +40,12 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.theme==='dark'||(!('theme'in localStorage)&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(_){}`,
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(SOFTWARE_APPLICATION_LD).replace(/</g, '\\u003c'),
           }}
         />
       </head>
