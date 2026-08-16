@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Check, Cpu, Image as ImageIcon, LayoutGrid, Palette as PaletteIcon, PenTool, Shapes, Sparkles, X } from 'lucide-react';
+import { Building2, Check, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Shapes, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { cn } from '@/lib/utils';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
-import { LOGO_EXAMPLE_TOPICS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
+import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { ProviderConfig } from '@/types';
 import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
@@ -129,6 +129,17 @@ export function PromptForm({
           </div>
         </div>
 
+        {/* Logo-only: industry context */}
+        {isLogo && (
+          <ChipRow
+            label="Industry & audience"
+            icon={<Building2 className="w-3.5 h-3.5 text-brand" />}
+            options={LOGO_INDUSTRY_PRESETS}
+            value={state.industry}
+            onChange={(id) => handlers.setIndustry(state.industry === id ? undefined : id)}
+          />
+        )}
+
         {/* Logo-only: wordmark / brand name */}
         {isLogo && (
           <div className="space-y-1.5">
@@ -158,6 +169,17 @@ export function PromptForm({
             options={LOGO_MARK_TYPES}
             value={state.logoType}
             onChange={handlers.setLogoType}
+          />
+        )}
+
+        {/* Logo-only: ownable concept */}
+        {isLogo && (
+          <ChipRow
+            label="Concept & meaning"
+            icon={<Lightbulb className="w-3.5 h-3.5 text-warning" />}
+            options={LOGO_CONCEPT_PRESETS}
+            value={state.concept}
+            onChange={(id) => handlers.setConcept(state.concept === id ? undefined : id)}
           />
         )}
 

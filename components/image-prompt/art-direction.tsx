@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { BookOpenCheck, Camera, ChevronDown, Eraser, Globe, Monitor, Palette, Search, SlidersHorizontal, Type } from 'lucide-react';
+import { BookOpenCheck, Camera, ChevronDown, Eraser, Eye, Gauge, Globe, LayoutGrid, Monitor, Package, Palette, Search, SlidersHorizontal, Triangle, Type } from 'lucide-react';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
 import { CAMERA_PRESETS, COLOR_GRADE_PRESETS, COMPOSITION_PRESETS, LIGHTING_PRESETS, MOOD_PRESETS, RESOLUTION_OPTIONS } from '@/lib/image-prompts';
-import { LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
-import { ChipRow } from './chip-row';
+import { LOGO_BOLDNESS_PRESETS, LOGO_HIDDEN_MEANING_PRESETS, LOGO_LOCKUP_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_SHAPE_PRESETS, LOGO_STYLE_PRESETS, LOGO_TYPOGRAPHY_PRESETS, LOGO_USAGE_PRESETS } from '@/lib/logo-prompts';
+import { ChipRow, MultiChipRow } from './chip-row';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
 
 interface ArtDirectionProps {
@@ -23,14 +23,17 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
 
   const summary = isLogo
     ? [
-        LOGO_MARK_TYPES.find((m) => m.id === state.logoType)?.label,
-        LOGO_STYLE_PRESETS.find((s) => s.id === state.logoStyle)?.label,
-        LOGO_PALETTE_PRESETS.find((p) => p.id === state.palette)?.label,
+        LOGO_SHAPE_PRESETS.find((s) => s.id === state.shapeLanguage)?.label,
+        LOGO_TYPOGRAPHY_PRESETS.find((t) => t.id === state.typography)?.label,
+        LOGO_LOCKUP_PRESETS.find((l) => l.id === state.lockup)?.label,
+        LOGO_HIDDEN_MEANING_PRESETS.find((h) => h.id === state.hiddenMeaning)?.label,
+        state.usage.length > 0 && `${state.usage.length} use${state.usage.length > 1 ? 's' : ''}`,
+        LOGO_BOLDNESS_PRESETS.find((b) => b.id === state.boldness)?.label,
         mood && MOOD_PRESETS.find((m) => m.id === mood)?.label,
         resolution && `@${resolution}`,
       ]
         .filter(Boolean)
-        .join(' · ') || 'Mark type · style · palette · vibe · text · negatives'
+        .join(' · ') || 'Shape · type · lockup · hidden meaning · uses · vibe · text · negatives'
     : [
         lighting && LIGHTING_PRESETS.find((l) => l.id === lighting)?.label,
         mood && MOOD_PRESETS.find((m) => m.id === mood)?.label,
@@ -69,6 +72,61 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={LIGHTING_PRESETS}
             value={lighting}
             onChange={(id) => handlers.setLighting(lighting === id ? undefined : id)}
+          />
+        )}
+        {isLogo && (
+          <ChipRow
+            label="Shape language"
+            icon={<Triangle className="w-3.5 h-3.5 text-brand" />}
+            options={LOGO_SHAPE_PRESETS}
+            value={state.shapeLanguage}
+            onChange={(id) => handlers.setShapeLanguage(state.shapeLanguage === id ? undefined : id)}
+          />
+        )}
+        {isLogo && (
+          <ChipRow
+            label="Typography direction"
+            icon={<Type className="w-3.5 h-3.5 text-brand" />}
+            options={LOGO_TYPOGRAPHY_PRESETS}
+            value={state.typography}
+            onChange={(id) => handlers.setTypography(state.typography === id ? undefined : id)}
+          />
+        )}
+        {isLogo && (
+          <ChipRow
+            label="Lockup layout"
+            icon={<LayoutGrid className="w-3.5 h-3.5 text-brand" />}
+            options={LOGO_LOCKUP_PRESETS}
+            value={state.lockup}
+            onChange={(id) => handlers.setLockup(state.lockup === id ? undefined : id)}
+          />
+        )}
+        {isLogo && (
+          <ChipRow
+            label="Hidden meaning"
+            icon={<Eye className="w-3.5 h-3.5 text-brand" />}
+            options={LOGO_HIDDEN_MEANING_PRESETS}
+            value={state.hiddenMeaning}
+            onChange={(id) => handlers.setHiddenMeaning(state.hiddenMeaning === id ? undefined : id)}
+          />
+        )}
+        {isLogo && (
+          <MultiChipRow
+            label="Where the logo must work"
+            icon={<Package className="w-3.5 h-3.5 text-brand" />}
+            options={LOGO_USAGE_PRESETS}
+            values={state.usage}
+            onChange={handlers.setUsage}
+            helper="Drives small-size and one-color constraints — an app icon needs favicon-level simplicity, packaging needs ink-safe contrast."
+          />
+        )}
+        {isLogo && (
+          <ChipRow
+            label="Concept boldness"
+            icon={<Gauge className="w-3.5 h-3.5 text-brand" />}
+            options={LOGO_BOLDNESS_PRESETS}
+            value={state.boldness}
+            onChange={(id) => handlers.setBoldness(state.boldness === id ? undefined : id)}
           />
         )}
         <ChipRow

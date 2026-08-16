@@ -16,6 +16,22 @@ export interface StudioFormState {
   palette: string;
   /** Logo mode — exact wordmark / brand name text. */
   brandName: string;
+  /** Logo mode — industry preset id (see LOGO_INDUSTRY_PRESETS). */
+  industry: string | undefined;
+  /** Logo mode — ownable symbol concept id (see LOGO_CONCEPT_PRESETS). */
+  concept: string | undefined;
+  /** Logo mode — shape-language id (see LOGO_SHAPE_PRESETS). */
+  shapeLanguage: string | undefined;
+  /** Logo mode — typography direction id (see LOGO_TYPOGRAPHY_PRESETS). */
+  typography: string | undefined;
+  /** Logo mode — lockup layout id (see LOGO_LOCKUP_PRESETS). */
+  lockup: string | undefined;
+  /** Logo mode — hidden-meaning treatment id (see LOGO_HIDDEN_MEANING_PRESETS). */
+  hiddenMeaning: string | undefined;
+  /** Logo mode — versatility targets (see LOGO_USAGE_PRESETS). */
+  usage: string[];
+  /** Logo mode — concept boldness id (see LOGO_BOLDNESS_PRESETS). */
+  boldness: string | undefined;
   lighting: string | undefined;
   mood: string | undefined;
   composition: string | undefined;
@@ -39,6 +55,14 @@ export interface StudioFormHandlers {
   setLogoStyle: (value: string) => void;
   setPalette: (value: string) => void;
   setBrandName: (value: string) => void;
+  setIndustry: (value: string | undefined) => void;
+  setConcept: (value: string | undefined) => void;
+  setShapeLanguage: (value: string | undefined) => void;
+  setTypography: (value: string | undefined) => void;
+  setLockup: (value: string | undefined) => void;
+  setHiddenMeaning: (value: string | undefined) => void;
+  setUsage: (value: string[]) => void;
+  setBoldness: (value: string | undefined) => void;
   setLighting: (value: string | undefined) => void;
   setMood: (value: string | undefined) => void;
   setComposition: (value: string | undefined) => void;

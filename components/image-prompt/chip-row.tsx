@@ -58,3 +58,53 @@ export function ChipRow({ label, icon, options, value, onChange }: ChipRowProps)
     </div>
   );
 }
+
+interface MultiChipRowProps {
+  label: string;
+  icon: React.ReactNode;
+  options: ChipOption[];
+  /** Selected option ids. */
+  values: string[];
+  onChange: (ids: string[]) => void;
+  /** Optional helper text under the row. */
+  helper?: string;
+}
+
+/** Multi-select chip row — same visual language, toggling membership in a list. */
+export function MultiChipRow({ label, icon, options, values, onChange, helper }: MultiChipRowProps) {
+  const toggle = (id: string) =>
+    onChange(values.includes(id) ? values.filter((v) => v !== id) : [...values, id]);
+  return (
+    <div className="space-y-2">
+      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+        {icon}
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt, i) => {
+          const selected = values.includes(opt.id);
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => toggle(opt.id)}
+              title={opt.hint}
+              aria-pressed={selected}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
+                selected
+                  ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                  : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+              )}
+            >
+              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', CHIP_DOTS[i % CHIP_DOTS.length])} />
+              {opt.label}
+              {selected && <Check className="w-3 h-3 text-brand shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
+      {helper && <p className="text-[10px] text-text-muted leading-relaxed">{helper}</p>}
+    </div>
+  );
+}

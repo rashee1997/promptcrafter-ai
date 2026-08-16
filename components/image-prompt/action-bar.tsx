@@ -4,7 +4,7 @@ import React from 'react';
 import { Cpu, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
-import { LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
+import { LOGO_CONCEPT_PRESETS, LOGO_INDUSTRY_PRESETS, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { ProviderConfig } from '@/types';
 import { StudioFormState } from './studio-types';
 
@@ -40,6 +40,16 @@ export function ActionBar({
           {isLogo && (
             <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
               {LOGO_PALETTE_PRESETS.find((p) => p.id === state.palette)?.label ?? state.palette}
+            </span>
+          )}
+          {isLogo && state.industry && (
+            <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+              {LOGO_INDUSTRY_PRESETS.find((i) => i.id === state.industry)?.label ?? state.industry}
+            </span>
+          )}
+          {isLogo && state.concept && (
+            <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+              {LOGO_CONCEPT_PRESETS.find((c) => c.id === state.concept)?.label ?? state.concept}
             </span>
           )}
           <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">{state.aspectRatio}</span>

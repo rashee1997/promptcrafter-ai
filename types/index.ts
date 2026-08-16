@@ -359,6 +359,30 @@ export interface ImagePromptInput {
   palette?: string;
   /** Logo mode — exact brand name / wordmark text to render in the mark. */
   brandName?: string;
+  /**
+   * Logo mode — industry preset id (see LOGO_INDUSTRY_PRESETS in
+   * lib/logo-prompts.ts). Injects the category's expected audience and
+   * design direction so the mark reads as appropriate, not generic.
+   */
+  industry?: string;
+  /**
+   * Logo mode — ownable symbol concept id (see LOGO_CONCEPT_PRESETS). The
+   * mark is built around this concept AND its meaning, which is what makes
+   * logos feel designed rather than stock.
+   */
+  concept?: string;
+  /** Logo mode — shape-language id (see LOGO_SHAPE_PRESETS). */
+  shapeLanguage?: string;
+  /** Logo mode — typography direction id (see LOGO_TYPOGRAPHY_PRESETS). */
+  typography?: string;
+  /** Logo mode — lockup layout id (see LOGO_LOCKUP_PRESETS). */
+  lockup?: string;
+  /** Logo mode — hidden-meaning / negative-space treatment id (see LOGO_HIDDEN_MEANING_PRESETS). */
+  hiddenMeaning?: string;
+  /** Logo mode — versatility targets (see LOGO_USAGE_PRESETS); drives small-size + one-color constraints. */
+  usage?: string[];
+  /** Logo mode — concept boldness calibration id (see LOGO_BOLDNESS_PRESETS). */
+  boldness?: string;
 }
 
 /** Request contract for the Image Prompt Studio API route. */

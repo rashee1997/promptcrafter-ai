@@ -50,7 +50,9 @@ const LOGO_REFINE_SUGGESTIONS = [
   { id: 'flat', label: 'Simplify to a flat vector lockup' },
   { id: 'mono', label: 'Try a single-color version' },
   { id: 'emblem', label: 'Wrap it in an emblem / badge frame' },
-  { id: 'bold', label: 'Use a bolder, heavier wordmark' },
+  { id: 'hidden', label: 'Hide a second meaning in the negative space' },
+  { id: 'daring', label: 'Push the concept to be bolder and more ownable' },
+  { id: 'typography', label: 'Give the wordmark custom display typography' },
 ];
 
 /**

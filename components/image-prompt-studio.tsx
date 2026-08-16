@@ -47,6 +47,14 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [logoStyle, setLogoStyle] = useState(DEFAULT_LOGO_INPUT.logoStyle);
   const [palette, setPalette] = useState(DEFAULT_LOGO_INPUT.palette);
   const [brandName, setBrandName] = useState('');
+  const [industry, setIndustry] = useState<string | undefined>(undefined);
+  const [concept, setConcept] = useState<string | undefined>(undefined);
+  const [shapeLanguage, setShapeLanguage] = useState<string | undefined>(undefined);
+  const [typography, setTypography] = useState<string | undefined>(undefined);
+  const [lockup, setLockup] = useState<string | undefined>(undefined);
+  const [hiddenMeaning, setHiddenMeaning] = useState<string | undefined>(undefined);
+  const [usage, setUsage] = useState<string[]>([]);
+  const [boldness, setBoldness] = useState<string | undefined>(undefined);
   const [lighting, setLighting] = useState<string | undefined>(undefined);
   const [mood, setMood] = useState<string | undefined>(undefined);
   const [composition, setComposition] = useState<string | undefined>(undefined);
@@ -89,6 +97,14 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     logoStyle,
     palette,
     brandName,
+    industry,
+    concept,
+    shapeLanguage,
+    typography,
+    lockup,
+    hiddenMeaning,
+    usage,
+    boldness,
     lighting,
     mood,
     composition,
@@ -111,6 +127,14 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setLogoStyle,
     setPalette,
     setBrandName,
+    setIndustry,
+    setConcept,
+    setShapeLanguage,
+    setTypography,
+    setLockup,
+    setHiddenMeaning,
+    setUsage,
+    setBoldness,
     setLighting,
     setMood,
     setComposition,
@@ -136,6 +160,14 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     logoStyle: mode === 'logo' ? logoStyle : undefined,
     palette: mode === 'logo' ? palette : undefined,
     brandName: mode === 'logo' ? brandName.trim() || undefined : undefined,
+    industry: mode === 'logo' ? industry || undefined : undefined,
+    concept: mode === 'logo' ? concept || undefined : undefined,
+    shapeLanguage: mode === 'logo' ? shapeLanguage || undefined : undefined,
+    typography: mode === 'logo' ? typography || undefined : undefined,
+    lockup: mode === 'logo' ? lockup || undefined : undefined,
+    hiddenMeaning: mode === 'logo' ? hiddenMeaning || undefined : undefined,
+    usage: mode === 'logo' && usage.length > 0 ? [...usage] : undefined,
+    boldness: mode === 'logo' ? boldness || undefined : undefined,
     lighting: lighting || undefined,
     mood: mood || undefined,
     composition: composition || undefined,
@@ -247,6 +279,14 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setLogoStyle(inp?.logoStyle ?? DEFAULT_LOGO_INPUT.logoStyle);
     setPalette(inp?.palette ?? DEFAULT_LOGO_INPUT.palette);
     setBrandName(inp?.brandName ?? '');
+    setIndustry(inp?.industry ?? undefined);
+    setConcept(inp?.concept ?? undefined);
+    setShapeLanguage(inp?.shapeLanguage ?? undefined);
+    setTypography(inp?.typography ?? undefined);
+    setLockup(inp?.lockup ?? undefined);
+    setHiddenMeaning(inp?.hiddenMeaning ?? undefined);
+    setUsage(inp?.usage ?? []);
+    setBoldness(inp?.boldness ?? undefined);
     setLighting(inp?.lighting ?? undefined);
     setMood(inp?.mood ?? undefined);
     setComposition(inp?.composition ?? undefined);

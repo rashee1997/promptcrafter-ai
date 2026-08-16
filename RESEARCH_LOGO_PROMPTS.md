@@ -130,7 +130,56 @@ studio exposes as one-click presets (grounded in Looka / Figma / VistaPrint guid
 | Platform-specific logo handling | Logo dialect guide per platform: `--no text` for MJ symbol-only concepts, Ideogram/Gemini get full wordmark specs, SD/Flux gets a text-artifacts negative line |
 | Remix suggestions should match the mode | Logo-mode remixes offer flat-vector simplification, single-color versions, emblem frames, and bolder wordmarks |
 
-## 8. Sources
+## 8. Round two — why AI logo prompts still look "stock" (and the fixes shipped)
+
+Follow-up research (Superside's in-house Gen-AI designers, Promptsa's 2026
+prompt library, VistaPrint/99designs 2026 trend report, shape-psychology guides)
+converged on one diagnosis for the "awkward / not design-grade" complaint:
+
+> **The model writes adjectives, not design.** "Sleek, modern, professional,
+futuristic" describe a feeling but give the diffusion model nothing to draw.
+> Professional logo prompts name the *form*: "a single continuous line", "a
+> negative-space cut", "a heavy geometric sans-serif, uppercase, wide tracking",
+> "pure black on white, high-contrast silhouette". (Superside: "the results often
+> had a generic 'vector logo stock' look… challenging to generate fresh, unique
+> and non-cliché ideas.")
+
+Four more recurring findings drove new features:
+
+1. **Industry appropriateness is a design principle, not a nice-to-have.**
+   Each category has an expected visual language (medical = soft rounded shapes
+   build trust; tech = abstract geometry; finance = stability and heritage) and
+   its own cliché set. Prompts that don't encode either read as generic stock.
+2. **Concepts need meaning, not decoration.** A shield must convey protection,
+   a wave must convey calm motion (shape-psychology research: circles = unity,
+   squares = trust, triangles = power). Logos feel *designed* when the mark
+   encodes meaning; they feel stock when the concept is decorative.
+3. **The 2026 trend set changed.** VistaPrint/99designs: Storybook Gothic,
+   Pixel Sharp, Little Blip (one intentional "off" move), Toasty, Stamp & Seal —
+   and "minimal isn't dead, it just needs a hook" (negative-space cuts, asymmetry).
+4. **"Black and white" is a trap.** Models render it as a grayscale photo;
+   "monochrome, pure black on white, no gradients, designed for single-color
+   print" renders a real one-color mark (Promptsa).
+
+### What changed in the studio (round two)
+
+| Research finding | Studio change |
+|---|---|
+| Buzzword prompts produce stock logos | New hard rule in the logo meta-prompt: **DESIGN VOCABULARY, NOT BUZZWORDS** — "sleek/modern/professional/futuristic/elegant/premium" are forbidden as standalone descriptors; every prompt must describe concrete visual form (shape, stroke, type system, hex palette) |
+| Industry appropriateness + clichés | New **Industry & audience** row (13 presets: Tech & SaaS, Food & Beverage, Health & Wellness, Finance & Legal, Education, Creative, Retail & Fashion, Fitness, Real Estate, Hospitality, Gaming, Non-profit, Beauty) — each injects the category's visual language *and* a per-category cliché ban |
+| Concepts need meaning | New **Concept & meaning** row (20 ownable symbols — mountain, shield, wave, orbit, key, compass, crescent, hexagon… each with the meaning the mark must encode) |
+| Shape psychology | New **Shape language** row (circles/curves = unity, angular = power, squared = trust, organic = calm, symmetrical = formal, asymmetric = dynamic) |
+| Typography is the brand | New **Typography direction** row (geometric sans, humanist sans, modern serif, slab, script, mono, custom display, symbol-only) with weight/case/spacing dictation |
+| Lockup must be explicit | New **Lockup layout** row (horizontal, stacked, emblem/badge, mark-only) |
+| Hidden meanings are the memorable class | New **Hidden meaning** row (none, negative-space cut, hidden initial, double-meaning form — the FedEx-arrow class) |
+| Versatility / small-size survival | New **Where the logo must work** multi-select (app icon, website, packaging, print & signage, apparel) that encodes 32px-favicon, one-color, and ink-safe constraints |
+| Safe vs. ownable is a real dial | New **Concept boldness** row (Safe / Balanced / Daring) so users can push past category sameness deliberately |
+| 2026 style trends | Style pool expanded 19 → 24: Storybook Gothic, Pixel Sharp, Little Blip, Toasty, Stamp & Seal |
+| Palette range | Palette pool expanded 16 → 22: Charcoal & Mint, Indigo & Gold, Rose & Slate, Sand & Navy, Raspberry & Cream, Olive & Rust |
+| Monochrome correctness | Monochrome palette now emits "pure black on white, high-contrast silhouette, no gradients — designed for single-color print" in every dialect, never "black and white" |
+| Remix suggestions should match the features | Logo remixes expanded: hide a second meaning in negative space, push the concept bolder, custom display typography |
+
+## 9. Sources
 
 - ManyPixels — "25 AI Logo Prompts (+ How to Write Your Own) for 2026" — manypixels.co/blog/brand-design/best-ai-logo-prompts (Jul 2026)
 - Zoviz — "8 Logo Styles Explained: Types, Examples & How to Pick" — zoviz.com/blog/8-key-logo-styles-and-25-design-ideas (Aug 2026)
@@ -142,3 +191,8 @@ studio exposes as one-click presets (grounded in Looka / Figma / VistaPrint guid
 - Looka — "50 Logo Color Combinations to Inspire Your Design" — looka.com/blog/logo-color-combinations/
 - Figma — "Color Combinations" — figma.com/resource-library/color-combinations/
 - Printful — "10 Types of Logos (and How to Choose Yours)" — printful.com/blog/types-of-logos
+- VistaPrint / 99designs — "10 Logo Design Trends for 2026" — vistaprint.com/hub/logo-design-trends (Oct 2025)
+- Logo Design.net — "The Use of Shapes in Logo Design and Their Psychology" — logodesign.net/blog/psychology-of-shapes-in-logo (Sep 2025)
+- Ramotion — "Shape Psychology in Logo Design" — ramotion.com/blog/shapes-in-logo-design (Feb 2026)
+- Looka — "Logo Shapes: What They Mean & Why They're Important" — looka.com/blog/logo-shapes-meanings (Sep 2025)
+- Canva — "50 famous logos with hidden meanings" — canva.com/logos/hidden-meanings-behind-50-worlds-recognizable-logos
