@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import {
   Sparkles,
+  ImagePlus,
   History,
   Settings,
   Cpu,
@@ -18,9 +19,11 @@ import { ProviderConfig } from '@/types';
 import { getProviderModelList } from '@/lib/storage';
 import { Tooltip } from './tooltip';
 
+export type AppTab = 'generator' | 'image' | 'history' | 'settings';
+
 interface NavbarProps {
-  activeTab: 'generator' | 'history' | 'settings';
-  setActiveTab: (tab: 'generator' | 'history' | 'settings') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   activeProvider: ProviderConfig;
   /** Currently selected model for the active provider. */
   activeModel?: string;
@@ -34,6 +37,7 @@ interface NavbarProps {
 
 const TABS = [
   { id: 'generator', label: 'Create', Icon: Sparkles },
+  { id: 'image', label: 'Image', Icon: ImagePlus },
   { id: 'history', label: 'History', Icon: History },
   { id: 'settings', label: 'Settings', Icon: Settings },
 ] as const;
@@ -52,7 +56,7 @@ export function Navbar({
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const modelList = getProviderModelList(activeProvider);
 
-  const handleTabClick = (tab: 'generator' | 'history' | 'settings') => {
+  const handleTabClick = (tab: AppTab) => {
     setActiveTab(tab);
   };
 
@@ -237,7 +241,7 @@ export function Navbar({
         aria-label="Primary"
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface-card/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="grid h-16 grid-cols-3 max-w-md mx-auto">
+        <div className="grid h-16 grid-cols-4 max-w-md mx-auto">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (

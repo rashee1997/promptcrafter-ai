@@ -302,6 +302,48 @@ export interface HistoryItem {
   tags?: string[];
 }
 
+/**
+ * Image-generation dialects the Image Studio can emit a tuned prompt for.
+ */
+export type ImagePlatform =
+  | 'midjourney'
+  | 'dalle'
+  | 'stable-diffusion'
+  | 'flux'
+  | 'ideogram';
+
+/**
+ * Input for the Image Prompt Studio — a researched, multi-platform image
+ * generation prompt built from a short description.
+ */
+export interface ImagePromptInput {
+  /** What the image is actually of (the subject slot). */
+  subject: string;
+  /** Style preset id (see STYLE_PRESETS in lib/image-prompts.ts). */
+  style: string;
+  /** Lighting preset id, optional. */
+  lighting?: string;
+  /** Mood preset id, optional. */
+  mood?: string;
+  /** Composition / camera preset id, optional. */
+  composition?: string;
+  /** Aspect ratio, e.g. '1:1' | '16:9' | '9:16' | '4:3' | '3:2'. */
+  aspectRatio: string;
+  /** Which platform dialects to generate a tuned prompt for. */
+  platforms: ImagePlatform[];
+  /** Custom negative-prompt guidance (things to avoid in the image). */
+  negativePrompt?: string;
+  /** When true, the model is instructed to research the subject on the web first. */
+  deepResearch: boolean;
+  additionalNotes?: string;
+}
+
+/** Request contract for the Image Prompt Studio API route. */
+export interface ImagePromptGenerationRequest {
+  provider: ProviderConfig;
+  input: ImagePromptInput;
+}
+
 export interface GenerationRequest {
   provider: ProviderConfig;
   input: PromptInput;

@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
-import { Navbar } from '@/components/navbar';
+import { AppTab, Navbar } from '@/components/navbar';
+import { ImagePromptStudio } from '@/components/image-prompt-studio';
 import { PromptForm } from '@/components/prompt-form';
 import { PromptOutput } from '@/components/prompt-output';
 import { HistoryPanel } from '@/components/history-panel';
@@ -20,6 +21,7 @@ import {
   Settings as SettingsIcon,
   Sun,
   Moon,
+  ImagePlus,
 } from 'lucide-react';
 import { PromptInput, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
 import {
@@ -47,7 +49,7 @@ import { generatePromptStream, refinePromptStream } from '@/lib/ai-client';
 import { computePromptStats, generateVersionName, unwrapCodeBlock } from '@/lib/prompt-stats';
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'generator' | 'history' | 'settings'>('generator');
+  const [activeTab, setActiveTab] = useState<AppTab>('generator');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -625,6 +627,14 @@ export default function HomePage() {
       },
     },
     {
+      id: 'image',
+      label: 'Open image studio',
+      hint: 'Research image briefs on the web and generate platform prompts',
+      icon: <ImagePlus className="w-4 h-4" />,
+      group: 'Navigate',
+      run: () => setActiveTab('image'),
+    },
+    {
       id: 'history',
       label: 'Open history',
       hint: `${sessions.length} saved prompt${sessions.length === 1 ? '' : 's'}`,  
@@ -760,6 +770,21 @@ export default function HomePage() {
                   onOpenHistoryDiff={handleOpenHistoryDiff}
                 />
               </div>
+              </motion.div>
+            )}
+            {activeTab === 'image' && (
+              <motion.div
+                key="image"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="max-w-5xl mx-auto"
+              >
+                <ImagePromptStudio
+                  activeProvider={activeProvider}
+                  onSelectActiveModel={handleSelectActiveModel}
+                />
               </motion.div>
             )}
             {activeTab === 'history' && (
