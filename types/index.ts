@@ -256,6 +256,38 @@ export interface EvaluateRequest {
   context?: EvaluationContext;
 }
 
+// A1 — AI-refreshed example-topic suggestions (hybrid demo prompts).
+// The static per-domain/module arrays are the instant fallback; this request
+// asks a low-latency model to suggest context-aware replacements.
+export interface SuggestExamplesRequest {
+  module: 'text' | 'image' | 'logo';
+  /** Text module only — the selected domain preset id. */
+  domainId?: string;
+  /** Text module only — the selected domain name, for the prompt. */
+  domainName?: string;
+  /** Whatever the user has already picked, so suggestions make sense with it. */
+  currentInput?: Partial<ImagePromptInput> | Partial<PromptInput>;
+  /** Number of suggestions wanted. Default 4. */
+  count?: number;
+}
+
+export interface SuggestExamplesResponse {
+  examples: string[];
+  /** True when the request failed and the client should keep its static array. */
+  fallback: boolean;
+}
+
+// B1 — AI-suggested negative-prompt line for Image / Logo modes.
+export interface SuggestNegativePromptRequest {
+  mode: 'image' | 'logo';
+  input: ImagePromptInput;
+}
+
+export interface SuggestNegativePromptResponse {
+  /** Null on any failure — the client just hides the suggestion. */
+  suggestion: string | null;
+}
+
 // F2 — run the same prompt + test input across multiple providers
 export interface ABTestRequest {
   providers: ProviderConfig[];

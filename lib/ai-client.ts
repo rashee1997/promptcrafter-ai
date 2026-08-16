@@ -9,6 +9,10 @@ import {
   PromptQuality,
   ProviderConfig,
   RefineRequest,
+  SuggestExamplesRequest,
+  SuggestExamplesResponse,
+  SuggestNegativePromptRequest,
+  SuggestNegativePromptResponse,
   TestPromptRequest,
 } from '@/types';
 
@@ -231,6 +235,47 @@ export async function runABTest(request: ABTestRequest): Promise<ABTestResult | 
   } catch (err) {
     console.error('runABTest failed:', err);
     return null;
+  }
+}
+
+/** A1 — AI-refreshed example-topic suggestions (hybrid demo prompts). */
+export async function suggestExamples(
+  request: SuggestExamplesRequest
+): Promise<SuggestExamplesResponse> {
+  try {
+    const res = await fetch('/api/suggest-examples', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) return { examples: [], fallback: true };
+    const data = await res.json();
+    return {
+      examples: Array.isArray(data?.examples) ? data.examples.map(String) : [],
+      fallback: data?.fallback !== false,
+    };
+  } catch (err) {
+    console.error('suggestExamples failed:', err);
+    return { examples: [], fallback: true };
+  }
+}
+
+/** B1 — AI-suggested negative-prompt line for Image / Logo modes. */
+export async function suggestNegativePrompt(
+  request: SuggestNegativePromptRequest
+): Promise<SuggestNegativePromptResponse> {
+  try {
+    const res = await fetch('/api/suggest-negative-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) return { suggestion: null };
+    const data = await res.json();
+    return { suggestion: typeof data?.suggestion === 'string' && data.suggestion.trim() ? data.suggestion.trim() : null };
+  } catch (err) {
+    console.error('suggestNegativePrompt failed:', err);
+    return { suggestion: null };
   }
 }
 

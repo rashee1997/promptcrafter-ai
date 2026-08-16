@@ -174,11 +174,17 @@ export function PromptForm({
           </div>
         </div>
 
-        {/* Domain Selector Component */}
+        {/* Domain Selector Component — current selections feed the dynamic example chips */}
         <DomainSelector
           selectedDomainId={selectedDomain.id}
           onSelectDomain={setSelectedDomain}
           onPickExampleTopic={(example) => setTopic(example)}
+          currentInput={{
+            domainId: selectedDomain.id,
+            tone,
+            framework,
+            targetAudience: targetAudience.trim() || undefined,
+          }}
         />
 
         {/* Custom Domain Context if Custom Selected */}

@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Building2, Check, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Shapes, Sparkles, X } from 'lucide-react';
+import { Building2, Check, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, RefreshCw, Shapes, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { cn } from '@/lib/utils';
+import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
 import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { ProviderConfig } from '@/types';
@@ -41,6 +42,10 @@ export function PromptForm({
 
   const isLogo = state.mode === 'logo';
   const exampleTopics = isLogo ? LOGO_EXAMPLE_TOPICS : EXAMPLE_TOPICS;
+  // Hybrid demo prompts: static chips render instantly, then quietly upgrade to
+  // AI-refreshed suggestions matched to the current mode/settings.
+  const { examples: dynamicExamples, isRefreshing: examplesRefreshing, refresh: refreshExamples } =
+    useDynamicExamples(state.mode, state, exampleTopics);
   // The style grid is shared between modes — only the option pool and active value differ.
   const styleOptions = isLogo ? LOGO_STYLE_PRESETS : STYLE_PRESETS;
   const activeStyle = isLogo ? state.logoStyle : state.style;
@@ -116,16 +121,35 @@ export function PromptForm({
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {exampleTopics.map((ex) => (
-              <button
-                key={ex}
-                type="button"
-                onClick={() => handlers.setSubject(ex)}
-                className="px-2 py-1 rounded-lg text-[10px] font-medium bg-surface-muted border border-border text-text-muted hover:text-brand hover:border-brand/40 transition-colors"
-              >
-                {ex.length > 46 ? `${ex.slice(0, 46)}…` : ex}
-              </button>
-            ))}
+            <div
+              className={cn(
+                'flex flex-wrap gap-1.5 transition-opacity duration-300',
+                examplesRefreshing && 'opacity-60'
+              )}
+              aria-busy={examplesRefreshing}
+            >
+              {dynamicExamples.map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  onClick={() => handlers.setSubject(ex)}
+                  className="px-2 py-1 rounded-lg text-[10px] font-medium bg-surface-muted border border-border text-text-muted hover:text-brand hover:border-brand/40 transition-colors"
+                >
+                  {ex.length > 46 ? `${ex.slice(0, 46)}…` : ex}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={refreshExamples}
+              disabled={examplesRefreshing}
+              title="Get new suggestions"
+              aria-label="Get new example suggestions"
+              className="flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] font-medium text-text-muted hover:text-brand border border-transparent hover:border-brand/40 transition-colors disabled:opacity-60"
+            >
+              <RefreshCw className={cn('w-3 h-3', examplesRefreshing && 'animate-spin')} />
+              {examplesRefreshing ? 'Refreshing' : 'New ideas'}
+            </button>
           </div>
         </div>
 
