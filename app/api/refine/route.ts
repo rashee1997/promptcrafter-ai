@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
+import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { DomainPreset, RefineRequest } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const modelName = provider?.model || 'gemini-3.6-flash';
+      const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
 
       // Map prior messages for Gemini chat history
       const mappedHistory = (priorMessages || []).map((msg) => ({

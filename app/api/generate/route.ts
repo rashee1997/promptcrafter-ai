@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildMetaSystemPrompt, buildUserPromptMessage, DOMAIN_PRESETS } from '@/lib/domains';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
+import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { GenerationRequest } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const modelName = provider?.model || 'gemini-3.6-flash';
+      const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
 
       const responseStream = await ai.models.generateContentStream({
         model: modelName,

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { ProviderConfig } from '@/types';
+import { GEMINI_DEFAULT_MODEL } from './storage';
 import { createOpenAIClient } from './openai-provider';
 
 export interface CompletionMessage {
@@ -52,7 +53,7 @@ export async function runNonStreamingCompletion(
       },
     });
 
-    const modelName = provider?.model || 'gemini-3.6-flash';
+    const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
     const systemInstruction = messages
       .filter((m) => m.role === 'system')
       .map((m) => m.content)

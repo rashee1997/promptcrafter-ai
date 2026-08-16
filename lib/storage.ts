@@ -9,13 +9,46 @@ const STORE_SESSIONS = 'sessions';
 const STORE_PROVIDERS = 'providers';
 const STORE_SETTINGS = 'settings';
 
+/**
+ * Default Gemini model used whenever a request doesn't carry an explicit
+ * model selection. Kept as a stable, broadly available model — the newest
+ * models are available in GEMINI_MODEL_LIST for users who opt in.
+ */
+export const GEMINI_DEFAULT_MODEL = 'gemini-3.6-flash';
+
+/**
+ * Curated Gemini API model list (official docs, August 2026) exposed in the
+ * built-in provider's model selector. Order: newest stable first, then
+ * frontier previews, then the rest of the stable family, then the proven
+ * 2.5 fallback tier. `activeModel` pins the default so the dropdown order
+ * never silently changes what model fresh users get.
+ */
+export const GEMINI_MODEL_LIST: string[] = [
+  // Latest stable — most capable Flash model
+  'gemini-3.7-flash',
+  // Current default — previous-gen Flash, reliable and multimodal
+  GEMINI_DEFAULT_MODEL,
+  // Frontier previews (may have tighter rate limits)
+  'gemini-3.1-pro-preview',
+  'gemini-3-flash-preview',
+  // Stable 3.x family
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  // Fallback tier — proven 2.5 family
+  'gemini-2.5-pro',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+];
+
 export const DEFAULT_BUILTIN_PROVIDER: ProviderConfig = {
   id: 'default-gemini',
-  name: 'Google Gemini 3.6 Flash (Server Default)',
+  name: 'Google Gemini (Server Default)',
   baseUrl: 'https://generativelanguage.googleapis.com',
   apiKey: 'BUILTIN', // handled server side with GEMINI_API_KEY
-  model: 'gemini-3.6-flash',
-  models: ['gemini-3.6-flash'],
+  model: GEMINI_DEFAULT_MODEL,
+  models: GEMINI_MODEL_LIST,
+  activeModel: GEMINI_DEFAULT_MODEL,
   isDefault: true,
   useBuiltInGemini: true,
   temperature: 0.7,
@@ -67,7 +100,7 @@ function convertHistoryItemToSession(item: HistoryItem): Session {
         createdAt: timestamp,
         content: item.output || '',
         providerName: item.providerName || 'Default Provider',
-        modelUsed: item.modelUsed || 'gemini-3.6-flash',
+        modelUsed: item.modelUsed || GEMINI_DEFAULT_MODEL,
         stats,
       },
     ],
