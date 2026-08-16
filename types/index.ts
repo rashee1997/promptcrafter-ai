@@ -313,8 +313,8 @@ export type ImagePlatform =
   | 'ideogram';
 
 /**
- * Input for the Image Prompt Studio — a researched, multi-platform image
- * generation prompt built from a short description.
+ * Input for the Image Prompt Studio — a multi-platform image generation
+ * prompt built from a short description.
  */
 export interface ImagePromptInput {
   /** What the image is actually of (the subject slot). */
@@ -333,8 +333,6 @@ export interface ImagePromptInput {
   platforms: ImagePlatform[];
   /** Custom negative-prompt guidance (things to avoid in the image). */
   negativePrompt?: string;
-  /** When true, the model is instructed to research the subject on the web first. */
-  deepResearch: boolean;
   additionalNotes?: string;
 }
 

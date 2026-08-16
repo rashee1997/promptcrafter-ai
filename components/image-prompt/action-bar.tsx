@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Cpu, Globe } from 'lucide-react';
+import { Cpu, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
 import { ProviderConfig } from '@/types';
@@ -36,12 +36,6 @@ export function ActionBar({
           <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
             {platformLabels.map((p) => p.label).join(' · ')}
           </span>
-          {state.deepResearch && (
-            <span className="px-2 py-1 rounded-md bg-success/10 border border-success/25 text-success">
-              <Globe className="w-3 h-3 inline mr-1" />
-              Web
-            </span>
-          )}
           {activeProvider && onSelectActiveModel && providerModels.length > 0 && (
             <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border">
               <Cpu className="w-3 h-3 text-brand shrink-0" />
@@ -73,12 +67,12 @@ export function ActionBar({
           {isGenerating ? (
             <>
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{state.deepResearch ? 'Researching the web…' : 'Researching…'}</span>
+              <span>Generating…</span>
             </>
           ) : (
             <>
-              <Globe className="w-5 h-5" />
-              <span>Research &amp; Generate</span>
+              <Sparkles className="w-5 h-5" />
+              <span>Generate prompt</span>
               <kbd className="ml-1 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-80">
                 ⌘⏎
               </kbd>

@@ -31,7 +31,7 @@ interface ImagePromptStudioProps {
 }
 
 /**
- * Image Prompt Studio — orchestrates the research brief form, the streaming
+ * Image Prompt Studio — orchestrates the image prompt form, the streaming
  * output panel, and the saved gallery. All UI is delegated to focused
  * sub-components under components/image-prompt/.
  */
@@ -46,7 +46,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [composition, setComposition] = useState<string | undefined>(undefined);
   const [aspectRatio, setAspectRatio] = useState(DEFAULT_IMAGE_INPUT.aspectRatio);
   const [platforms, setPlatforms] = useState<ImagePlatform[]>(DEFAULT_IMAGE_INPUT.platforms);
-  const [deepResearch, setDeepResearch] = useState(DEFAULT_IMAGE_INPUT.deepResearch);
   const [negativePrompt, setNegativePrompt] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [showArtDirection, setShowArtDirection] = useState(false);
@@ -73,7 +72,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     composition,
     aspectRatio,
     platforms,
-    deepResearch,
     negativePrompt,
     additionalNotes,
     showArtDirection,
@@ -90,7 +88,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       setPlatforms((prev) =>
         prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
       ),
-    setDeepResearch,
     setNegativePrompt,
     setAdditionalNotes,
     setShowArtDirection,
@@ -105,7 +102,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     aspectRatio,
     platforms,
     negativePrompt: negativePrompt.trim() || undefined,
-    deepResearch,
     additionalNotes: additionalNotes.trim() || undefined,
   });
 
@@ -139,8 +135,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           parsed = { ...parsed, master: completedText.trim() };
         }
         setSections(parsed);
-        setActiveTab(parsed.research ? 'research' : 'master');
-        toast.success('Image brief ready', 'Research + platform prompts are ready to copy.');
+        setActiveTab('master');
+        toast.success('Image prompts ready', 'Master + platform prompts are ready to copy.');
       },
       (error) => {
         setIsGenerating(false);
@@ -197,10 +193,10 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
 
   return (
     <div className="space-y-6">
-      <StudioHeader deepResearch={deepResearch} platformCount={platforms.length} />
+      <StudioHeader platformCount={platforms.length} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,5fr)_minmax(0,7fr)] gap-6 lg:items-start">
-        {/* ── Left: Research brief form ── */}
+        {/* ── Left: Image prompt form ── */}
         <PromptForm
           state={formState}
           handlers={formHandlers}
@@ -219,7 +215,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           activeTab={activeTab}
           onTabChange={setActiveTab}
           activeProvider={activeProvider}
-          deepResearch={deepResearch}
           onUseExample={() => setSubject(EXAMPLE_TOPICS[0])}
           onCopy={handleCopy}
           onSave={handleSave}

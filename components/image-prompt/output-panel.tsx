@@ -3,7 +3,6 @@
 import React, { useEffect, useRef } from 'react';
 import { BookOpenCheck, Check, ImagePlus, RefreshCw } from 'lucide-react';
 import { GlassCard } from '../glass-card';
-import { cn } from '@/lib/utils';
 import { buildOutputTabs, ImagePromptSections } from '@/lib/image-prompts';
 import { ProviderConfig } from '@/types';
 import { BriefViewer } from './brief-viewer';
@@ -15,7 +14,6 @@ interface OutputPanelProps {
   activeTab: keyof ImagePromptSections | 'raw';
   onTabChange: (tab: keyof ImagePromptSections | 'raw') => void;
   activeProvider: ProviderConfig;
-  deepResearch: boolean;
   onUseExample: () => void;
   onCopy: (text: string, label: string) => void;
   onSave: () => void;
@@ -30,7 +28,6 @@ export function OutputPanel({
   activeTab,
   onTabChange,
   activeProvider,
-  deepResearch,
   onUseExample,
   onCopy,
   onSave,
@@ -59,7 +56,7 @@ export function OutputPanel({
             <BookOpenCheck className="w-4 h-4 text-brand" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-text-primary leading-tight">Research brief &amp; prompts</p>
+            <p className="text-sm font-bold text-text-primary leading-tight">Image-ready prompts</p>
             <p className="text-[11px] text-text-muted font-mono truncate">
               {activeProvider.name} · {activeProvider.model}
             </p>
@@ -73,7 +70,7 @@ export function OutputPanel({
         ) : sections ? (
           <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-success/10 text-success border border-success/25">
             <Check className="w-3 h-3" />
-            {deepResearch ? 'Grounded in web' : 'Brief ready'}
+            Prompts ready
           </span>
         ) : null}
       </div>
@@ -89,11 +86,10 @@ export function OutputPanel({
                 <ImagePlus className="w-7 h-7 text-white" />
               </div>
             </div>
-            <h3 className="mt-5 text-base font-bold text-text-primary">Describe an image to research</h3>
+            <h3 className="mt-5 text-base font-bold text-text-primary">Describe an image to generate</h3>
             <p className="mt-2 text-xs text-text-secondary leading-relaxed max-w-sm">
-              The studio researches your subject&apos;s visual canon on the web, then writes a
-              six-slot master prompt plus tuned variants for Midjourney, DALL·E, SD/Flux, and
-              Ideogram — ready to paste.
+              The studio writes a six-slot master prompt plus tuned variants for Midjourney,
+              DALL·E, SD/Flux, and Ideogram — ready to paste.
             </p>
             <button
               type="button"

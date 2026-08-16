@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, Cpu, Globe, LayoutGrid, Sparkles, X } from 'lucide-react';
+import { Check, Cpu, LayoutGrid, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { cn } from '@/lib/utils';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
@@ -21,7 +21,7 @@ interface PromptFormProps {
   onSubmit: () => void;
 }
 
-/** Left card: subject, research toggle, style/ratio/platform presets, art direction, action bar. */
+/** Left card: subject, style/ratio/platform presets, art direction, action bar. */
 export function PromptForm({
   state,
   handlers,
@@ -68,7 +68,7 @@ export function PromptForm({
               className="w-full p-3.5 text-sm rounded-xl border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/80 focus:border-brand transition-all shadow-inner resize-y leading-relaxed"
             />
             <span className="absolute right-3 bottom-3 text-[11px] text-text-muted pointer-events-none hidden sm:flex items-center gap-2">
-              <span>⌘+Enter to research</span>
+              <span>⌘+Enter to generate</span>
               <span>•</span>
               <span>{state.subject.length} chars</span>
             </span>
@@ -86,45 +86,6 @@ export function PromptForm({
             ))}
           </div>
         </div>
-
-        {/* Deep research toggle */}
-        <button
-          type="button"
-          onClick={() => handlers.setDeepResearch(!state.deepResearch)}
-          aria-pressed={state.deepResearch}
-          className={cn(
-            'w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-left',
-            state.deepResearch
-              ? 'bg-success/10 border-success/30'
-              : 'bg-surface-card/50 border-border hover:border-brand/40'
-          )}
-        >
-          <span
-            className={cn(
-              'mt-0.5 flex items-center justify-center w-8 h-8 rounded-lg shrink-0 border',
-              state.deepResearch ? 'bg-success/15 border-success/40' : 'bg-surface-muted border-border'
-            )}
-          >
-            <Globe className={cn('w-4 h-4', state.deepResearch ? 'text-success' : 'text-text-muted')} />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block text-xs font-bold text-text-primary flex items-center gap-2">
-              Deep web research
-              <span className={cn('relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors', state.deepResearch ? 'bg-success' : 'bg-surface-hover border border-border')}>
-                <span
-                  className={cn(
-                    'inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform',
-                    state.deepResearch ? 'translate-x-3.5' : 'translate-x-0.5'
-                  )}
-                />
-              </span>
-            </span>
-            <span className="block mt-0.5 text-[11px] text-text-secondary leading-relaxed">
-              Grounds the brief in live Google Search results about the subject&apos;s visual canon,
-              reference styles, and common generation pitfalls. Off = instant knowledge-based research.
-            </span>
-          </span>
-        </button>
 
         {/* Style presets */}
         <div className="space-y-2">

@@ -150,7 +150,7 @@ export async function testPromptExecution(
   }
 }
 
-/** Image Studio — stream a researched, multi-platform image generation prompt. */
+/** Image Studio — stream an image-ready, multi-platform image generation prompt. */
 export async function generateImagePromptStream(
   request: ImagePromptGenerationRequest,
   onChunk: (chunk: string) => void,

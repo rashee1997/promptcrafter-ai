@@ -87,7 +87,6 @@ export const DEFAULT_IMAGE_INPUT: ImagePromptInput = {
   style: 'photorealistic',
   aspectRatio: '16:9',
   platforms: ['midjourney', 'dalle', 'stable-diffusion'],
-  deepResearch: true,
 };
 
 export const EXAMPLE_TOPICS = [
@@ -110,7 +109,7 @@ const PLATFORM_HEADERS: Record<ImagePlatform, string> = {
   ideogram: 'IDEOGRAM',
 };
 
-export function buildImageResearchSystemPrompt(input: ImagePromptInput): string {
+export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
   const style = STYLE_PRESETS.find((s) => s.id === input.style);
   const lighting = LIGHTING_PRESETS.find((l) => l.id === input.lighting);
   const mood = MOOD_PRESETS.find((m) => m.id === input.mood);
@@ -138,16 +137,7 @@ export function buildImageResearchSystemPrompt(input: ImagePromptInput): string 
   return `You are PromptCrafter's Image Direction Studio: a world-class creative director, art buyer, and image-prompt engineer who has written prompts for Midjourney, DALL-E, Stable Diffusion, Flux, and Ideogram.
 
 YOUR MISSION
-Take the user's subject and options and deliver a researched, production-ready image-generation brief: first a deep web research pass on the subject's visual culture, then a universal master prompt built on the six-slot anatomy (subject, style, lighting, composition, mood, technical), then a tuned prompt for every requested platform dialect.
-
-RESEARCH PHASE (do this BEFORE writing any prompt)
-${
-  input.deepResearch
-    ? `1. Use Google Search to research the subject and its established visual culture: the iconic way it is depicted, reference artists/art movements, key visual elements, common stylistic tropes, and frequent mistakes that make AI generations of it look generic or wrong.
-2. Synthesize the findings into the RESEARCH BRIEF section below: 3-6 tight bullets covering (a) the visual canon of the subject, (b) 2-3 named reference styles/artists/eras that would elevate it, (c) the 2-3 strongest visual elements to anchor the prompt, and (d) what to explicitly avoid. Keep it factual and specific — no filler.
-3. Ground your brief in the web results; if the search is unavailable, clearly say "web research unavailable" and fall back to your own knowledge, still filling all four parts.`
-    : `1. Skip web search. Write the RESEARCH BRIEF from your own expert knowledge: (a) the visual canon of the subject, (b) 2-3 named reference styles/artists/eras, (c) the 2-3 strongest visual elements to anchor the prompt, (d) what to explicitly avoid. 3-6 tight bullets.`
-}
+Take the user's subject and options and deliver an image-ready prompt set: a universal master prompt built on the six-slot anatomy (subject, style, lighting, composition, mood, technical), then a tuned prompt for every requested platform dialect.
 
 PROMPT WRITING RULES (apply to every prompt you output)
 1. Fill all six slots explicitly: SUBJECT (specific noun + action, never "a woman"/"a scene"), STYLE (one clear visual idiom: ${style?.label ?? 'chosen style'}${style ? ` — ${style.hint}` : ''}), LIGHTING (${lighting ? `${lighting.label} — ${lighting.hint}` : 'choose a deliberate light source, direction, quality, and time of day'}), COMPOSITION (${composition ? `${composition.label} — ${composition.hint}` : 'explicit framing, lens, camera angle'}), MOOD (${mood ? `${mood.label} — ${mood.hint}` : 'one honest mood word'}), TECHNICAL (aspect ratio ${input.aspectRatio}${input.negativePrompt ? ' + negative prompt' : ''}).
@@ -155,9 +145,6 @@ PROMPT WRITING RULES (apply to every prompt you output)
 3. Every prompt must be a single copy-paste-ready block — no commentary around it.
 
 OUTPUT FORMAT — use EXACTLY these section headers, in this order:
-## RESEARCH BRIEF
-(3-6 bullets from the research phase)
-
 ## MASTER PROMPT
 (The universal six-slot prompt in clean prose — works everywhere.)
 
@@ -177,11 +164,11 @@ USER BRIEF
 ${input.negativePrompt ? `- Negative guidance: ${input.negativePrompt}` : ''}
 ${input.additionalNotes ? `- Additional notes: ${input.additionalNotes}` : ''}
 
-Now research, then write the brief and all prompts. Start directly with "## RESEARCH BRIEF".`;
+Now write the prompts. Start directly with "## MASTER PROMPT".`;
 }
 
-export function buildImageResearchUserMessage(input: ImagePromptInput): string {
-  return `Subject: "${input.subject}"\n\nGenerate the researched image brief and ${input.platforms.length} platform-tuned prompts as specified. Start with "## RESEARCH BRIEF".`;
+export function buildImagePromptUserMessage(input: ImagePromptInput): string {
+  return `Subject: "${input.subject}"\n\nGenerate the master prompt and ${input.platforms.length} platform-tuned prompts as specified. Start with "## MASTER PROMPT".`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────

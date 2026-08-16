@@ -1,16 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Globe, ImagePlus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ImagePlus } from 'lucide-react';
 
 interface StudioHeaderProps {
-  deepResearch: boolean;
   platformCount: number;
 }
 
-/** Tab-level intro strip: title + live research/platform badges. */
-export function StudioHeader({ deepResearch, platformCount }: StudioHeaderProps) {
+/** Tab-level intro strip: title + platform badge. */
+export function StudioHeader({ platformCount }: StudioHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
@@ -21,23 +19,11 @@ export function StudioHeader({ deepResearch, platformCount }: StudioHeaderProps)
           Image Prompt Studio
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-text-secondary leading-relaxed max-w-2xl">
-          Describe an image, and it researches the subject&apos;s visual culture on the web, then
-          engineers a six-slot brief — subject, style, lighting, composition, mood, technical —
-          tuned for each platform you select.
+          Describe an image, and it engineers a six-slot brief — subject, style, lighting,
+          composition, mood, technical — tuned for each platform you select.
         </p>
       </div>
       <div className="flex items-center gap-1.5">
-        <span
-          className={cn(
-            'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border',
-            deepResearch
-              ? 'bg-success/10 text-success border-success/25'
-              : 'bg-surface-muted text-text-muted border-border'
-          )}
-        >
-          <Globe className="w-3 h-3" />
-          {deepResearch ? 'WEB RESEARCH ON' : 'KNOWLEDGE RESEARCH'}
-        </span>
         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-brand/10 text-brand border border-brand/20">
           {platformCount} PLATFORMS
         </span>

@@ -9,7 +9,6 @@ export interface StudioFormState {
   composition: string | undefined;
   aspectRatio: string;
   platforms: ImagePlatform[];
-  deepResearch: boolean;
   negativePrompt: string;
   additionalNotes: string;
   showArtDirection: boolean;
@@ -24,7 +23,6 @@ export interface StudioFormHandlers {
   setComposition: (value: string | undefined) => void;
   setAspectRatio: (value: string) => void;
   togglePlatform: (id: ImagePlatform) => void;
-  setDeepResearch: (value: boolean) => void;
   setNegativePrompt: (value: string) => void;
   setAdditionalNotes: (value: string) => void;
   setShowArtDirection: (value: boolean) => void;
