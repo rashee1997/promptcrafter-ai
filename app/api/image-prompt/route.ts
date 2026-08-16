@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildImagePromptSystemPrompt, buildImagePromptUserMessage } from '@/lib/image-prompts';
 import { buildLogoPromptSystemPrompt, buildLogoPromptUserMessage } from '@/lib/logo-prompts';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
+import { withModelFallback } from '@/lib/model-fallback';
 import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { ImagePromptGenerationRequest } from '@/types';
 
@@ -64,15 +65,19 @@ export async function POST(req: NextRequest) {
 
       const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
 
-      const responseStream = await ai.models.generateContentStream({
-        model: modelName,
-        contents: userMessage,
-        config: {
-          systemInstruction,
-          temperature: provider?.temperature ?? 0.7,
-          topP: provider?.topP ?? 0.95,
-        },
-      });
+      const responseStream = await withModelFallback(
+        { ...provider, model: modelName },
+        (model) =>
+          ai.models.generateContentStream({
+            model,
+            contents: userMessage,
+            config: {
+              systemInstruction,
+              temperature: provider?.temperature ?? 0.7,
+              topP: provider?.topP ?? 0.95,
+            },
+          })
+      );
 
       const encoder = new TextEncoder();
       const customStream = new ReadableStream({

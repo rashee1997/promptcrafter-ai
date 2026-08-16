@@ -18,6 +18,8 @@ import {
   Globe,
   Sliders,
   Edit3,
+  Shuffle,
+  RotateCcw,
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { Expandable } from './expandable';
@@ -55,6 +57,8 @@ export function ProviderSettings({
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(4096);
   const [disableStreaming, setDisableStreaming] = useState(false);
+  const [fallbackMode, setFallbackMode] = useState<'none' | 'manual' | 'auto'>('none');
+  const [fallbackModel, setFallbackModel] = useState('');
 
   const resetForm = () => {
     setName('');
@@ -64,6 +68,8 @@ export function ProviderSettings({
     setTemperature(0.7);
     setMaxTokens(4096);
     setDisableStreaming(false);
+    setFallbackMode('none');
+    setFallbackModel('');
     setEditingProviderId(null);
     setTestStatus({ loading: false });
     setShowAddForm(false);
@@ -81,6 +87,8 @@ export function ProviderSettings({
     setTemperature(provider.temperature ?? 0.7);
     setMaxTokens(provider.maxTokens ?? 4096);
     setDisableStreaming(provider.disableStreaming ?? false);
+    setFallbackMode(provider.fallbackMode ?? 'none');
+    setFallbackModel(provider.fallbackModel ?? '');
     setEditingProviderId(provider.id);
     setShowAddForm(true);
     setTestStatus({ loading: false });
@@ -102,6 +110,23 @@ export function ProviderSettings({
   };
 
   const modelListValue = models.map((m) => m.trim()).filter(Boolean);
+
+  const fallbackModeOptions: { id: 'none' | 'manual' | 'auto'; label: string; hint: string }[] = [
+    { id: 'none', label: 'No fallback', hint: 'Fail fast if the model errors' },
+    { id: 'manual', label: 'Manual fallback', hint: 'Retry with one specific model' },
+    { id: 'auto', label: 'Auto-rotate', hint: 'Rotate through every configured model' },
+  ];
+
+  const fallbackError =
+    fallbackMode === 'manual'
+      ? !fallbackModel.trim()
+        ? 'Enter the fallback model name.'
+        : fallbackModel.trim() === modelListValue[0]
+          ? 'The fallback must be different from the default model.'
+          : null
+      : fallbackMode === 'auto' && modelListValue.length < 2
+        ? 'Auto-rotate needs at least two configured models.'
+        : null;
 
   const handleTestConnection = async () => {
     setTestStatus({ loading: true });
@@ -143,30 +168,39 @@ export function ProviderSettings({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !baseUrl.trim() || modelListValue.length === 0) return;
+    if (!name.trim() || !baseUrl.trim() || modelListValue.length === 0 || fallbackError) return;
 
     const existingProvider = editingProviderId
       ? providers.find((p) => p.id === editingProviderId)
       : undefined;
+
+    // A manual fallback that isn't one of the configured models is added to
+    // the list automatically so the model selector stays consistent.
+    const finalModels = [...modelListValue];
+    if (fallbackMode === 'manual' && fallbackModel.trim() && !finalModels.includes(fallbackModel.trim())) {
+      finalModels.push(fallbackModel.trim());
+    }
 
     const newProvider: ProviderConfig = {
       id: editingProviderId || `provider-${Date.now()}`,
       name: name.trim(),
       baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
-      model: modelListValue[0],
-      models: modelListValue,
+      model: finalModels[0],
+      models: finalModels,
       // Keep the previously selected model if it is still part of the list
       activeModel:
-        existingProvider?.activeModel && modelListValue.includes(existingProvider.activeModel)
+        existingProvider?.activeModel && finalModels.includes(existingProvider.activeModel)
           ? existingProvider.activeModel
-          : existingProvider?.model && modelListValue.includes(existingProvider.model)
+          : existingProvider?.model && finalModels.includes(existingProvider.model)
           ? existingProvider.model
           : undefined,
       temperature,
       maxTokens,
       disableStreaming,
       useBuiltInGemini: existingProvider?.useBuiltInGemini,
+      fallbackMode,
+      fallbackModel: fallbackMode === 'manual' ? fallbackModel.trim() : undefined,
     };
 
     onSaveProvider(newProvider);
@@ -400,6 +434,89 @@ export function ProviderSettings({
               </p>
             </div>
 
+            {/* Model fallback — manual or auto-rotate through all models */}
+            <div className="space-y-2.5 pt-2 border-t border-border/50">
+              <div>
+                <label className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+                  <Shuffle className="w-3.5 h-3.5 text-brand" />
+                  Model fallback
+                </label>
+                <p className="text-[11px] text-text-muted mt-0.5 leading-relaxed">
+                  When the active model fails (not found, rate-limited, or a provider error), retry
+                  with a fallback instead of failing the request.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {fallbackModeOptions.map((opt) => {
+                  const selected = fallbackMode === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setFallbackMode(opt.id)}
+                      title={opt.hint}
+                      aria-pressed={selected}
+                      className={
+                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all ' +
+                        (selected
+                          ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                          : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover')
+                      }
+                    >
+                      {opt.id === 'auto' ? (
+                        <Shuffle className="w-3 h-3 shrink-0 text-brand" />
+                      ) : opt.id === 'manual' ? (
+                        <RotateCcw className="w-3 h-3 shrink-0 text-brand" />
+                      ) : null}
+                      {opt.label}
+                      {selected && <Check className="w-3 h-3 text-brand shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {fallbackMode === 'manual' && (
+                <div>
+                  <label htmlFor="provider-fallback-model" className="text-xs font-semibold text-text-secondary mb-1 block">
+                    Fallback model *
+                  </label>
+                  <input
+                    id="provider-fallback-model"
+                    type="text"
+                    value={fallbackModel}
+                    onChange={(e) => setFallbackModel(e.target.value)}
+                    placeholder="e.g. gpt-4o-mini or llama-3.3-70b-versatile"
+                    className="w-full p-2.5 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand font-mono"
+                  />
+                  {fallbackModel.trim() &&
+                    fallbackModel.trim() !== modelListValue[0] &&
+                    !modelListValue.includes(fallbackModel.trim()) && (
+                      <p className="text-[11px] text-warning mt-1 leading-relaxed">
+                        “{fallbackModel.trim()}” isn’t in your model list yet — it will be added
+                        automatically when you save.
+                      </p>
+                    )}
+                </div>
+              )}
+
+              {fallbackMode === 'auto' && modelListValue.length >= 2 && (
+                <p className="text-[11px] text-text-muted leading-relaxed font-mono">
+                  Try order: {modelListValue.join(' → ')}
+                </p>
+              )}
+
+              {fallbackError && (
+                <div
+                  role="alert"
+                  className="p-2.5 rounded-xl text-xs bg-danger/10 border border-danger/20 text-danger flex items-start gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{fallbackError}</span>
+                </div>
+              )}
+            </div>
+
             {/* Temperature & Max Tokens */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div>
@@ -540,6 +657,24 @@ export function ProviderSettings({
                               </span>
                             );
                           })}
+                          {p.fallbackMode === 'manual' && p.fallbackModel && (
+                            <span
+                              className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-warning/10 text-warning border border-warning/20 flex items-center gap-1"
+                              title={`Fallback model: ${p.fallbackModel}`}
+                            >
+                              <RotateCcw className="w-2.5 h-2.5" />
+                              {p.fallbackModel}
+                            </span>
+                          )}
+                          {p.fallbackMode === 'auto' && (
+                            <span
+                              className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-warning/10 text-warning border border-warning/20 flex items-center gap-1"
+                              title="Auto-rotates through every configured model when the active one fails"
+                            >
+                              <Shuffle className="w-2.5 h-2.5" />
+                              Auto-rotate {getProviderModelList(p).length} models
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -83,6 +83,15 @@ export interface ProviderConfig {
   maxTokens?: number;
   topP?: number;
   disableStreaming?: boolean;
+  /**
+   * Fallback behavior when the active model fails (model not found, rate
+   * limit, or provider server error). 'manual' retries with `fallbackModel`;
+   * 'auto' rotates through every configured model in order. Absent = 'none'
+   * (backward compatible with existing persisted configs).
+   */
+  fallbackMode?: 'none' | 'manual' | 'auto';
+  /** Manual fallback model id used when `fallbackMode === 'manual'`. */
+  fallbackModel?: string;
 }
 
 export interface PromptInput {

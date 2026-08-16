@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
+import { withModelFallback } from '@/lib/model-fallback';
 import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { DomainPreset, RefineRequest } from '@/types';
 
@@ -86,17 +87,22 @@ export async function POST(req: NextRequest) {
         parts: [{ text: msg.content }],
       }));
 
-      const chat = ai.chats.create({
-        model: modelName,
-        history: mappedHistory,
-        config: {
-          systemInstruction,
-          temperature: refineTemperature,
-          topP: provider?.topP ?? 0.95,
-        },
-      });
-
-      const responseStream = await chat.sendMessageStream({ message: userRefineMessage });
+      // Chat creation + first message are retried across fallback models.
+      const responseStream = await withModelFallback(
+        { ...provider, model: modelName },
+        async (model) => {
+          const chat = await ai.chats.create({
+            model,
+            history: mappedHistory,
+            config: {
+              systemInstruction,
+              temperature: refineTemperature,
+              topP: provider?.topP ?? 0.95,
+            },
+          });
+          return chat.sendMessageStream({ message: userRefineMessage });
+        }
+      );
 
       const encoder = new TextEncoder();
       const customStream = new ReadableStream({

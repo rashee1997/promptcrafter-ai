@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { ProviderConfig } from '@/types';
-import { GEMINI_DEFAULT_MODEL } from './storage';
 import { createOpenAIClient } from './openai-provider';
+import { withModelFallback } from './model-fallback';
 
 export interface CompletionMessage {
   role: 'system' | 'user' | 'assistant';
@@ -53,7 +53,6 @@ export async function runNonStreamingCompletion(
       },
     });
 
-    const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
     const systemInstruction = messages
       .filter((m) => m.role === 'system')
       .map((m) => m.content)
@@ -66,28 +65,30 @@ export async function runNonStreamingCompletion(
         parts: [{ text: m.content }],
       }));
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents,
-      config: {
-        systemInstruction: systemInstruction || undefined,
-        temperature: options?.temperature ?? provider?.temperature ?? 0.7,
-        maxOutputTokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
-      },
+    return await withModelFallback(provider, async (model) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents,
+        config: {
+          systemInstruction: systemInstruction || undefined,
+          temperature: options?.temperature ?? provider?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
+        },
+      });
+      return response.text || '';
     });
-
-    return response.text || '';
   }
 
   // OpenAI-compatible provider
   const client = createOpenAIClient(provider);
-  const completion = await client.chat.completions.create({
-    model: provider.model || 'gpt-4o-mini',
-    messages,
-    temperature: options?.temperature ?? provider?.temperature ?? 0.7,
-    max_tokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
-    stream: false,
+  return await withModelFallback(provider, async (model) => {
+    const completion = await client.chat.completions.create({
+      model,
+      messages,
+      temperature: options?.temperature ?? provider?.temperature ?? 0.7,
+      max_tokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
+      stream: false,
+    });
+    return completion.choices?.[0]?.message?.content || '';
   });
-
-  return completion.choices?.[0]?.message?.content || '';
 }
