@@ -70,6 +70,28 @@
   100% { transform: translate(-3%, 4%) scale(1.04); }
 }
 
+/* ── Thin, brand-tinted scrollbars (scrollbar-thin utility) ── */
+/* Styling ::-webkit-scrollbar also keeps the scrollbar always visible in
+   Chromium instead of the auto-hiding macOS overlay style. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--brand) 35%, transparent) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--brand) 35%, transparent);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--brand) 60%, transparent);
+}
+
 /* ── Light Theme ── */
 :root {
   --surface-page: oklch(0.97 0.005 260);
