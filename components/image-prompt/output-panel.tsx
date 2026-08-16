@@ -6,6 +6,7 @@ import { GlassCard } from '../glass-card';
 import { buildOutputTabs, ImagePromptSections } from '@/lib/image-prompts';
 import { ProviderConfig } from '@/types';
 import { BriefViewer } from './brief-viewer';
+import { StudioMode } from './studio-types';
 
 interface OutputPanelProps {
   isGenerating: boolean;
@@ -14,6 +15,8 @@ interface OutputPanelProps {
   activeTab: keyof ImagePromptSections | 'raw';
   onTabChange: (tab: keyof ImagePromptSections | 'raw') => void;
   activeProvider: ProviderConfig;
+  /** Studio mode — drives the empty-state copy and remix suggestions. */
+  mode: StudioMode;
   onUseExample: () => void;
   onSave: () => void;
   onNew: () => void;
@@ -29,6 +32,7 @@ export function OutputPanel({
   activeTab,
   onTabChange,
   activeProvider,
+  mode,
   onUseExample,
   onSave,
   onNew,
@@ -87,11 +91,13 @@ export function OutputPanel({
                 <ImagePlus className="w-7 h-7 text-white" />
               </div>
             </div>
-            <h3 className="mt-5 text-base font-bold text-text-primary">Describe an image to generate</h3>
+            <h3 className="mt-5 text-base font-bold text-text-primary">
+              {mode === 'logo' ? 'Describe a brand to design a logo for' : 'Describe an image to generate'}
+            </h3>
             <p className="mt-2 text-xs text-text-secondary leading-relaxed max-w-sm">
-              The studio writes a full creative-director brief — subject, lighting, camera,
-              color grade, text and more — plus tuned variants for Midjourney, DALL·E,
-              SD/Flux, Ideogram, and Gemini / Nano Banana — ready to paste.
+              {mode === 'logo'
+                ? 'The studio engineers a brand-identity brief — mark type, style, palette, and wordmark — plus tuned variants for Midjourney, DALL·E, SD/Flux, Ideogram, and Gemini / Nano Banana — ready to paste.'
+                : 'The studio writes a full creative-director brief — subject, lighting, camera, color grade, text and more — plus tuned variants for Midjourney, DALL·E, SD/Flux, Ideogram, and Gemini / Nano Banana — ready to paste.'}
             </p>
             <button
               type="button"
@@ -130,6 +136,7 @@ export function OutputPanel({
             onTabChange={onTabChange}
             onSave={onSave}
             onNew={onNew}
+            mode={mode}
             onRefineSuggestion={onRefineSuggestion}
             isGenerating={isGenerating}
           />

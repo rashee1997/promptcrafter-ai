@@ -17,11 +17,12 @@ import {
 } from '@/lib/image-prompts';
 import { generateImagePromptStream } from '@/lib/ai-client';
 import { getProviderModelList } from '@/lib/storage';
+import { DEFAULT_LOGO_INPUT, LOGO_EXAMPLE_TOPICS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { ImagePlatform, ImagePromptInput, ProviderConfig } from '@/types';
 import { OutputPanel } from './image-prompt/output-panel';
 import { PromptForm } from './image-prompt/prompt-form';
 import { SavedGallery } from './image-prompt/saved-gallery';
-import { StudioFormHandlers, StudioFormState } from './image-prompt/studio-types';
+import { StudioFormHandlers, StudioFormState, StudioMode } from './image-prompt/studio-types';
 import { StudioHeader } from './image-prompt/studio-header';
 
 interface ImagePromptStudioProps {
@@ -41,6 +42,11 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   // ── Form state ──
   const [subject, setSubject] = useState('');
   const [style, setStyle] = useState(DEFAULT_IMAGE_INPUT.style);
+  const [mode, setMode] = useState<StudioMode>('image');
+  const [logoType, setLogoType] = useState(DEFAULT_LOGO_INPUT.logoType);
+  const [logoStyle, setLogoStyle] = useState(DEFAULT_LOGO_INPUT.logoStyle);
+  const [palette, setPalette] = useState(DEFAULT_LOGO_INPUT.palette);
+  const [brandName, setBrandName] = useState('');
   const [lighting, setLighting] = useState<string | undefined>(undefined);
   const [mood, setMood] = useState<string | undefined>(undefined);
   const [composition, setComposition] = useState<string | undefined>(undefined);
@@ -68,9 +74,21 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setSavedPrompts(getSavedImagePrompts());
   }, []);
 
+  /** Switching modes swaps the brief anatomy; logos are square-first artifacts. */
+  const handleSetMode = (next: StudioMode) => {
+    setMode(next);
+    if (next === 'logo') setAspectRatio('1:1');
+    else setAspectRatio(DEFAULT_IMAGE_INPUT.aspectRatio);
+  };
+
   const formState: StudioFormState = {
     subject,
     style,
+    mode,
+    logoType,
+    logoStyle,
+    palette,
+    brandName,
     lighting,
     mood,
     composition,
@@ -88,6 +106,11 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const formHandlers: StudioFormHandlers = {
     setSubject,
     setStyle,
+    setMode: handleSetMode,
+    setLogoType,
+    setLogoStyle,
+    setPalette,
+    setBrandName,
     setLighting,
     setMood,
     setComposition,
@@ -108,6 +131,11 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const buildInput = (): ImagePromptInput => ({
     subject: subject.trim(),
     style,
+    mode,
+    logoType: mode === 'logo' ? logoType : undefined,
+    logoStyle: mode === 'logo' ? logoStyle : undefined,
+    palette: mode === 'logo' ? palette : undefined,
+    brandName: mode === 'logo' ? brandName.trim() || undefined : undefined,
     lighting: lighting || undefined,
     mood: mood || undefined,
     composition: composition || undefined,
@@ -183,7 +211,10 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
 
   const handleSave = () => {
     if (!sections?.master || !subject.trim()) return;
-    const styleLabel = STYLE_PRESETS.find((s) => s.id === style)?.label ?? style;
+    const styleLabel =
+      mode === 'logo'
+        ? (LOGO_STYLE_PRESETS.find((s) => s.id === logoStyle)?.label ?? logoStyle)
+        : (STYLE_PRESETS.find((s) => s.id === style)?.label ?? style);
     // Store the full parsed sections (minus the raw doc) + the exact form input
     // so the gallery can preview/copy every platform prompt and restore it.
     const { raw: _raw, ...sectionsCopy } = sections;
@@ -196,6 +227,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       aspectRatio,
       master: sections.master,
       negative: sections.negative,
+      mode,
       sections: sectionsCopy,
       input: buildInput(),
       createdAt: Date.now(),
@@ -207,8 +239,14 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   /** Restore a saved brief into the form (gallery → edit loop). */
   const handleRestore = (item: SavedImagePrompt) => {
     const inp = item.input;
+    const restoredMode: StudioMode = inp?.mode ?? item.mode ?? 'image';
     setSubject(inp?.subject ?? item.subject);
     setStyle(inp?.style ?? DEFAULT_IMAGE_INPUT.style);
+    setMode(restoredMode);
+    setLogoType(inp?.logoType ?? DEFAULT_LOGO_INPUT.logoType);
+    setLogoStyle(inp?.logoStyle ?? DEFAULT_LOGO_INPUT.logoStyle);
+    setPalette(inp?.palette ?? DEFAULT_LOGO_INPUT.palette);
+    setBrandName(inp?.brandName ?? '');
     setLighting(inp?.lighting ?? undefined);
     setMood(inp?.mood ?? undefined);
     setComposition(inp?.composition ?? undefined);
@@ -246,7 +284,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
 
   return (
     <div className="space-y-6">
-      <StudioHeader platformCount={platforms.length} />
+      <StudioHeader platformCount={platforms.length} mode={mode} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,5fr)_minmax(0,7fr)] gap-6 lg:items-start">
         {/* ── Left: Image prompt form ── */}
@@ -268,7 +306,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           activeTab={activeTab}
           onTabChange={setActiveTab}
           activeProvider={activeProvider}
-          onUseExample={() => setSubject(EXAMPLE_TOPICS[0])}
+          mode={mode}
+          onUseExample={() => setSubject(mode === 'logo' ? LOGO_EXAMPLE_TOPICS[0] : EXAMPLE_TOPICS[0])}
           onSave={handleSave}
           onNew={handleNew}
           onRefineSuggestion={handleRefineSuggestion}

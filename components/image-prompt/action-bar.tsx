@@ -4,6 +4,7 @@ import React from 'react';
 import { Cpu, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
+import { LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { ProviderConfig } from '@/types';
 import { StudioFormState } from './studio-types';
 
@@ -24,14 +25,23 @@ export function ActionBar({
   onSelectActiveModel,
 }: ActionBarProps) {
   const platformLabels = PLATFORM_OPTIONS.filter((p) => state.platforms.includes(p.id));
+  const isLogo = state.mode === 'logo';
+  const styleChip = isLogo
+    ? (LOGO_STYLE_PRESETS.find((s) => s.id === state.logoStyle)?.label ?? state.logoStyle)
+    : (STYLE_PRESETS.find((s) => s.id === state.style)?.label ?? state.style);
 
   return (
     <div className="sticky bottom-3 z-20 pt-1">
       <div className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface-card/90 backdrop-blur-md p-3 shadow-xl shadow-black/15">
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-text-secondary">
           <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
-            {STYLE_PRESETS.find((s) => s.id === state.style)?.label ?? state.style}
+            {styleChip}
           </span>
+          {isLogo && (
+            <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+              {LOGO_PALETTE_PRESETS.find((p) => p.id === state.palette)?.label ?? state.palette}
+            </span>
+          )}
           <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">{state.aspectRatio}</span>
           <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
             {platformLabels.map((p) => p.label).join(' · ')}
@@ -72,7 +82,7 @@ export function ActionBar({
           ) : (
             <>
               <Sparkles className="w-5 h-5" />
-              <span>Generate prompt</span>
+              <span>{isLogo ? 'Generate logo prompt' : 'Generate prompt'}</span>
               <kbd className="ml-1 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-80">
                 ⌘⏎
               </kbd>

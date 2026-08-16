@@ -115,8 +115,13 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
                   <p className="text-xs font-bold text-text-primary truncate" title={item.title}>
                     {item.title}
                   </p>
-                  <p className="mt-0.5 text-[10px] text-text-muted">
-                    {item.styleLabel} · {item.aspectRatio} · {timeAgo(item.createdAt)}
+                  <p className="mt-0.5 text-[10px] text-text-muted flex items-center gap-1.5">
+                    {item.mode === 'logo' && (
+                      <span className="px-1 py-0.5 rounded-md text-[8px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wide">
+                        Logo
+                      </span>
+                    )}
+                    <span className="truncate">{item.styleLabel} · {item.aspectRatio} · {timeAgo(item.createdAt)}</span>
                   </p>
                 </div>
 

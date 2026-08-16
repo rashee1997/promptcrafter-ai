@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildImagePromptSystemPrompt, buildImagePromptUserMessage } from '@/lib/image-prompts';
+import { buildLogoPromptSystemPrompt, buildLogoPromptUserMessage } from '@/lib/logo-prompts';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
 import { ImagePromptGenerationRequest } from '@/types';
 
@@ -17,8 +18,10 @@ const STREAM_HEADERS = {
 /**
  * Streams an image-ready prompt set: a universal full-anatomy master prompt
  * plus a tuned prompt per requested platform dialect (Midjourney, DALL·E,
- * SD/Flux, Ideogram, Gemini / Nano Banana). No web research — the model
- * writes directly from its knowledge and the USER BRIEF.
+ * SD/Flux, Ideogram, Gemini / Nano Banana). When the input is in logo mode,
+ * a brand-identity brief (mark type, style, palette, wordmark) is used
+ * instead. No web research — the model writes directly from its knowledge
+ * and the USER BRIEF.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -29,8 +32,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Subject is required.' }, { status: 400 });
     }
 
-    const systemInstruction = buildImagePromptSystemPrompt(input);
-    const userMessage = buildImagePromptUserMessage(input);
+    const isLogo = input.mode === 'logo';
+    const systemInstruction = isLogo
+      ? buildLogoPromptSystemPrompt(input)
+      : buildImagePromptSystemPrompt(input);
+    const userMessage = isLogo
+      ? buildLogoPromptUserMessage(input)
+      : buildImagePromptUserMessage(input);
 
     const isGemini =
       provider?.useBuiltInGemini || !provider?.baseUrl || provider?.baseUrl.includes('googleapis.com');

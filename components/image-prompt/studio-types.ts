@@ -1,9 +1,21 @@
 import { ImagePlatform } from '@/types';
 
+/** Studio mode — image prompts or brand-identity logo prompts. */
+export type StudioMode = 'image' | 'logo';
+
 /** Form state owned by ImagePromptStudio and shared with its sub-components. */
 export interface StudioFormState {
   subject: string;
   style: string;
+  mode: StudioMode;
+  /** Logo mode — mark type id (see LOGO_MARK_TYPES in lib/logo-prompts.ts). */
+  logoType: string;
+  /** Logo mode — style preset id (see LOGO_STYLE_PRESETS in lib/logo-prompts.ts). */
+  logoStyle: string;
+  /** Logo mode — color palette id (see LOGO_PALETTE_PRESETS in lib/logo-prompts.ts). */
+  palette: string;
+  /** Logo mode — exact wordmark / brand name text. */
+  brandName: string;
   lighting: string | undefined;
   mood: string | undefined;
   composition: string | undefined;
@@ -22,6 +34,11 @@ export interface StudioFormState {
 export interface StudioFormHandlers {
   setSubject: (value: string) => void;
   setStyle: (value: string) => void;
+  setMode: (mode: StudioMode) => void;
+  setLogoType: (value: string) => void;
+  setLogoStyle: (value: string) => void;
+  setPalette: (value: string) => void;
+  setBrandName: (value: string) => void;
   setLighting: (value: string | undefined) => void;
   setMood: (value: string | undefined) => void;
   setComposition: (value: string | undefined) => void;

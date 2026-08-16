@@ -345,6 +345,20 @@ export interface ImagePromptInput {
   /** Exact in-image text to render, with typography guidance if desired. */
   inImageText?: string;
   additionalNotes?: string;
+  /**
+   * Studio mode. 'logo' drives a brand-identity brief (mark type, logo style,
+   * color palette, wordmark) instead of a photographic one. Absent = 'image'
+   * so persisted briefs and requests stay backward compatible.
+   */
+  mode?: 'image' | 'logo';
+  /** Logo mode — mark type id (see LOGO_MARK_TYPES in lib/logo-prompts.ts). */
+  logoType?: string;
+  /** Logo mode — style preset id (see LOGO_STYLE_PRESETS in lib/logo-prompts.ts). */
+  logoStyle?: string;
+  /** Logo mode — color palette id (see LOGO_PALETTE_PRESETS in lib/logo-prompts.ts). */
+  palette?: string;
+  /** Logo mode — exact brand name / wordmark text to render in the mark. */
+  brandName?: string;
 }
 
 /** Request contract for the Image Prompt Studio API route. */

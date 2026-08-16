@@ -7,6 +7,7 @@ import { Tooltip } from '../tooltip';
 import { cn } from '@/lib/utils';
 import { buildOutputTabs, ImagePromptSections, PLATFORM_OPTIONS } from '@/lib/image-prompts';
 import { useInlineCopy } from '@/lib/use-inline-copy';
+import { StudioMode } from './studio-types';
 
 interface BriefViewerProps {
   sections: ImagePromptSections;
@@ -14,6 +15,8 @@ interface BriefViewerProps {
   onTabChange: (tab: keyof ImagePromptSections | 'raw') => void;
   onSave: () => void;
   onNew: () => void;
+  /** Studio mode — remix suggestions are tuned to the brief anatomy. */
+  mode: StudioMode;
   /** Remix suggestions (Related-Prompts pattern) re-run generation with a tweak applied. */
   onRefineSuggestion?: (suggestion: string) => void;
   isGenerating: boolean;
@@ -37,10 +40,17 @@ function platformColor(key: string): string | undefined {
   return PLATFORM_OPTIONS.find((p) => p.id === key)?.color;
 }
 
-const REFINE_SUGGESTIONS = [
+const IMAGE_REFINE_SUGGESTIONS = [
   { id: 'light', label: 'More cinematic lighting' },
   { id: 'color', label: 'Warmer color grade' },
   { id: 'text', label: 'Add bold in-image text' },
+];
+
+const LOGO_REFINE_SUGGESTIONS = [
+  { id: 'flat', label: 'Simplify to a flat vector lockup' },
+  { id: 'mono', label: 'Try a single-color version' },
+  { id: 'emblem', label: 'Wrap it in an emblem / badge frame' },
+  { id: 'bold', label: 'Use a bolder, heavier wordmark' },
 ];
 
 /**
@@ -56,10 +66,12 @@ export function BriefViewer({
   onTabChange,
   onSave,
   onNew,
+  mode,
   onRefineSuggestion,
   isGenerating,
 }: BriefViewerProps) {
   const tabs = buildOutputTabs(sections);
+  const refineSuggestions = mode === 'logo' ? LOGO_REFINE_SUGGESTIONS : IMAGE_REFINE_SUGGESTIONS;
   const [view, setView] = useState<BriefView>('tab');
   const { copiedKey, copy } = useInlineCopy();
 
@@ -255,7 +267,7 @@ export function BriefViewer({
             <Wand2 className="w-3.5 h-3.5 text-brand" />
             Remix
           </span>
-          {REFINE_SUGGESTIONS.map((s) => (
+          {refineSuggestions.map((s) => (
             <button
               key={s.id}
               type="button"

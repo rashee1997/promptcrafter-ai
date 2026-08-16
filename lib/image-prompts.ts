@@ -228,7 +228,7 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
   return `You are PromptCrafter's Image Direction Studio: a world-class creative director, art buyer, and image-prompt engineer who has written prompts for Midjourney, DALL-E, Stable Diffusion, Flux, Ideogram, and Google's Nano Banana image models (Gemini Flash/Pro Image).
 
 YOUR MISSION
-Take the user's subject and options and deliver an image-ready prompt set: a universal master prompt built on the full brief anatomy (subject, action, location, style, lighting, camera/lens, composition, mood, color grade, technical), then a tuned prompt for every requested platform dialect. Direct each scene like a film director briefing a studio: name what is in the frame, how it is lit, how it is shot, and how it feels.
+Take the user's subject and options and deliver an image-ready prompt set: a compact universal master prompt built on the full brief anatomy (subject, action, location, style, lighting, camera/lens, composition, mood, color grade, technical), then a tuned prompt for every requested platform dialect. Direct each scene like a film director briefing a studio: name what is in the frame, how it is lit, how it is shot, and how it feels.
 
 PROMPT WRITING RULES (apply to every prompt you output)
 1. Fill every slot explicitly: SUBJECT (specific noun + action, never "a woman"/"a scene"), ACTION (what is happening), LOCATION/CONTEXT (where and when), STYLE (one clear visual idiom: ${style?.label ?? 'chosen style'}${style ? ` — ${style.hint}` : ''}), LIGHTING (${lighting ? `${lighting.label} — ${lighting.hint}` : 'choose a deliberate light source, direction, quality, and time of day'}), CAMERA/LENS (${camera ? `${camera.label} — ${camera.hint}` : 'an explicit lens or camera feel'}), COMPOSITION (${composition ? `${composition.label} — ${composition.hint}` : 'explicit framing and camera angle'}), MOOD (${mood ? `${mood.label} — ${mood.hint}` : 'one honest mood word'}), COLOR GRADE (${colorGrade ? `${colorGrade.label} — ${colorGrade.hint}` : 'a deliberate palette or film-stock feel'}), TECHNICAL (aspect ratio ${input.aspectRatio}${input.resolution ? `, ${input.resolution} resolution` : ''}${input.inImageText ? ', in-image text' : ''}${input.negativePrompt ? ' + negative prompt' : ''}).
@@ -240,10 +240,11 @@ PROMPT WRITING RULES (apply to every prompt you output)
 7. One visual direction: never stack conflicting styles (no "photorealistic anime oil painting"); commit to a single coherent idiom.
 8. Respect purpose: when additional notes give context (audience, brand, use case), let it shape composition, mood, and color.
 9. Every prompt must be a single copy-paste-ready block — no commentary around it.
+10. No cross-section duplication: every section must be a DIFFERENT prompt. The MASTER PROMPT is the compact universal version; each platform section re-expresses the same brief in its own dialect (keyword phrases, weighted tokens, parameters, or full prose). Never repeat the same text in two sections — in particular, the GEMINI / NANO BANANA section carries the full prose creative brief while the MASTER PROMPT stays short and distinct from it.
 
-OUTPUT FORMAT — use EXACTLY these section headers, in this order:
+OUTPUT FORMAT — obey EXACTLY. Every section MUST start with a markdown "## " header on its own line — no bold labels, no numbering, no colons. Write these headers, in this order:
 ## MASTER PROMPT
-(The universal full-anatomy prompt in clean prose — works everywhere.)
+(A COMPACT universal prompt — 1–2 dense sentences of comma-separated slot phrases covering subject, action, location, style, lighting, camera/lens, composition, mood, color grade, and technical tags. No prose paragraphs, no dialect syntax, no parameters — the long description belongs only in the prose dialects below.)
 
 ${platformList.map((p) => `## ${PLATFORM_HEADERS[p.id]}\n(Tuned ${p.label} prompt.)`).join('\n\n')}
 
@@ -315,13 +316,29 @@ const SECTION_ALIASES: Record<string, keyof ImagePromptSections> = {
   'ideogram': 'ideogram',
   'gemini': 'gemini',
   'gemini / nano banana': 'gemini',
+  'gemini/nano banana': 'gemini',
+  'gemini prompt': 'gemini',
+  'gemini / nano banana prompt': 'gemini',
+  'gemini / nano banana pro': 'gemini',
   'nano banana': 'gemini',
+  'nano banana prompt': 'gemini',
   'nano-banana': 'gemini',
   'nanobanana': 'gemini',
   'nano banana pro': 'gemini',
+  'nano banana 2': 'gemini',
+  'gemini 2.5 flash image': 'gemini',
+  'gemini 3 pro image': 'gemini',
+  'gemini 3.1 flash image': 'gemini',
+  'gemini pro image': 'gemini',
+  'gemini flash image': 'gemini',
   'negative prompt': 'negative',
   'negative': 'negative',
 };
+
+/** Lowercase a header title, stripping trailing colons and stray asterisks/spaces. */
+function normalizeHeaderTitle(title: string): string {
+  return title.replace(/:+$/, '').replace(/^[*\s]+|[*\s]+$/g, '').trim().toLowerCase();
+}
 
 export function parseImagePromptOutput(raw: string): ImagePromptSections {
   const sections: ImagePromptSections = { raw };
@@ -341,12 +358,24 @@ export function parseImagePromptOutput(raw: string): ImagePromptSections {
   };
 
   for (const line of lines) {
-    const match = line.match(/^#{1,3}\s+(.+)$/);
-    if (match) {
+    // 1. Markdown headers: ## MASTER PROMPT
+    const md = line.match(/^#{1,3}\s+(.+)$/);
+    // 2. Bold-only labels the model often uses instead: **GEMINI / NANO BANANA**
+    const bold = line.match(/^\*\*(.+?)\*\*\s*:?\s*$/);
+    let title: string | null = null;
+    if (md) title = md[1];
+    else if (bold) title = bold[1];
+    else {
+      // 3. Plain label headers ("MASTER PROMPT:") — only when the whole line
+      //    is a known section name so prose lines are never mistaken for headers.
+      const stripped = line.trim().replace(/:+$/, '').replace(/^[*\s]+|[*\s]+$/g, '');
+      if (stripped.length > 0 && stripped.length <= 48 && SECTION_ALIASES[normalizeHeaderTitle(stripped)]) {
+        title = stripped;
+      }
+    }
+    if (title) {
       flush();
-      const title = match[1].trim().toLowerCase();
-      const alias = SECTION_ALIASES[title];
-      currentKey = alias ?? null;
+      currentKey = SECTION_ALIASES[normalizeHeaderTitle(title)] ?? null;
       continue;
     }
     if (currentKey) {
@@ -391,6 +420,8 @@ export interface SavedImagePrompt {
   master: string;
   negative?: string;
   createdAt: number;
+  /** Studio mode that produced this brief — lets the gallery badge logos. */
+  mode?: 'image' | 'logo';
   /**
    * Full parsed sections (minus the raw document) so the gallery can preview
    * and copy every platform prompt, not just the master. Older saved briefs
