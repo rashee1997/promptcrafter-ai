@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
-import { BookOpenCheck, Camera, ChevronDown, Eraser, Eye, Gauge, Globe, LayoutGrid, Monitor, Package, Palette, Search, SlidersHorizontal, Triangle, Type } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpenCheck, Camera, ChevronDown, Eraser, Eye, Gauge, Globe, LayoutGrid, Monitor, Package, Palette, Search, SlidersHorizontal, Sparkles, Triangle, Type } from 'lucide-react';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
+import { suggestNegativePrompt } from '@/lib/ai-client';
 import { CAMERA_PRESETS, COLOR_GRADE_PRESETS, COMPOSITION_PRESETS, LIGHTING_PRESETS, MOOD_PRESETS, RESOLUTION_OPTIONS } from '@/lib/image-prompts';
 import { LOGO_BOLDNESS_PRESETS, LOGO_HIDDEN_MEANING_PRESETS, LOGO_LOCKUP_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_SHAPE_PRESETS, LOGO_STYLE_PRESETS, LOGO_TYPOGRAPHY_PRESETS, LOGO_USAGE_PRESETS } from '@/lib/logo-prompts';
+import { ImagePromptInput } from '@/types';
 import { ChipRow, MultiChipRow } from './chip-row';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
 
@@ -20,6 +22,55 @@ interface ArtDirectionProps {
 export function ArtDirection({ state, handlers }: ArtDirectionProps) {
   const { lighting, mood, composition, camera, colorGrade, resolution, negativePrompt, inImageText, additionalNotes, showArtDirection } = state;
   const isLogo = state.mode === 'logo';
+
+  // B1 — one-click negative-prompt suggestions. Manual (button press) only:
+  // auto-firing would be too disruptive to overwrite what the user typed.
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestCooldown, setSuggestCooldown] = useState(false);
+
+  const handleSuggestNegative = async () => {
+    if (suggesting) return;
+    setSuggesting(true);
+    const input: ImagePromptInput = {
+      subject: state.subject,
+      style: state.style,
+      mode: state.mode,
+      logoType: state.mode === 'logo' ? state.logoType : undefined,
+      logoStyle: state.mode === 'logo' ? state.logoStyle : undefined,
+      palette: state.mode === 'logo' ? state.palette : undefined,
+      brandName: state.mode === 'logo' ? state.brandName.trim() || undefined : undefined,
+      industry: state.mode === 'logo' ? state.industry : undefined,
+      concept: state.mode === 'logo' ? state.concept : undefined,
+      shapeLanguage: state.mode === 'logo' ? state.shapeLanguage : undefined,
+      typography: state.mode === 'logo' ? state.typography : undefined,
+      lockup: state.mode === 'logo' ? state.lockup : undefined,
+      hiddenMeaning: state.mode === 'logo' ? state.hiddenMeaning : undefined,
+      usage: state.mode === 'logo' && state.usage.length > 0 ? [...state.usage] : undefined,
+      boldness: state.mode === 'logo' ? state.boldness : undefined,
+      lighting,
+      mood,
+      composition,
+      camera,
+      colorGrade,
+      resolution,
+      aspectRatio: state.aspectRatio,
+      platforms: state.platforms,
+      negativePrompt: negativePrompt.trim() || undefined,
+      inImageText: inImageText.trim() || undefined,
+      additionalNotes: additionalNotes.trim() || undefined,
+    };
+    const response = await suggestNegativePrompt({ mode: state.mode, input });
+    setSuggesting(false);
+    if (response.suggestion) {
+      // Append rather than overwrite — never discard what the user typed.
+      const current = state.negativePrompt.trim();
+      handlers.setNegativePrompt(current ? `${current}, ${response.suggestion}` : response.suggestion);
+    } else {
+      // Nice-to-have assist: brief cooldown, no error surfaced to the user.
+      setSuggestCooldown(true);
+      setTimeout(() => setSuggestCooldown(false), 3000);
+    }
+  };
 
   const summary = isLogo
     ? [
@@ -194,10 +245,26 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
 
         {/* Negative prompt */}
         <div className="space-y-1.5">
-          <label htmlFor="img-negative" className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            <Eraser className="w-3.5 h-3.5 text-danger" />
-            Things to avoid <span className="text-text-muted font-normal normal-case">(optional)</span>
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="img-negative" className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+              <Eraser className="w-3.5 h-3.5 text-danger" />
+              Things to avoid <span className="text-text-muted font-normal normal-case">(optional)</span>
+            </label>
+            <button
+              type="button"
+              onClick={handleSuggestNegative}
+              disabled={suggesting || suggestCooldown}
+              title="Suggest exclusions for this brief"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium border border-border bg-surface-muted text-text-secondary hover:text-brand hover:border-brand/40 transition-colors disabled:opacity-50"
+            >
+              {suggesting ? (
+                <span className="w-3 h-3 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+              ) : (
+                <Sparkles className="w-3 h-3 text-warning" />
+              )}
+              {suggestCooldown ? 'Unavailable' : suggesting ? 'Suggesting…' : 'Suggest'}
+            </button>
+          </div>
           <input
             id="img-negative"
             type="text"
