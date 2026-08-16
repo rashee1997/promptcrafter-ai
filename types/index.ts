@@ -304,13 +304,16 @@ export interface HistoryItem {
 
 /**
  * Image-generation dialects the Image Studio can emit a tuned prompt for.
+ * `gemini` targets Google's Nano Banana image models (Gemini Flash/Pro Image),
+ * which are prompted as a natural-language creative brief rather than a tag soup.
  */
 export type ImagePlatform =
   | 'midjourney'
   | 'dalle'
   | 'stable-diffusion'
   | 'flux'
-  | 'ideogram';
+  | 'ideogram'
+  | 'gemini';
 
 /**
  * Input for the Image Prompt Studio — a multi-platform image generation
@@ -333,6 +336,14 @@ export interface ImagePromptInput {
   platforms: ImagePlatform[];
   /** Custom negative-prompt guidance (things to avoid in the image). */
   negativePrompt?: string;
+  /** Camera / lens preset id (see CAMERA_PRESETS in lib/image-prompts.ts). */
+  camera?: string;
+  /** Color grading / film-stock preset id (see COLOR_GRADE_PRESETS). */
+  colorGrade?: string;
+  /** Output resolution: '1K' | '2K' | '4K' (Gemini-native; quality tags elsewhere). */
+  resolution?: string;
+  /** Exact in-image text to render, with typography guidance if desired. */
+  inImageText?: string;
   additionalNotes?: string;
 }
 

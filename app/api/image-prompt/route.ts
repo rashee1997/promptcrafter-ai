@@ -15,8 +15,9 @@ const STREAM_HEADERS = {
 };
 
 /**
- * Streams an image-ready prompt set: a universal six-slot master prompt plus
- * a tuned prompt per requested platform dialect. No web research — the model
+ * Streams an image-ready prompt set: a universal full-anatomy master prompt
+ * plus a tuned prompt per requested platform dialect (Midjourney, DALL·E,
+ * SD/Flux, Ideogram, Gemini / Nano Banana). No web research — the model
  * writes directly from its knowledge and the USER BRIEF.
  */
 export async function POST(req: NextRequest) {

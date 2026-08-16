@@ -44,9 +44,13 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [lighting, setLighting] = useState<string | undefined>(undefined);
   const [mood, setMood] = useState<string | undefined>(undefined);
   const [composition, setComposition] = useState<string | undefined>(undefined);
+  const [camera, setCamera] = useState<string | undefined>(undefined);
+  const [colorGrade, setColorGrade] = useState<string | undefined>(undefined);
+  const [resolution, setResolution] = useState<string | undefined>(undefined);
   const [aspectRatio, setAspectRatio] = useState(DEFAULT_IMAGE_INPUT.aspectRatio);
   const [platforms, setPlatforms] = useState<ImagePlatform[]>(DEFAULT_IMAGE_INPUT.platforms);
   const [negativePrompt, setNegativePrompt] = useState('');
+  const [inImageText, setInImageText] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [showArtDirection, setShowArtDirection] = useState(false);
 
@@ -70,9 +74,13 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     lighting,
     mood,
     composition,
+    camera,
+    colorGrade,
+    resolution,
     aspectRatio,
     platforms,
     negativePrompt,
+    inImageText,
     additionalNotes,
     showArtDirection,
   };
@@ -83,12 +91,16 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setLighting,
     setMood,
     setComposition,
+    setCamera,
+    setColorGrade,
+    setResolution,
     setAspectRatio,
     togglePlatform: (id) =>
       setPlatforms((prev) =>
         prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
       ),
     setNegativePrompt,
+    setInImageText,
     setAdditionalNotes,
     setShowArtDirection,
   };
@@ -99,13 +111,17 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     lighting: lighting || undefined,
     mood: mood || undefined,
     composition: composition || undefined,
+    camera: camera || undefined,
+    colorGrade: colorGrade || undefined,
+    resolution: resolution || undefined,
     aspectRatio,
     platforms,
     negativePrompt: negativePrompt.trim() || undefined,
+    inImageText: inImageText.trim() || undefined,
     additionalNotes: additionalNotes.trim() || undefined,
   });
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (notesOverride?: string) => {
     if (!subject.trim() || isGenerating) return;
 
     abortControllerRef.current?.abort();
@@ -117,7 +133,12 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setSections(null);
     setActiveTab('raw');
 
-    const input = buildInput();
+    // Remix suggestions pass the merged notes explicitly so the generation
+    // always includes the tweak (avoids stale-closure reads of state).
+    const input: ImagePromptInput =
+      notesOverride !== undefined
+        ? { ...buildInput(), additionalNotes: notesOverride.trim() || undefined }
+        : buildInput();
     let fullText = '';
 
     await generateImagePromptStream(
@@ -160,18 +181,12 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setActiveTab('raw');
   };
 
-  const handleCopy = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied`, 'Paste it straight into your image tool.');
-    } catch {
-      toast.error('Copy failed', 'Your browser blocked clipboard access.');
-    }
-  };
-
   const handleSave = () => {
     if (!sections?.master || !subject.trim()) return;
     const styleLabel = STYLE_PRESETS.find((s) => s.id === style)?.label ?? style;
+    // Store the full parsed sections (minus the raw doc) + the exact form input
+    // so the gallery can preview/copy every platform prompt and restore it.
+    const { raw: _raw, ...sectionsCopy } = sections;
     const item: SavedImagePrompt = {
       id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: subject.trim().slice(0, 60),
@@ -181,10 +196,48 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       aspectRatio,
       master: sections.master,
       negative: sections.negative,
+      sections: sectionsCopy,
+      input: buildInput(),
       createdAt: Date.now(),
     };
     setSavedPrompts(saveImagePrompt(item));
-    toast.success('Saved to gallery', 'Reopen it anytime from this tab.');
+    toast.success('Saved to gallery', 'Reopen, preview, copy, or reuse it anytime.');
+  };
+
+  /** Restore a saved brief into the form (gallery → edit loop). */
+  const handleRestore = (item: SavedImagePrompt) => {
+    const inp = item.input;
+    setSubject(inp?.subject ?? item.subject);
+    setStyle(inp?.style ?? DEFAULT_IMAGE_INPUT.style);
+    setLighting(inp?.lighting ?? undefined);
+    setMood(inp?.mood ?? undefined);
+    setComposition(inp?.composition ?? undefined);
+    setCamera(inp?.camera ?? undefined);
+    setColorGrade(inp?.colorGrade ?? undefined);
+    setResolution(inp?.resolution ?? undefined);
+    setAspectRatio(inp?.aspectRatio ?? item.aspectRatio ?? DEFAULT_IMAGE_INPUT.aspectRatio);
+    setPlatforms(
+      inp?.platforms ?? (item.platforms.length > 0 ? item.platforms : DEFAULT_IMAGE_INPUT.platforms)
+    );
+    setNegativePrompt(inp?.negativePrompt ?? '');
+    setInImageText(inp?.inImageText ?? '');
+    setAdditionalNotes(inp?.additionalNotes ?? '');
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // ignore
+    }
+    toast.success('Brief loaded', 'Tweak any option and regenerate — or copy from the preview.');
+  };
+
+  /** Related-Prompts pattern: apply a remix suggestion and regenerate. */
+  const handleRefineSuggestion = (suggestion: string) => {
+    const merged = additionalNotes.trim() ? `${additionalNotes.trim()} — ${suggestion}` : suggestion;
+    setAdditionalNotes(merged);
+    toast.info('Remixing brief', suggestion);
+    requestAnimationFrame(() => {
+      handleGenerate(merged);
+    });
   };
 
   const handleDeleteSaved = (id: string) => {
@@ -216,19 +269,19 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onTabChange={setActiveTab}
           activeProvider={activeProvider}
           onUseExample={() => setSubject(EXAMPLE_TOPICS[0])}
-          onCopy={handleCopy}
           onSave={handleSave}
           onNew={handleNew}
+          onRefineSuggestion={handleRefineSuggestion}
         />
       </div>
 
-      {/* ── Saved gallery ── */}
+      {/* ── Saved gallery (history) ── */}
       {savedPrompts.length > 0 && (
         <SavedGallery
           items={savedPrompts}
-          onCopy={handleCopy}
           onDelete={handleDeleteSaved}
           onClear={() => setSavedPrompts(clearSavedImagePrompts())}
+          onRestore={handleRestore}
         />
       )}
     </div>

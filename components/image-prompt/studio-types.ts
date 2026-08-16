@@ -7,9 +7,13 @@ export interface StudioFormState {
   lighting: string | undefined;
   mood: string | undefined;
   composition: string | undefined;
+  camera: string | undefined;
+  colorGrade: string | undefined;
+  resolution: string | undefined;
   aspectRatio: string;
   platforms: ImagePlatform[];
   negativePrompt: string;
+  inImageText: string;
   additionalNotes: string;
   showArtDirection: boolean;
 }
@@ -21,9 +25,13 @@ export interface StudioFormHandlers {
   setLighting: (value: string | undefined) => void;
   setMood: (value: string | undefined) => void;
   setComposition: (value: string | undefined) => void;
+  setCamera: (value: string | undefined) => void;
+  setColorGrade: (value: string | undefined) => void;
+  setResolution: (value: string | undefined) => void;
   setAspectRatio: (value: string) => void;
   togglePlatform: (id: ImagePlatform) => void;
   setNegativePrompt: (value: string) => void;
+  setInImageText: (value: string) => void;
   setAdditionalNotes: (value: string) => void;
   setShowArtDirection: (value: boolean) => void;
 }

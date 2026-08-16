@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { BookOpenCheck, ChevronDown, Eraser, Globe, Search, SlidersHorizontal } from 'lucide-react';
+import { BookOpenCheck, Camera, ChevronDown, Eraser, Globe, Monitor, Palette, Search, SlidersHorizontal, Type } from 'lucide-react';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
-import { COMPOSITION_PRESETS, LIGHTING_PRESETS, MOOD_PRESETS } from '@/lib/image-prompts';
+import { CAMERA_PRESETS, COLOR_GRADE_PRESETS, COMPOSITION_PRESETS, LIGHTING_PRESETS, MOOD_PRESETS, RESOLUTION_OPTIONS } from '@/lib/image-prompts';
 import { ChipRow } from './chip-row';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
 
@@ -15,15 +15,18 @@ interface ArtDirectionProps {
 
 /** Accordion with lighting / mood / composition chips, negative prompt, and notes. */
 export function ArtDirection({ state, handlers }: ArtDirectionProps) {
-  const { lighting, mood, composition, negativePrompt, additionalNotes, showArtDirection } = state;
+  const { lighting, mood, composition, camera, colorGrade, resolution, negativePrompt, inImageText, additionalNotes, showArtDirection } = state;
 
   const summary = [
     lighting && LIGHTING_PRESETS.find((l) => l.id === lighting)?.label,
     mood && MOOD_PRESETS.find((m) => m.id === mood)?.label,
     composition && COMPOSITION_PRESETS.find((c) => c.id === composition)?.label,
+    camera && CAMERA_PRESETS.find((c) => c.id === camera)?.label,
+    colorGrade && COLOR_GRADE_PRESETS.find((c) => c.id === colorGrade)?.label,
+    resolution && `@${resolution}`,
   ]
     .filter(Boolean)
-    .join(' · ') || 'Lighting · mood · camera · negatives';
+    .join(' · ') || 'Lighting · mood · camera · color · text · negatives';
 
   return (
     <div className="border-t border-border pt-4">
@@ -60,12 +63,52 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
           onChange={(id) => handlers.setMood(mood === id ? undefined : id)}
         />
         <ChipRow
-          label="Composition & camera"
+          label="Composition & framing"
           icon={<Search className="w-3.5 h-3.5 text-brand" />}
           options={COMPOSITION_PRESETS}
           value={composition}
           onChange={(id) => handlers.setComposition(composition === id ? undefined : id)}
         />
+        <ChipRow
+          label="Camera & lens"
+          icon={<Camera className="w-3.5 h-3.5 text-brand" />}
+          options={CAMERA_PRESETS}
+          value={camera}
+          onChange={(id) => handlers.setCamera(camera === id ? undefined : id)}
+        />
+        <ChipRow
+          label="Color grade & film stock"
+          icon={<Palette className="w-3.5 h-3.5 text-brand" />}
+          options={COLOR_GRADE_PRESETS}
+          value={colorGrade}
+          onChange={(id) => handlers.setColorGrade(colorGrade === id ? undefined : id)}
+        />
+        <ChipRow
+          label="Output resolution"
+          icon={<Monitor className="w-3.5 h-3.5 text-brand" />}
+          options={RESOLUTION_OPTIONS}
+          value={resolution}
+          onChange={(id) => handlers.setResolution(resolution === id ? undefined : id)}
+        />
+
+        {/* In-image text */}
+        <div className="space-y-1.5">
+          <label htmlFor="img-text" className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+            <Type className="w-3.5 h-3.5 text-brand" />
+            Text inside the image <span className="text-text-muted font-normal normal-case">(optional)</span>
+          </label>
+          <input
+            id="img-text"
+            type="text"
+            value={inImageText}
+            onChange={(e) => handlers.setInImageText(e.target.value)}
+            placeholder='e.g. "FRESH ROAST" in bold white sans-serif across the top'
+            className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+          <p className="text-[10px] text-text-muted leading-relaxed">
+            Best rendered by Gemini / Nano Banana and Ideogram. Wrap exact wording in quotes and describe the typography.
+          </p>
+        </div>
 
         {/* Negative prompt */}
         <div className="space-y-1.5">

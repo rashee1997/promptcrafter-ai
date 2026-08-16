@@ -3,9 +3,14 @@ import { ImagePlatform, ImagePromptInput } from '@/types';
 // ────────────────────────────────────────────────────────────────────────────
 // Image Prompt Studio — presets, meta-prompt builders, output parser, gallery
 //
-// Prompt anatomy follows the 2026 "six-slot brief" used across Midjourney,
-// DALL·E, Stable Diffusion, Flux, and Ideogram: subject, style, lighting,
-// composition, mood, and technical (aspect ratio / negative prompt).
+// Prompt anatomy follows the 2026 creative-director brief used across
+// Midjourney, DALL·E, Stable Diffusion, Flux, Ideogram, and Gemini's Nano
+// Banana image models: subject + action + location, style, lighting, camera/
+// lens, composition, mood, color grade / film stock, and technical (aspect
+// ratio, resolution, in-image text, negative prompt). Prompting guidance is
+// grounded in Google's official Nano Banana prompting guides (see
+// RESEARCH_IMAGE_PROMPTS.md) and the general image-prompt structure guides
+// (Subject + Details + Style + Composition + Lighting + Quality + Extras).
 // ────────────────────────────────────────────────────────────────────────────
 
 export interface ChipOption {
@@ -27,6 +32,12 @@ export const STYLE_PRESETS: ChipOption[] = [
   { id: 'isometric', label: 'Isometric', hint: 'Technical 30° axonometric view, diorama' },
   { id: 'pixel-art', label: 'Pixel Art', hint: 'Retro 16-bit, limited palette, crisp pixels' },
   { id: 'retrofuturism', label: 'Retro-Futurism', hint: 'Mid-century optimism, chrome, pastel interiors' },
+  { id: 'product-photography', label: 'Product Photo', hint: 'Studio catalog shot, crisp focus, commercial light' },
+  { id: 'noir', label: 'Film Noir', hint: 'Hard shadows, 1940s monochrome, moody streets' },
+  { id: 'vaporwave', label: 'Vaporwave', hint: 'Retro synthwave, neon grids, chrome suns' },
+  { id: 'ukiyo-e', label: 'Ukiyo-e', hint: 'Japanese woodblock, flat color, bold ink lines' },
+  { id: 'papercraft', label: 'Papercraft', hint: 'Cut-paper layers, soft shadows, tactile depth' },
+  { id: 'concept-art', label: 'Concept Art', hint: 'Production painting, dramatic key light, worldbuilding' },
 ];
 
 export const LIGHTING_PRESETS: ChipOption[] = [
@@ -38,6 +49,14 @@ export const LIGHTING_PRESETS: ChipOption[] = [
   { id: 'moonlight', label: 'Moonlight', hint: 'Cool blue night, deep shadows' },
   { id: 'high-key', label: 'High-Key', hint: 'Bright, airy, low contrast' },
   { id: 'low-key', label: 'Low-Key', hint: 'Dark, moody, single source' },
+  { id: 'rim-light', label: 'Rim Light', hint: 'Edge-lit silhouette, dramatic separation' },
+  { id: 'backlight', label: 'Backlight', hint: 'Glowing halo behind the subject' },
+  { id: 'candlelight', label: 'Candlelight', hint: 'Warm flicker, intimate shadows' },
+  { id: 'volumetric', label: 'Volumetric', hint: 'Visible god rays / light shafts' },
+  { id: 'bioluminescent', label: 'Bioluminescent', hint: 'Glowing organic blues and greens' },
+  { id: 'split', label: 'Split Lighting', hint: 'Half-lit face, half shadow' },
+  { id: 'hard-sun', label: 'Hard Sunlight', hint: 'Midday sun, crisp shadows' },
+  { id: 'blue-hour', label: 'Blue Hour', hint: 'Cool dusk light just after sunset' },
 ];
 
 export const MOOD_PRESETS: ChipOption[] = [
@@ -49,6 +68,11 @@ export const MOOD_PRESETS: ChipOption[] = [
   { id: 'dramatic', label: 'Dramatic', hint: 'High stakes, bold contrast' },
   { id: 'dreamy', label: 'Dreamy', hint: 'Soft-focus, ethereal, surreal' },
   { id: 'ominous', label: 'Ominous', hint: 'Threatening, tense, foreboding' },
+  { id: 'whimsical', label: 'Whimsical', hint: 'Playful, charming, storybook' },
+  { id: 'nostalgic', label: 'Nostalgic', hint: 'Warm memories, faded tenderness' },
+  { id: 'tense', label: 'Tense', hint: 'Suspense, coiled energy' },
+  { id: 'cozy', label: 'Cozy', hint: 'Warm, safe, inviting' },
+  { id: 'awe', label: 'Awe', hint: 'Wondrous, vast, humbling' },
 ];
 
 export const COMPOSITION_PRESETS: ChipOption[] = [
@@ -60,6 +84,14 @@ export const COMPOSITION_PRESETS: ChipOption[] = [
   { id: 'portrait', label: 'Portrait', hint: '85mm, subject in left third' },
   { id: 'macro', label: 'Macro', hint: 'Extreme detail, magnified texture' },
   { id: 'rule-of-thirds', label: 'Rule of Thirds', hint: 'Subject on an intersection' },
+  { id: 'dutch-angle', label: 'Dutch Angle', hint: 'Tilted horizon, unease' },
+  { id: 'extreme-close-up', label: 'Extreme Close-up', hint: 'Detail fill, texture macro feel' },
+  { id: 'over-the-shoulder', label: 'Over-the-Shoulder', hint: 'Subject seen past a foreground figure' },
+  { id: 'pov', label: 'POV Shot', hint: 'First-person perspective' },
+  { id: 'symmetry', label: 'Symmetrical', hint: 'Mirrored balance, formal calm' },
+  { id: 'leading-lines', label: 'Leading Lines', hint: 'Lines pull the eye to the subject' },
+  { id: 'frame-in-frame', label: 'Frame in Frame', hint: 'Composed within an arch or window' },
+  { id: 'negative-space', label: 'Negative Space', hint: 'Subject small, breathing room' },
 ];
 
 export const ASPECT_RATIOS: { id: string; label: string; hint: string }[] = [
@@ -68,6 +100,54 @@ export const ASPECT_RATIOS: { id: string; label: string; hint: string }[] = [
   { id: '4:3', label: '4:3', hint: 'Standard / listings' },
   { id: '16:9', label: '16:9', hint: 'Widescreen / hero' },
   { id: '9:16', label: '9:16', hint: 'Vertical / stories' },
+  { id: '2:3', label: '2:3', hint: 'Portrait classic' },
+  { id: '3:4', label: '3:4', hint: 'Portrait standard' },
+  { id: '4:5', label: '4:5', hint: 'Social portrait / IG' },
+  { id: '5:4', label: '5:4', hint: 'Near-square / print' },
+  { id: '21:9', label: '21:9', hint: 'Ultrawide / cinematic' },
+];
+
+/**
+ * Camera / lens presets — photographic hardware and focal-length vocabulary.
+ * Controls depth, distortion, perspective, and the "visual DNA" of the shot.
+ */
+export const CAMERA_PRESETS: ChipOption[] = [
+  { id: '35mm', label: '35mm', hint: 'Classic lens, natural perspective' },
+  { id: '85mm', label: '85mm Portrait', hint: 'Flattering compression, creamy bokeh' },
+  { id: 'wide-angle', label: 'Wide-angle 16mm', hint: 'Expansive perspective, edge stretch' },
+  { id: 'macro', label: 'Macro', hint: 'Extreme close detail, shallow DOF' },
+  { id: 'fisheye', label: 'Fisheye', hint: 'Distorted, immersive 180° view' },
+  { id: 'anamorphic', label: 'Anamorphic', hint: 'Cinematic widescreen flare, oval bokeh' },
+  { id: 'telephoto', label: 'Telephoto', hint: 'Compressed depth, flattened layers' },
+  { id: 'tilt-shift', label: 'Tilt-shift', hint: 'Miniature diorama focus falloff' },
+  { id: 'drone', label: 'Drone / Aerial', hint: 'Top-down, epic scale' },
+  { id: 'gopro', label: 'GoPro POV', hint: 'Action-cam wide, immersive feel' },
+  { id: 'medium-format', label: 'Medium Format', hint: 'Analog richness, tonal depth' },
+  { id: 'disposable', label: 'Disposable Camera', hint: 'Raw nostalgic flash aesthetic' },
+];
+
+/**
+ * Color grade / film-stock presets — sets the emotional tone of the final image.
+ */
+export const COLOR_GRADE_PRESETS: ChipOption[] = [
+  { id: 'kodak-portra', label: 'Kodak Portra', hint: 'Warm skin tones, soft film look' },
+  { id: 'cinestill', label: 'Cinestill 800T', hint: 'Halation neon nights, tungsten' },
+  { id: 'teal-orange', label: 'Cinematic Teal & Orange', hint: 'Blockbuster color contrast' },
+  { id: 'film-noir', label: 'Film Noir', hint: 'Stark shadows, monochrome or desaturated' },
+  { id: 'monochrome', label: 'Monochrome', hint: 'Pure black & white, hard contrast' },
+  { id: 'muted', label: 'Desaturated Muted', hint: 'Moody, subdued, restrained' },
+  { id: 'vibrant', label: 'High Saturation', hint: 'Punchy, vivid, saturated color' },
+  { id: 'pastel', label: 'Pastel', hint: 'Soft airy palette, gentle tones' },
+  { id: 'film-80s', label: '1980s Film', hint: 'Warm faded grain, nostalgic' },
+  { id: 'sepia', label: 'Sepia', hint: 'Aged archival warmth' },
+  { id: 'infrared', label: 'Infrared', hint: 'Dreamlike false color, glowing foliage' },
+];
+
+/** Output resolution — Gemini-native 1K/2K/4K; mapped to quality tags elsewhere. */
+export const RESOLUTION_OPTIONS: { id: string; label: string; hint: string }[] = [
+  { id: '1K', label: '1K', hint: 'Standard 1024px output' },
+  { id: '2K', label: '2K', hint: 'High-res — large screens & prints' },
+  { id: '4K', label: '4K', hint: 'Maximum detail — wallpapers & large print' },
 ];
 
 export const PLATFORM_OPTIONS: {
@@ -80,13 +160,19 @@ export const PLATFORM_OPTIONS: {
   { id: 'dalle', label: 'DALL·E', hint: 'Conversational natural-language description', color: 'text-[#7ec699]' },
   { id: 'stable-diffusion', label: 'SD / Flux', hint: 'Weighted tokens + negative prompt', color: 'text-[#e0a458]' },
   { id: 'ideogram', label: 'Ideogram', hint: 'Text-in-image specialist', color: 'text-[#6fc3df]' },
+  {
+    id: 'gemini',
+    label: 'Gemini / Nano Banana',
+    hint: 'Natural-language creative brief · 2K/4K · sharp text',
+    color: 'text-[#8ab4f8]',
+  },
 ];
 
 export const DEFAULT_IMAGE_INPUT: ImagePromptInput = {
   subject: '',
   style: 'photorealistic',
   aspectRatio: '16:9',
-  platforms: ['midjourney', 'dalle', 'stable-diffusion'],
+  platforms: ['gemini', 'midjourney', 'dalle', 'stable-diffusion'],
 };
 
 export const EXAMPLE_TOPICS = [
@@ -107,6 +193,7 @@ const PLATFORM_HEADERS: Record<ImagePlatform, string> = {
   'stable-diffusion': 'STABLE DIFFUSION',
   flux: 'FLUX',
   ideogram: 'IDEOGRAM',
+  gemini: 'GEMINI / NANO BANANA',
 };
 
 export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
@@ -114,19 +201,23 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
   const lighting = LIGHTING_PRESETS.find((l) => l.id === input.lighting);
   const mood = MOOD_PRESETS.find((m) => m.id === input.mood);
   const composition = COMPOSITION_PRESETS.find((c) => c.id === input.composition);
+  const camera = CAMERA_PRESETS.find((c) => c.id === input.camera);
+  const colorGrade = COLOR_GRADE_PRESETS.find((c) => c.id === input.colorGrade);
   const platformList = PLATFORM_OPTIONS.filter((p) => input.platforms.includes(p.id));
 
   const dialectGuide = platformList
     .map((p) => {
       switch (p.id) {
         case 'midjourney':
-          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, and parameters appended at the very end with double dashes: --ar ${input.aspectRatio}; use --style raw for photorealistic or photographic styles; add --stylize 100-250 for a bit of house style or --stylize 0 for raw adherence; if a negative prompt is provided, express it as --no with the key exclusions; never wrap the prompt in quotes.`;
+          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, and parameters appended at the very end with double dashes: --ar ${input.aspectRatio}; use --style raw for photorealistic or photographic styles; add --stylize 100-250 for a bit of house style or --stylize 0 for raw adherence; if a negative prompt is provided, express it as --no with the key exclusions; never wrap the prompt in quotes. Fold in the camera/lens and film-stock vocabulary from the brief as high-signal phrases (e.g. "35mm", "Kodak Portra", "anamorphic"); keep any in-image text to short labels — Midjourney mangles long text.`;
         case 'dalle':
-          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a creative brief; explicitly state the aspect ratio in words (e.g. "wide 16:9 cinematic frame"); no parameter flags, no comma-stacking, no negative-prompt syntax — exclusions are phrased as "without X" or "avoiding X".`;
+          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a creative brief; explicitly state the aspect ratio in words (e.g. "wide 16:9 cinematic frame"); no parameter flags, no comma-stacking, no negative-prompt syntax — exclusions are phrased as "without X" or "avoiding X". If in-image text is requested, put the exact wording in quotes and describe the typography; DALL·E handles short text well.`;
         case 'stable-diffusion':
-          return `STABLE DIFFUSION / FLUX dialect: dense keyword tokens with emoji-free weighting syntax like (golden hour:1.2), (volumetric fog:1.1), and quality tags; put the negative prompt on its own line starting with "Negative prompt:" and list exclusions as comma-separated tokens (blurry, deformed hands, watermark, oversaturated); include sampler guidance only as a final line: "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras".`;
+          return `STABLE DIFFUSION / FLUX dialect: dense keyword tokens with emoji-free weighting syntax like (golden hour:1.2), (volumetric fog:1.1), and quality tags; put the negative prompt on its own line starting with "Negative prompt:" and list exclusions as comma-separated tokens (blurry, deformed hands, watermark, oversaturated); include sampler guidance only as a final line: "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras". Map the requested output resolution to restrained quality tags (e.g. "4k", "ultra-detailed" at most one or two); avoid rendering long in-image text — short labels only.`;
         case 'ideogram':
           return `IDEOGRAM dialect: natural-language prompt optimized for legible in-image text — describe the exact text/lettering to render in quotes and keep the design layout explicit (centered headline, poster composition); avoid anti-aliasing and cluttered backgrounds that would blur text.`;
+        case 'gemini':
+          return `GEMINI / NANO BANANA dialect: a natural-language creative brief in full sentences — Nano Banana is a thinking model that reasons about intent, physics, and composition, so act like a creative director, not a keyword list. Open with a strong verb ("Capture", "Render", "Create", "Show") and follow the formula [Subject] + [Action] + [Location/context] + [Composition] + [Style], then layer in lighting, camera/lens, color grade, and mood as prose. State the aspect ratio in words (e.g. "a wide 16:9 frame") and explicitly request the output resolution (1K, 2K or 4K — e.g. "render at native 2K resolution"). Use positive framing: phrase exclusions as "without X" or "avoiding X" ("an empty street" not "no cars") — Nano Banana has no negative-prompt syntax. If in-image text is requested, put the exact wording in quotes and describe the typography ("bold, white, sans-serif", "hand-lettered script"); Gemini renders text better than any other dialect here, so give it the full text spec. Use photographic and cinematic vocabulary: lens (35mm, macro, wide-angle), camera feel (shot on medium-format film, GoPro), lighting design (three-point softbox, golden-hour backlighting, chiaroscuro), and film stock/color grade. If the subject involves real-time data or current events, add one line asking the model to ground the image in current information before rendering.`;
         default:
           return '';
       }
@@ -134,19 +225,25 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
     .filter(Boolean)
     .join('\n\n');
 
-  return `You are PromptCrafter's Image Direction Studio: a world-class creative director, art buyer, and image-prompt engineer who has written prompts for Midjourney, DALL-E, Stable Diffusion, Flux, and Ideogram.
+  return `You are PromptCrafter's Image Direction Studio: a world-class creative director, art buyer, and image-prompt engineer who has written prompts for Midjourney, DALL-E, Stable Diffusion, Flux, Ideogram, and Google's Nano Banana image models (Gemini Flash/Pro Image).
 
 YOUR MISSION
-Take the user's subject and options and deliver an image-ready prompt set: a universal master prompt built on the six-slot anatomy (subject, style, lighting, composition, mood, technical), then a tuned prompt for every requested platform dialect.
+Take the user's subject and options and deliver an image-ready prompt set: a universal master prompt built on the full brief anatomy (subject, action, location, style, lighting, camera/lens, composition, mood, color grade, technical), then a tuned prompt for every requested platform dialect. Direct each scene like a film director briefing a studio: name what is in the frame, how it is lit, how it is shot, and how it feels.
 
 PROMPT WRITING RULES (apply to every prompt you output)
-1. Fill all six slots explicitly: SUBJECT (specific noun + action, never "a woman"/"a scene"), STYLE (one clear visual idiom: ${style?.label ?? 'chosen style'}${style ? ` — ${style.hint}` : ''}), LIGHTING (${lighting ? `${lighting.label} — ${lighting.hint}` : 'choose a deliberate light source, direction, quality, and time of day'}), COMPOSITION (${composition ? `${composition.label} — ${composition.hint}` : 'explicit framing, lens, camera angle'}), MOOD (${mood ? `${mood.label} — ${mood.hint}` : 'one honest mood word'}), TECHNICAL (aspect ratio ${input.aspectRatio}${input.negativePrompt ? ' + negative prompt' : ''}).
-2. Use strong visual signals ("35mm lens", "Rembrandt lighting", "matte painting", "isometric") and ban weak tokens: beautiful, stunning, amazing, masterpiece, breathtaking, highly detailed, 4k, 8k (unless the dialect genuinely needs quality tags — SD/Flux only).
-3. Every prompt must be a single copy-paste-ready block — no commentary around it.
+1. Fill every slot explicitly: SUBJECT (specific noun + action, never "a woman"/"a scene"), ACTION (what is happening), LOCATION/CONTEXT (where and when), STYLE (one clear visual idiom: ${style?.label ?? 'chosen style'}${style ? ` — ${style.hint}` : ''}), LIGHTING (${lighting ? `${lighting.label} — ${lighting.hint}` : 'choose a deliberate light source, direction, quality, and time of day'}), CAMERA/LENS (${camera ? `${camera.label} — ${camera.hint}` : 'an explicit lens or camera feel'}), COMPOSITION (${composition ? `${composition.label} — ${composition.hint}` : 'explicit framing and camera angle'}), MOOD (${mood ? `${mood.label} — ${mood.hint}` : 'one honest mood word'}), COLOR GRADE (${colorGrade ? `${colorGrade.label} — ${colorGrade.hint}` : 'a deliberate palette or film-stock feel'}), TECHNICAL (aspect ratio ${input.aspectRatio}${input.resolution ? `, ${input.resolution} resolution` : ''}${input.inImageText ? ', in-image text' : ''}${input.negativePrompt ? ' + negative prompt' : ''}).
+2. Order matters: lead with the subject and the most important visual elements, then refine; put technical details (ratio, resolution, negative) last.
+3. Use strong visual signals ("35mm lens", "Rembrandt lighting", "Kodak Portra film", "matte painting", "isometric") and ban weak tokens: beautiful, stunning, amazing, masterpiece, breathtaking, highly detailed, 4k, 8k (unless the dialect genuinely needs quality tags — SD/Flux only).
+4. Be concrete: concrete nouns and materiality beat abstractions — "a navy blue tweed coat" not "a nice jacket"; "ornate elven plate armor etched with silver leaf" not "armor". Include textures, materials, and small authentic details.
+5. Positive framing: describe what you WANT, not what you don't want ("an empty street" not "no cars"). Rephrase negative-prompt exclusions as "without X" or "avoiding X" in prose dialects; only SD/Flux gets a dedicated negative prompt line.
+6. In-image text: when text must appear in the image, wrap the exact wording in quotes and describe the typography ("bold, white, sans-serif", "hand-lettered script"). Never invent in-image text the user didn't request.
+7. One visual direction: never stack conflicting styles (no "photorealistic anime oil painting"); commit to a single coherent idiom.
+8. Respect purpose: when additional notes give context (audience, brand, use case), let it shape composition, mood, and color.
+9. Every prompt must be a single copy-paste-ready block — no commentary around it.
 
 OUTPUT FORMAT — use EXACTLY these section headers, in this order:
 ## MASTER PROMPT
-(The universal six-slot prompt in clean prose — works everywhere.)
+(The universal full-anatomy prompt in clean prose — works everywhere.)
 
 ${platformList.map((p) => `## ${PLATFORM_HEADERS[p.id]}\n(Tuned ${p.label} prompt.)`).join('\n\n')}
 
@@ -157,9 +254,13 @@ USER BRIEF
 - Subject: "${input.subject}"
 - Style: ${style?.label ?? input.style}${style ? ` (${style.hint})` : ''}
 - Lighting: ${lighting?.label ?? (input.lighting ? `"${input.lighting}"` : 'director\u2019s choice')}
-- Mood: ${mood?.label ?? (input.mood ? `"${input.mood}"` : 'director\u2019s choice')}
+- Camera / lens: ${camera?.label ?? (input.camera ? `"${input.camera}"` : 'director\u2019s choice')}
 - Composition: ${composition?.label ?? (input.composition ? `"${input.composition}"` : 'director\u2019s choice')}
+- Mood: ${mood?.label ?? (input.mood ? `"${input.mood}"` : 'director\u2019s choice')}
+- Color grade / film stock: ${colorGrade?.label ?? (input.colorGrade ? `"${input.colorGrade}"` : 'director\u2019s choice')}
 - Aspect ratio: ${input.aspectRatio}
+- Resolution: ${input.resolution ?? 'model default'}
+${input.inImageText ? `- In-image text: ${input.inImageText}` : ''}
 - Platform dialects to emit: ${platformList.map((p) => p.label).join(', ') || 'master only'}
 ${input.negativePrompt ? `- Negative guidance: ${input.negativePrompt}` : ''}
 ${input.additionalNotes ? `- Additional notes: ${input.additionalNotes}` : ''}
@@ -168,7 +269,14 @@ Now write the prompts. Start directly with "## MASTER PROMPT".`;
 }
 
 export function buildImagePromptUserMessage(input: ImagePromptInput): string {
-  return `Subject: "${input.subject}"\n\nGenerate the master prompt and ${input.platforms.length} platform-tuned prompts as specified. Start with "## MASTER PROMPT".`;
+  const extras = [
+    input.camera && `Camera: ${CAMERA_PRESETS.find((c) => c.id === input.camera)?.label ?? input.camera}`,
+    input.colorGrade && `Color grade: ${COLOR_GRADE_PRESETS.find((c) => c.id === input.colorGrade)?.label ?? input.colorGrade}`,
+    input.resolution && `Resolution: ${input.resolution}`,
+    input.inImageText && `In-image text: ${input.inImageText}`,
+  ].filter(Boolean);
+  const extrasLine = extras.length > 0 ? `\n${extras.join('\n')}` : '';
+  return `Subject: "${input.subject}"\n\nGenerate the master prompt and ${input.platforms.length} platform-tuned prompts as specified. Start with "## MASTER PROMPT".${extrasLine}`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -183,6 +291,7 @@ export interface ImagePromptSections {
   'stable-diffusion'?: string;
   flux?: string;
   ideogram?: string;
+  gemini?: string;
   negative?: string;
   /** Any text that appeared before the first recognized section header. */
   preamble?: string;
@@ -204,6 +313,12 @@ const SECTION_ALIASES: Record<string, keyof ImagePromptSections> = {
   'sdxl': 'stable-diffusion',
   'flux': 'flux',
   'ideogram': 'ideogram',
+  'gemini': 'gemini',
+  'gemini / nano banana': 'gemini',
+  'nano banana': 'gemini',
+  'nano-banana': 'gemini',
+  'nanobanana': 'gemini',
+  'nano banana pro': 'gemini',
   'negative prompt': 'negative',
   'negative': 'negative',
 };
@@ -256,6 +371,7 @@ export function buildOutputTabs(sections: ImagePromptSections): { key: keyof Ima
   if (sections['stable-diffusion']) tabs.push({ key: 'stable-diffusion', label: 'SD / Flux' });
   if (sections.flux) tabs.push({ key: 'flux', label: 'Flux' });
   if (sections.ideogram) tabs.push({ key: 'ideogram', label: 'Ideogram' });
+  if (sections.gemini) tabs.push({ key: 'gemini', label: 'Gemini / Nano Banana' });
   if (sections.negative) tabs.push({ key: 'negative', label: 'Negative prompt' });
   return tabs;
 }
@@ -275,6 +391,18 @@ export interface SavedImagePrompt {
   master: string;
   negative?: string;
   createdAt: number;
+  /**
+   * Full parsed sections (minus the raw document) so the gallery can preview
+   * and copy every platform prompt, not just the master. Older saved briefs
+   * without this field still work — they fall back to `master`/`negative`.
+   */
+  sections?: Partial<Omit<ImagePromptSections, 'raw'>>;
+  /**
+   * The exact form input that produced this brief — enables one-click "reuse"
+   * that restores every option back into the studio form. Optional for
+   * backward compatibility with previously saved briefs.
+   */
+  input?: ImagePromptInput;
 }
 
 const GALLERY_KEY = 'pc:image-prompts';

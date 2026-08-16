@@ -19,8 +19,9 @@ export function StudioHeader({ platformCount }: StudioHeaderProps) {
           Image Prompt Studio
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-text-secondary leading-relaxed max-w-2xl">
-          Describe an image, and it engineers a six-slot brief — subject, style, lighting,
-          composition, mood, technical — tuned for each platform you select.
+          Describe an image, and it engineers a creative-director brief — subject, style,
+          lighting, camera & lens, composition, mood, color grade, text, resolution — tuned
+          for each platform you select, including Gemini / Nano Banana.
         </p>
       </div>
       <div className="flex items-center gap-1.5">

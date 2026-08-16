@@ -15,9 +15,10 @@ interface OutputPanelProps {
   onTabChange: (tab: keyof ImagePromptSections | 'raw') => void;
   activeProvider: ProviderConfig;
   onUseExample: () => void;
-  onCopy: (text: string, label: string) => void;
   onSave: () => void;
   onNew: () => void;
+  /** Remix suggestions re-run generation with a tweak applied. */
+  onRefineSuggestion?: (suggestion: string) => void;
 }
 
 /** Right card: status header, empty state, streaming well, and parsed brief viewer. */
@@ -29,9 +30,9 @@ export function OutputPanel({
   onTabChange,
   activeProvider,
   onUseExample,
-  onCopy,
   onSave,
   onNew,
+  onRefineSuggestion,
 }: OutputPanelProps) {
   const streamWellRef = useRef<HTMLDivElement>(null);
 
@@ -88,8 +89,9 @@ export function OutputPanel({
             </div>
             <h3 className="mt-5 text-base font-bold text-text-primary">Describe an image to generate</h3>
             <p className="mt-2 text-xs text-text-secondary leading-relaxed max-w-sm">
-              The studio writes a six-slot master prompt plus tuned variants for Midjourney,
-              DALL·E, SD/Flux, and Ideogram — ready to paste.
+              The studio writes a full creative-director brief — subject, lighting, camera,
+              color grade, text and more — plus tuned variants for Midjourney, DALL·E,
+              SD/Flux, Ideogram, and Gemini / Nano Banana — ready to paste.
             </p>
             <button
               type="button"
@@ -126,9 +128,10 @@ export function OutputPanel({
             sections={sections}
             activeTab={activeTab}
             onTabChange={onTabChange}
-            onCopy={onCopy}
             onSave={onSave}
             onNew={onNew}
+            onRefineSuggestion={onRefineSuggestion}
+            isGenerating={isGenerating}
           />
         )}
 
