@@ -67,6 +67,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [inImageText, setInImageText] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [showArtDirection, setShowArtDirection] = useState(false);
+  const [showRefine, setShowRefine] = useState(false);
 
   // ── Output state ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -117,6 +118,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     inImageText,
     additionalNotes,
     showArtDirection,
+    showRefine,
   };
 
   const formHandlers: StudioFormHandlers = {
@@ -150,6 +152,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setInImageText,
     setAdditionalNotes,
     setShowArtDirection,
+    setShowRefine,
   };
 
   const buildInput = (): ImagePromptInput => ({

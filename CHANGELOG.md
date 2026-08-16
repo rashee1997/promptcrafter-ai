@@ -5,6 +5,14 @@ All notable changes to PromptCrafter AI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Dynamic hybrid example prompts** — the static example-topic chips in the text, Image, and Logo studios now act as an instant fallback layer that quietly upgrades to AI-refreshed suggestions matched to the current module/domain and whatever settings are already picked (style, lighting, industry, mark type, palette, tone, framework…). Powered by a low-latency Gemini Flash-Lite assist call (`gemini-2.5-flash-lite` with a `gemini-3.x-flash-lite` fallback) that never blocks the primary Generate action, debounced to selection-only changes, cached per option combo, with a manual refresh button.
+- **AI-suggested negative prompts** — the Image and Logo studio "Things to avoid" fields gain a one-click Suggest button that generates a brief-specific exclusion list (photorealistic vs. flat-vector vs. lettermark exclusions, keyed to the chosen style, lighting, camera, palette, mark type, usage, typography…) and appends it with `, ` instead of overwriting manual input; failures hide quietly with no error surfaced.
+- **Settings-column 3-tier rework** — the Image/Logo prompt form now tiers its settings: Essentials (mode, subject + example chips, style grid, aspect ratio) always visible → a collapsed-by-default "Refine" accordion (platform dialects plus a logo-only "Brand" sub-card grouping industry, wordmark, mark type, concept, and palette) → the existing Art Direction accordion. Logo mode drops from a dozen always-visible controls to four essentials plus two clearly labeled optional panels; open/closed state persists across mode switches.
+
 ## [1.1.0] - 2026-08-13
 
 ### Added

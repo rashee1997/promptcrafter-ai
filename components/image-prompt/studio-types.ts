@@ -44,6 +44,11 @@ export interface StudioFormState {
   inImageText: string;
   additionalNotes: string;
   showArtDirection: boolean;
+  /**
+   * Tier-2 "Refine" accordion (platform dialects + logo Brand sub-card).
+   * Absent/undefined on older persisted state — defaults to collapsed.
+   */
+  showRefine: boolean;
 }
 
 /** Setter callbacks for the form state — mirrors the useState setters in the studio. */
@@ -75,4 +80,5 @@ export interface StudioFormHandlers {
   setInImageText: (value: string) => void;
   setAdditionalNotes: (value: string) => void;
   setShowArtDirection: (value: boolean) => void;
+  setShowRefine: (value: boolean) => void;
 }

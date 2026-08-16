@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Building2, Check, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, RefreshCw, Shapes, Sparkles, X } from 'lucide-react';
+import { Building2, Check, ChevronDown, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, RefreshCw, Shapes, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
+import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
 import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
@@ -23,7 +24,12 @@ interface PromptFormProps {
   onSubmit: () => void;
 }
 
-/** Left card: mode toggle, subject, style/ratio/platform presets, art direction, action bar. */
+/**
+ * Left card — settings column, tiered into three levels of disclosure:
+ *   TIER 1 Essentials   — mode toggle, subject + example chips, style grid, aspect ratio (always visible).
+ *   TIER 2 Refine       — collapsed accordion: platform dialects + a logo-only "Brand" sub-card.
+ *   TIER 3 Art direction — the existing accordion in art-direction.tsx.
+ */
 export function PromptForm({
   state,
   handlers,
@@ -50,6 +56,20 @@ export function PromptForm({
   const styleOptions = isLogo ? LOGO_STYLE_PRESETS : STYLE_PRESETS;
   const activeStyle = isLogo ? state.logoStyle : state.style;
   const selectStyle = (id: string) => (isLogo ? handlers.setLogoStyle(id) : handlers.setStyle(id));
+
+  /** Tier-2 collapsed summary — same .filter(Boolean).join(' · ') pattern as art-direction.tsx. */
+  const platformLabels = PLATFORM_OPTIONS.filter((p) => state.platforms.includes(p.id)).map((p) => p.label);
+  const refineSummary = isLogo
+    ? [
+        LOGO_INDUSTRY_PRESETS.find((i) => i.id === state.industry)?.label,
+        LOGO_MARK_TYPES.find((m) => m.id === state.logoType)?.label,
+        LOGO_CONCEPT_PRESETS.find((c) => c.id === state.concept)?.label,
+        LOGO_PALETTE_PRESETS.find((p) => p.id === state.palette)?.label,
+        state.brandName.trim() || undefined,
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Industry · mark · concept · palette'
+    : platformLabels.join(' · ') || 'Platforms';
 
   const renderModeButton = (m: StudioMode) => {
     const selected = state.mode === m;
@@ -79,6 +99,8 @@ export function PromptForm({
   return (
     <GlassCard variant="default" className="p-5 sm:p-6 space-y-5">
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} onKeyDown={handleKeyDown} className="space-y-5">
+        {/* ── TIER 1 · ESSENTIALS — always visible ── */}
+
         {/* Mode toggle */}
         <div
           role="group"
@@ -153,60 +175,6 @@ export function PromptForm({
           </div>
         </div>
 
-        {/* Logo-only: industry context */}
-        {isLogo && (
-          <ChipRow
-            label="Industry & audience"
-            icon={<Building2 className="w-3.5 h-3.5 text-brand" />}
-            options={LOGO_INDUSTRY_PRESETS}
-            value={state.industry}
-            onChange={(id) => handlers.setIndustry(state.industry === id ? undefined : id)}
-          />
-        )}
-
-        {/* Logo-only: wordmark / brand name */}
-        {isLogo && (
-          <div className="space-y-1.5">
-            <label htmlFor="img-brand" className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-              <PenTool className="w-3.5 h-3.5 text-brand" />
-              Wordmark / brand name <span className="text-text-muted font-normal normal-case">(optional)</span>
-            </label>
-            <input
-              id="img-brand"
-              type="text"
-              value={state.brandName}
-              onChange={(e) => handlers.setBrandName(e.target.value)}
-              placeholder='e.g. "EMBER & OAK" — exact text to render in the mark'
-              className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
-            />
-            <p className="text-[10px] text-text-muted leading-relaxed">
-              Rendered best by Ideogram and Gemini / Nano Banana. Keep it short — long names get garbled by most models.
-            </p>
-          </div>
-        )}
-
-        {/* Logo-only: mark type */}
-        {isLogo && (
-          <ChipRow
-            label="Mark type"
-            icon={<Shapes className="w-3.5 h-3.5 text-brand" />}
-            options={LOGO_MARK_TYPES}
-            value={state.logoType}
-            onChange={handlers.setLogoType}
-          />
-        )}
-
-        {/* Logo-only: ownable concept */}
-        {isLogo && (
-          <ChipRow
-            label="Concept & meaning"
-            icon={<Lightbulb className="w-3.5 h-3.5 text-warning" />}
-            options={LOGO_CONCEPT_PRESETS}
-            value={state.concept}
-            onChange={(id) => handlers.setConcept(state.concept === id ? undefined : id)}
-          />
-        )}
-
         {/* Style presets (image styles or logo styles) */}
         <div className="space-y-2">
           <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
@@ -239,45 +207,6 @@ export function PromptForm({
           </div>
         </div>
 
-        {/* Logo-only: color palette */}
-        {isLogo && (
-          <div className="space-y-2">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-              <PaletteIcon className="w-3.5 h-3.5 text-brand" />
-              Color palette
-              <span className="text-text-muted font-normal normal-case">— max three colors for a scalable mark</span>
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-              {LOGO_PALETTE_PRESETS.map((p) => {
-                const selected = state.palette === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handlers.setPalette(p.id)}
-                    title={p.hint}
-                    aria-pressed={selected}
-                    className={cn(
-                      'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left',
-                      selected
-                        ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
-                        : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
-                    )}
-                  >
-                    <span
-                      className="w-4 h-3 rounded-[4px] shrink-0 border border-black/10 shadow-inner"
-                      style={{ background: `linear-gradient(90deg, ${p.colors.join(', ')})` }}
-                      aria-hidden="true"
-                    />
-                    <span className="truncate">{p.label}</span>
-                    {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Aspect ratio */}
         <ChipRow
           label="Aspect ratio"
@@ -287,39 +216,150 @@ export function PromptForm({
           onChange={handlers.setAspectRatio}
         />
 
-        {/* Platform dialects */}
-        <div className="space-y-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            <Cpu className="w-3.5 h-3.5 text-brand" />
-            Tune prompts for
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {PLATFORM_OPTIONS.map((p) => {
-              const selected = state.platforms.includes(p.id);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handlers.togglePlatform(p.id)}
-                  title={p.hint}
-                  aria-pressed={selected}
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
-                    selected
-                      ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
-                      : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
-                  )}
-                >
-                  <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', p.color)} />
-                  {p.label}
-                  {selected && <Check className="w-3 h-3 text-brand shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
+        {/* ── TIER 2 · REFINE — single accordion, collapsed by default ── */}
+        <div className="border-t border-border pt-4">
+          <button
+            type="button"
+            onClick={() => handlers.setShowRefine(!state.showRefine)}
+            aria-expanded={state.showRefine}
+            aria-controls="img-refine"
+            className="w-full flex items-center justify-between gap-2 text-left group"
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary group-hover:text-brand transition-colors">
+              <SlidersHorizontal className="w-4 h-4 text-brand" />
+              <span>Refine</span>
+              <span className="hidden md:flex items-center gap-1.5 text-[10px] font-medium text-text-muted">
+                {refineSummary}
+              </span>
+            </div>
+            <ChevronDown className={cn('w-4 h-4 transition-transform', state.showRefine && 'rotate-180')} />
+          </button>
+
+          <Expandable open={state.showRefine} id="img-refine" className="mt-4 space-y-4">
+            {/* Logo-only: Brand sub-card — industry, wordmark, mark type, concept, palette
+                grouped in one visually bounded block instead of five top-level sections. */}
+            {isLogo && (
+              <div className="p-4 rounded-xl bg-surface-muted/60 border border-border space-y-4">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-text-secondary">
+                  <PenTool className="w-3.5 h-3.5 text-warning" />
+                  Brand
+                </span>
+
+                <ChipRow
+                  label="Industry & audience"
+                  icon={<Building2 className="w-3.5 h-3.5 text-brand" />}
+                  options={LOGO_INDUSTRY_PRESETS}
+                  value={state.industry}
+                  onChange={(id) => handlers.setIndustry(state.industry === id ? undefined : id)}
+                />
+
+                <div className="space-y-1.5">
+                  <label htmlFor="img-brand" className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                    <PenTool className="w-3.5 h-3.5 text-brand" />
+                    Wordmark / brand name <span className="text-text-muted font-normal normal-case">(optional)</span>
+                  </label>
+                  <input
+                    id="img-brand"
+                    type="text"
+                    value={state.brandName}
+                    onChange={(e) => handlers.setBrandName(e.target.value)}
+                    placeholder='e.g. "EMBER & OAK" — exact text to render in the mark'
+                    className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                  <p className="text-[10px] text-text-muted leading-relaxed">
+                    Rendered best by Ideogram and Gemini / Nano Banana. Keep it short — long names get garbled by most models.
+                  </p>
+                </div>
+
+                <ChipRow
+                  label="Mark type"
+                  icon={<Shapes className="w-3.5 h-3.5 text-brand" />}
+                  options={LOGO_MARK_TYPES}
+                  value={state.logoType}
+                  onChange={handlers.setLogoType}
+                />
+
+                <ChipRow
+                  label="Concept & meaning"
+                  icon={<Lightbulb className="w-3.5 h-3.5 text-warning" />}
+                  options={LOGO_CONCEPT_PRESETS}
+                  value={state.concept}
+                  onChange={(id) => handlers.setConcept(state.concept === id ? undefined : id)}
+                />
+
+                <div className="space-y-2">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                    <PaletteIcon className="w-3.5 h-3.5 text-brand" />
+                    Color palette
+                    <span className="text-text-muted font-normal normal-case">— max three colors for a scalable mark</span>
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {LOGO_PALETTE_PRESETS.map((p) => {
+                      const selected = state.palette === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handlers.setPalette(p.id)}
+                          title={p.hint}
+                          aria-pressed={selected}
+                          className={cn(
+                            'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left',
+                            selected
+                              ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                              : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                          )}
+                        >
+                          <span
+                            className="w-4 h-3 rounded-[4px] shrink-0 border border-black/10 shadow-inner"
+                            style={{ background: `linear-gradient(90deg, ${p.colors.join(', ')})` }}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">{p.label}</span>
+                          {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Platform dialects */}
+            <div className="space-y-2">
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                <Cpu className="w-3.5 h-3.5 text-brand" />
+                Tune prompts for
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {PLATFORM_OPTIONS.map((p) => {
+                  const selected = state.platforms.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handlers.togglePlatform(p.id)}
+                      title={p.hint}
+                      aria-pressed={selected}
+                      className={cn(
+                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
+                        selected
+                          ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                          : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                      )}
+                    >
+                      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', p.color)} />
+                      {p.label}
+                      {selected && <Check className="w-3 h-3 text-brand shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </Expandable>
         </div>
 
-        {/* Art direction accordion */}
+        {/* ── TIER 3 · ART DIRECTION — existing accordion (now with negative-prompt Suggest) ── */}
         <ArtDirection state={state} handlers={handlers} />
 
         {/* Sticky action bar */}
