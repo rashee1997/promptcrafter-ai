@@ -44,7 +44,7 @@ import {
 } from '@/lib/storage';
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { generatePromptStream, refinePromptStream } from '@/lib/ai-client';
-import { computePromptStats, generateVersionName } from '@/lib/prompt-stats';
+import { computePromptStats, generateVersionName, unwrapCodeBlock } from '@/lib/prompt-stats';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'generator' | 'history' | 'settings'>('generator');
@@ -269,11 +269,20 @@ export default function HomePage() {
       async (completedText) => {
         setIsGenerating(false);
 
+        // Store the unwrapped, non-empty prompt so saved content, the copy
+        // button, and the test suite all operate on the same artifact.
+        const cleaned = unwrapCodeBlock(completedText).trim();
+        if (!cleaned) {
+          setStreamingText('');
+          toast.error("Couldn't create the prompt", 'The model returned an empty response. Try again.');
+          return;
+        }
+
         const timestamp = Date.now();
         const rand = Math.random().toString(36).slice(2, 7);
         const sessId = `sess-${timestamp}-${rand}`;
         const v1Id = `v-${timestamp}-1`;
-        const stats = computePromptStats(completedText);
+        const stats = computePromptStats(cleaned);
 
         const initialVersion: PromptVersion = {
           id: v1Id,
@@ -281,7 +290,7 @@ export default function HomePage() {
           name: 'Original',
           sourceType: 'initial',
           createdAt: timestamp,
-          content: completedText,
+          content: cleaned,
           providerName: activeProvider.name,
           modelUsed: activeProvider.model,
           stats,
@@ -303,7 +312,7 @@ export default function HomePage() {
             {
               id: `msg-${timestamp}-2`,
               role: 'assistant',
-              content: completedText,
+              content: cleaned,
               createdAt: timestamp,
               resultingVersionId: v1Id,
             },
@@ -323,6 +332,7 @@ export default function HomePage() {
       (error) => {
         setIsGenerating(false);
         setStreamingText(`⚠️ Couldn't create the prompt: ${error.message}`);
+        toast.error("Couldn't create the prompt", error.message);
       },
       controller.signal
     );
@@ -344,6 +354,11 @@ export default function HomePage() {
       content: m.content,
     }));
 
+    // The exact version being refined — the model may only edit this text.
+    const baseForRefine =
+      currentSession.versions.find((v) => v.id === currentSession.activeVersionId) ||
+      currentSession.versions[currentSession.versions.length - 1];
+
     let fullText = '';
 
     await refinePromptStream(
@@ -356,6 +371,7 @@ export default function HomePage() {
         },
         priorMessages,
         instruction,
+        basePrompt: baseForRefine?.content || '',
       },
       (chunk) => {
         fullText += chunk;
@@ -364,12 +380,18 @@ export default function HomePage() {
       async (completedText) => {
         setIsGenerating(false);
 
+        const cleaned = unwrapCodeBlock(completedText).trim();
+        if (!cleaned) {
+          toast.error("Couldn't update the prompt", 'The model returned an empty response. Your current version is unchanged.');
+          return;
+        }
+
         const timestamp = Date.now();
         const rand = Math.random().toString(36).slice(2, 7);
         const versionNumber = currentSession.versions.length + 1;
         const vId = `v-${timestamp}-${rand}`;
         const versionName = generateVersionName(instruction, versionNumber, 'refinement');
-        const stats = computePromptStats(completedText);
+        const stats = computePromptStats(cleaned);
 
         const newVersion: PromptVersion = {
           id: vId,
@@ -378,7 +400,7 @@ export default function HomePage() {
           sourceType: 'refinement',
           createdAt: timestamp,
           refinementInstruction: instruction,
-          content: completedText,
+          content: cleaned,
           providerName: activeProvider.name,
           modelUsed: activeProvider.model,
           stats,
@@ -394,7 +416,7 @@ export default function HomePage() {
         const assistantMsg: ThreadMessage = {
           id: `msg-${timestamp}-2`,
           role: 'assistant',
-          content: completedText,
+          content: cleaned,
           createdAt: timestamp,
           resultingVersionId: vId,
         };
@@ -413,6 +435,7 @@ export default function HomePage() {
       (error) => {
         setIsGenerating(false);
         setStreamingText(`⚠️ Couldn't update the prompt: ${error.message}`);
+        toast.error("Couldn't update the prompt", 'Your current version is unchanged.');
       },
       controller.signal
     );
@@ -421,12 +444,18 @@ export default function HomePage() {
   const handleSaveEditVersion = async (newContent: string) => {
     if (!currentSession) return;
 
+    const cleaned = unwrapCodeBlock(newContent).trim();
+    if (!cleaned) {
+      toast.error('Could not save edit', 'The prompt cannot be empty.');
+      return;
+    }
+
     const timestamp = Date.now();
     const rand = Math.random().toString(36).slice(2, 7);
     const versionNumber = currentSession.versions.length + 1;
     const vId = `v-${timestamp}-${rand}`;
     const versionName = generateVersionName(undefined, versionNumber, 'manual-edit');
-    const stats = computePromptStats(newContent);
+    const stats = computePromptStats(cleaned);
 
     const editVersion: PromptVersion = {
       id: vId,
@@ -434,7 +463,7 @@ export default function HomePage() {
       name: versionName,
       sourceType: 'manual-edit',
       createdAt: timestamp,
-      content: newContent,
+      content: cleaned,
       providerName: activeProvider.name,
       modelUsed: activeProvider.model,
       stats,
@@ -443,7 +472,7 @@ export default function HomePage() {
     const assistantMsg: ThreadMessage = {
       id: `msg-${timestamp}-edit`,
       role: 'assistant',
-      content: newContent,
+      content: cleaned,
       createdAt: timestamp,
       resultingVersionId: vId,
     };

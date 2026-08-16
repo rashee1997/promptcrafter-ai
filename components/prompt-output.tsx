@@ -44,9 +44,10 @@ import { evaluatePromptQuality, runCaseEvaluation } from '@/lib/ai-client';
 import { setVersionQuality, saveTestSuite, saveTestRun } from '@/lib/storage';
 import { auditPlaceholders, fillPlaceholders } from '@/lib/placeholder';
 import { exportPromptFor, EXPORT_TARGETS, ExportTarget } from '@/lib/export';
-import { heuristicPromptQuality, PASS_THRESHOLD } from '@/lib/prompt-quality';
+import { heuristicPromptQuality, PASS_THRESHOLD, buildEvaluationContext } from '@/lib/prompt-quality';
 import { buildCostLedger } from '@/lib/ledger';
 import { formatCostDollars } from '@/lib/model-pricing';
+import { computeWordDiff } from '@/lib/diff';
 import { toast } from '@/components/toast';
 
 interface PromptOutputProps {
@@ -109,6 +110,9 @@ export function PromptOutput({
   const [suiteProgress, setSuiteProgress] = useState('');
   const [suiteError, setSuiteError] = useState<string | null>(null);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+
+  // §9.6b — "what changed" diff panel for the active version
+  const [changeDiffOpen, setChangeDiffOpen] = useState(false);
 
   const outputRef = useRef<HTMLDivElement>(null);
 
@@ -173,6 +177,10 @@ export function PromptOutput({
   // Derived text content (computed before the early return so hooks stay ordered)
   const rawPromptText = unwrapCodeBlock(isEditing ? editContent : output);
 
+  // The SAVED version's text. Quality display and scoring are always anchored
+  // to the saved version — never to an unsaved draft in the editor.
+  const versionPromptText = unwrapCodeBlock(activeVersion?.content || output);
+
   // F4 — placeholder audit
   const audit = useMemo(() => auditPlaceholders(rawPromptText), [rawPromptText]);
   const filledPrompt = useMemo(
@@ -207,8 +215,10 @@ export function PromptOutput({
 
   const { wordCount, charCount, estTokens } = computePromptStats(rawPromptText);
 
-  // F1 — real stored quality when available, heuristic otherwise
-  const heuristicQuality = heuristicPromptQuality(rawPromptText);
+  // F1 — real stored quality when available, heuristic otherwise. The heuristic
+  // is computed from the saved version, so editing a draft never changes the
+  // displayed score until it is saved as a new version.
+  const heuristicQuality = heuristicPromptQuality(versionPromptText);
   const quality = activeVersion?.quality || (!isGenerating && output ? heuristicQuality : null);
   const displayScore = quality?.overall ?? heuristicQuality.overall;
 
@@ -274,19 +284,36 @@ export function PromptOutput({
     URL.revokeObjectURL(url);
   };
 
-  // F1 — score the active version with the LLM judge
+  // F1 — score the SAVED version with the LLM judge. Scoring is read-only:
+  // it never modifies the prompt, only records the score against the version.
   const handleScoreVersion = async () => {
-    if (isScoring || !rawPromptText) return;
+    if (isScoring || isEditing || !versionPromptText) return;
     setIsScoring(true);
     try {
-      const judged = await evaluatePromptQuality(activeProvider, rawPromptText);
-      const finalQuality = judged || heuristicQuality;
+      const judged = await evaluatePromptQuality(
+        activeProvider,
+        versionPromptText,
+        buildEvaluationContext(currentSession)
+      );
+      const finalQuality =
+        judged ||
+        {
+          ...heuristicQuality,
+          fallbackReason: 'The AI review could not be completed — showing a quick estimate instead.',
+        };
       if (currentSession && activeVersion) {
         const updated = await setVersionQuality(currentSession.id, activeVersion.id, finalQuality);
         onSessionUpdate?.(updated);
       }
       setScoreOpen(true);
-      toast.success(`Version scored ${finalQuality.overall}/100`, 'Score saved to this version.');
+      toast.success(
+        `Version scored ${finalQuality.overall}/100`,
+        finalQuality.source === 'llm-judge'
+          ? 'Score saved to this version.'
+          : 'Quick estimate saved — run AI review when your connection is back.'
+      );
+    } catch (err: any) {
+      toast.error("Couldn't score the version", err?.message || 'Please try again.');
     } finally {
       setIsScoring(false);
     }
@@ -320,12 +347,14 @@ export function PromptOutput({
       for (const version of currentSession.versions) {
         setSuiteProgress(`Testing version ${version.versionNumber} (${testSuite.length} case${testSuite.length === 1 ? '' : 's'})...`);
         const cases = [];
+        let runJudgeModel: string | undefined;
         for (const input of testSuite) {
           const result = await runCaseEvaluation({
             provider: activeProvider,
             prompt: version.content,
             testInput: input,
           });
+          if (!runJudgeModel && result?.judgeModel) runJudgeModel = result.judgeModel;
           cases.push({
             input,
             output: result?.output || '',
@@ -341,6 +370,7 @@ export function PromptOutput({
           ranAt: Date.now(),
           providerName: activeProvider.name,
           modelUsed: activeProvider.model || activeProvider.name,
+          judgeModel: runJudgeModel,
           cases,
         };
         const updated = await saveTestRun(currentSession.id, latestRun);
@@ -386,6 +416,17 @@ export function PromptOutput({
   const versions = currentSession?.versions || [];
   const activeVersionId = activeVersion?.id || currentSession?.activeVersionId;
 
+  // Version immediately before the active one, for the "what changed" diff.
+  const diffPrevVersion = (() => {
+    if (!activeVersion || versions.length < 2) return null;
+    const idx = versions.findIndex((v) => v.id === activeVersion.id);
+    if (idx <= 0) return null;
+    return versions[idx - 1];
+  })();
+  const changeDiff = diffPrevVersion && activeVersion
+    ? computeWordDiff(diffPrevVersion.content, activeVersion.content)
+    : null;
+
   const qualityDimensions = quality
     ? [
         { key: 'Clarity', value: quality.dimensions.clarity, note: quality.dimensions.clarity.notes },
@@ -402,6 +443,13 @@ export function PromptOutput({
   for (const run of latestRuns) {
     if (!runsByVersion.has(run.versionId)) runsByVersion.set(run.versionId, run);
   }
+
+  // Matrix columns are derived from the runs' snapshotted case inputs so the
+  // table stays aligned even after the live suite is edited.
+  const matrixRuns = versions
+    .map((v) => runsByVersion.get(v.id))
+    .filter((r): r is TestRun => !!r);
+  const maxCaseCols = matrixRuns.reduce((max, r) => Math.max(max, r.cases.length), 0);
 
   return (
     <GlassCard variant="glowing" className="p-5 sm:p-6 space-y-4">
@@ -455,7 +503,10 @@ export function PromptOutput({
               aria-expanded={scoreOpen}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Quality: {displayScore}/100</span>
+              <span>
+                Quality: {displayScore}/100
+                {quality?.source === 'heuristic' && <span className="ml-1 text-[9px] font-bold uppercase tracking-wide opacity-70">est.</span>}
+              </span>
               {scoreDelta !== null && (
                 <span
                   className={`text-[10px] font-bold ${
@@ -500,6 +551,48 @@ export function PromptOutput({
         </div>
       </div>
 
+      {/* §9.6b — What changed vs the previous version (surfaces the refine edit immediately) */}
+      {!isGenerating && activeVersion && diffPrevVersion && changeDiff && (
+        <div className="rounded-xl border border-border bg-surface-muted/40 p-3 space-y-2">
+          <button
+            type="button"
+            onClick={() => setChangeDiffOpen((open) => !open)}
+            className="w-full flex items-center justify-between gap-2 text-left"
+            aria-expanded={changeDiffOpen}
+          >
+            <span className="flex items-center gap-2 text-[11px] font-bold text-text-primary">
+              <GitCompare className="w-3.5 h-3.5 text-brand shrink-0" />
+              Changed from v{diffPrevVersion.versionNumber} ({diffPrevVersion.name})
+              <span className="text-[10px] font-medium text-text-muted">
+                → {activeVersion.name}
+              </span>
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-text-muted transition-transform ${changeDiffOpen ? 'rotate-180' : ''}`} />
+          </button>
+          <Expandable open={changeDiffOpen} className="space-y-1.5 pt-1">
+            <div className="max-h-48 overflow-y-auto rounded-lg bg-surface-code border border-border/70 p-3 text-[11px] font-mono leading-relaxed whitespace-pre-wrap">
+              {changeDiff.map((chunk, idx) => {
+                if (chunk.added) {
+                  return (
+                    <span key={idx} className="bg-success/25 text-success font-bold px-0.5 rounded">
+                      {chunk.value}
+                    </span>
+                  );
+                }
+                if (chunk.removed) {
+                  return (
+                    <span key={idx} className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70">
+                      {chunk.value}
+                    </span>
+                  );
+                }
+                return <span key={idx}>{chunk.value}</span>;
+              })}
+            </div>
+          </Expandable>
+        </div>
+      )}
+
       {/* F1 — Quality Scorecard */}
       {quality && scoreOpen && (
       <Expandable open={true} className="space-y-3 p-4 rounded-xl bg-surface-muted/70 border border-brand/25">
@@ -516,11 +609,18 @@ export function PromptOutput({
               <span className="text-[10px] text-text-muted"> / 100</span>
               <p className="text-[10px] text-text-muted">
                 {quality.source === 'llm-judge'
-                  ? `via ${quality.providerName}`
+                  ? `via ${quality.judgeModel || quality.providerName}`
                   : 'Quick estimate · run a full review for a detailed score'}
               </p>
             </div>
           </div>
+
+          {quality.fallbackReason && (
+            <p className="text-[10px] text-warning flex items-center gap-1.5">
+              <AlertTriangle className="w-3 h-3 shrink-0" />
+              {quality.fallbackReason}
+            </p>
+          )}
 
           {/* Dimension bars */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -567,9 +667,26 @@ export function PromptOutput({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-warning block mb-1.5">Improve</span>
                 <ul className="space-y-1.5">
                   {quality.improvements.slice(0, 4).map((imp, i) => (
-                    <li key={i} className="text-[11px] text-text-secondary leading-relaxed">
-                      <span className="font-semibold text-warning">{imp.issue}</span>
-                      <span className="text-text-muted"> → {imp.fix}</span>
+                    <li key={i} className="text-[11px] text-text-secondary leading-relaxed flex items-start justify-between gap-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="font-semibold text-warning">{imp.issue}</span>
+                        <span className="text-text-muted"> → {imp.fix}</span>
+                        {imp.dimension && (
+                          <span className="ml-1 text-[9px] font-bold uppercase tracking-wide text-text-muted">
+                            [{imp.dimension}]
+                          </span>
+                        )}
+                      </span>
+                      {onRefinePrompt && (
+                        <button
+                          type="button"
+                          onClick={() => onRefinePrompt(imp.fix)}
+                          className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand/15 text-brand border border-brand/30 hover:bg-brand/25 transition-colors"
+                          title="Apply this fix as a new version"
+                        >
+                          Apply
+                        </button>
+                      )}
                     </li>
                   ))}
                   {quality.improvements.length === 0 && (
@@ -583,7 +700,8 @@ export function PromptOutput({
           <button
             type="button"
             onClick={handleScoreVersion}
-            disabled={isScoring}
+            disabled={isScoring || isEditing}
+            title={isEditing ? 'Save or cancel your edit before reviewing the saved version' : 'Score the saved version with the AI judge'}
             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50 flex items-center gap-1.5 transition-colors shadow-sm"
           >
             {isScoring ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Gauge className="w-3.5 h-3.5" />}
@@ -986,9 +1104,21 @@ export function PromptOutput({
                       <thead>
                         <tr className="text-left text-text-muted">
                           <th className="py-1 pr-2 font-semibold">Version</th>
-                          {testSuite.map((_, i) => (
-                            <th key={i} className="py-1 px-2 font-semibold">Case {i + 1}</th>
-                          ))}
+                          {Array.from({ length: maxCaseCols }, (_, i) => {
+                            // Column labels come from the run's SNAPSHOTTED case
+                            // inputs, not the current suite, so results never
+                            // shift onto the wrong inputs after the suite is edited.
+                            const headerCase = matrixRuns.find((r) => r.cases[i])?.cases[i];
+                            return (
+                              <th
+                                key={i}
+                                className="py-1 px-2 font-semibold"
+                                title={headerCase?.input || `Case ${i + 1}`}
+                              >
+                                Case {i + 1}
+                              </th>
+                            );
+                          })}
                           <th className="py-1 px-2 font-semibold">Pass</th>
                         </tr>
                       </thead>
@@ -998,7 +1128,7 @@ export function PromptOutput({
                           return (
                             <tr key={ver.id} className="border-t border-border/60">
                               <td className="py-1.5 pr-2 font-semibold text-brand">v{ver.versionNumber}</td>
-                              {testSuite.map((_, i) => {
+                              {Array.from({ length: maxCaseCols }, (_, i) => {
                                 const result = run?.cases[i];
                                 if (!result) {
                                   return <td key={i} className="py-1.5 px-2 text-text-muted">—</td>;

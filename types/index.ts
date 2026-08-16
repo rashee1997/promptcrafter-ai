@@ -105,6 +105,34 @@ export interface PromptInput {
 }
 
 /**
+ * Fixed keys of the quality rubric. Used to tag improvement suggestions with
+ * the dimension they belong to so fixes can be applied back through refine.
+ */
+export type QualityDimensionKey =
+  | 'clarity'
+  | 'structure'
+  | 'outputSpec'
+  | 'context'
+  | 'errorHandling'
+  | 'tokenEfficiency';
+
+export type ImprovementSeverity = 'low' | 'medium' | 'high';
+
+/**
+ * Session context passed to the LLM judge so scoring is task-aware instead of
+ * generic. Mirrors the relevant fields of PromptInput + the session's domain.
+ */
+export interface EvaluationContext {
+  domainId?: string;
+  domainName?: string;
+  topic?: string;
+  tone?: string;
+  framework?: string;
+  targetAudience?: string;
+  additionalNotes?: string;
+}
+
+/**
  * F1 — Prompt Quality Scorecard.
  * A 0-100 production-readiness assessment across a fixed rubric,
  * produced by an LLM judge (with a client-side heuristic fallback).
@@ -125,11 +153,19 @@ export interface PromptQuality {
     tokenEfficiency: QualityDimension; // Leanness vs bloat
   };
   strengths: string[];
-  improvements: { issue: string; fix: string }[];
+  improvements: { issue: string; fix: string; dimension?: QualityDimensionKey; severity?: ImprovementSeverity }[];
   modelUsed: string;
   providerName: string;
   evaluatedAt: number;
   source: 'llm-judge' | 'heuristic';
+  /** Which model actually produced this score (fixed judge identity for comparability). */
+  judgeModel?: string;
+  /** Which provider actually produced this score. */
+  judgeProvider?: string;
+  /** Rubric/schema version this score was produced against. */
+  judgeVersion?: string;
+  /** Set when the LLM judge failed and this is a heuristic estimate instead. */
+  fallbackReason?: string;
 }
 
 export type VersionSourceType = 'initial' | 'refinement' | 'manual-edit';
@@ -150,6 +186,9 @@ export interface PromptVersion {
   stats: { wordCount: number; charCount: number; estTokens: number };
   // F1 — cached prompt-quality assessment for this version (optional)
   quality?: PromptQuality;
+  // F1 — chronological score history for this version (newest last). `quality`
+  // mirrors the last entry so older persisted sessions stay fully readable.
+  qualityHistory?: PromptQuality[];
 }
 
 export interface ThreadMessage {
@@ -177,6 +216,8 @@ export interface TestRun {
   ranAt: number;
   providerName: string;
   modelUsed: string;
+  /** Model that judged the outputs of this run (may differ from the executor). */
+  judgeModel?: string;
   cases: TestCaseResult[];
 }
 
@@ -202,6 +243,8 @@ export interface Session {
 export interface EvaluateRequest {
   provider: ProviderConfig;
   prompt: string;
+  /** Session context so the judge scores against the task, not in a vacuum. */
+  context?: EvaluationContext;
 }
 
 // F2 — run the same prompt + test input across multiple providers
@@ -238,6 +281,9 @@ export interface CaseEvaluationResult {
   passed: boolean;
   notes?: string;
   error?: string;
+  /** Model that judged the output (may differ from the executing model). */
+  judgeModel?: string;
+  judgeProvider?: string;
 }
 
 /**
@@ -267,6 +313,11 @@ export interface RefineRequest {
   // Full message history sent for context — NOT just the latest instruction
   priorMessages: { role: 'system' | 'user' | 'assistant'; content: string }[];
   instruction: string;         // the new user refinement instruction
+  /**
+   * The exact prompt text being refined (the session's active version). The
+   * model may ONLY modify this text — history is context, not the edit target.
+   */
+  basePrompt: string;
 }
 
 export interface TestPromptRequest {

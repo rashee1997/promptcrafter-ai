@@ -8,6 +8,23 @@ export interface CompletionMessage {
 }
 
 /**
+ * Resolves the provider used to JUDGE an output, which should differ from the
+ * model that produced the output so a model can't grade its own work. Prefers
+ * the first configured model different from the executor; falls back to the
+ * executor when only one model is available.
+ */
+export function resolveJudgeProvider(provider: ProviderConfig): ProviderConfig {
+  const models = Array.isArray(provider.models)
+    ? provider.models.map((m) => m?.trim()).filter((m): m is string => !!m)
+    : [];
+  const unique = [...new Set(models)].filter((m) => m !== provider.model);
+  if (unique.length > 0) {
+    return { ...provider, model: unique[0], activeModel: unique[0] };
+  }
+  return provider;
+}
+
+/**
  * Runs a single non-streaming completion against either the built-in Gemini
  * provider or any OpenAI-compatible provider. Used by the evaluate / ab-test /
  * evaluate-output routes where a full response (not a stream) is required.

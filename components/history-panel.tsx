@@ -28,7 +28,7 @@ import { DOMAIN_PRESETS } from '@/lib/domains';
 import { computeWordDiff } from '@/lib/diff';
 import { evaluatePromptQuality } from '@/lib/ai-client';
 import { setVersionQuality } from '@/lib/storage';
-import { PASS_THRESHOLD } from '@/lib/prompt-quality';
+import { PASS_THRESHOLD, buildEvaluationContext, isComparableQuality } from '@/lib/prompt-quality';
 import { toast } from '@/components/toast';
 import { Sparkline } from '@/components/sparkline';
 
@@ -166,20 +166,28 @@ export function HistoryPanel({
     setEditingVersion(null);
   };
 
-  // F6 — re-run the AI judge against the active version and compare with the stored score
+  // F6 — re-run the AI judge against the active version and compare with the
+  // stored score. The stored score is preserved in the version's score history
+  // (setVersionQuality appends), so the baseline used for drift detection is
+  // never destroyed by the recheck itself.
   const handleReVerify = async (session: Session) => {
     const activeVersion =
       session.versions.find((v) => v.id === session.activeVersionId) ||
       session.versions[session.versions.length - 1];
     if (!activeVersion) return;
 
-    const oldScore = activeVersion.quality?.overall ?? null;
+    const oldQuality = activeVersion.quality ?? null;
+    const oldScore = oldQuality?.overall ?? null;
     setReVerify((prev) => ({
       ...prev,
       [session.id]: { checking: true, oldScore, newScore: null },
     }));
 
-    const quality = await evaluatePromptQuality(activeProvider, activeVersion.content);
+    const quality = await evaluatePromptQuality(
+      activeProvider,
+      activeVersion.content,
+      buildEvaluationContext(session)
+    );
     if (!quality) {
       setReVerify((prev) => ({
         ...prev,
@@ -196,9 +204,12 @@ export function HistoryPanel({
     }
 
     const delta = oldScore !== null ? quality.overall - oldScore : null;
+    const comparable = !!oldQuality && isComparableQuality(oldQuality, quality);
     let message: string;
     if (delta === null) {
       message = `Scored ${quality.overall}/100.`;
+    } else if (!comparable) {
+      message = `Score updated: ${oldScore} → ${quality.overall} (judge changed — not a direct comparison).`;
     } else if (Math.abs(delta) >= 8) {
       message = `⚠ Quality changed: ${oldScore} → ${quality.overall} (${delta > 0 ? '+' : ''}${delta} pts).`;
     } else {

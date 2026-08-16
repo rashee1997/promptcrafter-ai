@@ -311,9 +311,17 @@ export async function setVersionQuality(sessionId: string, versionId: string, qu
     throw new Error(`Session ${sessionId} not found`);
   }
 
-  const updatedVersions = session.versions.map((v) =>
-    v.id === versionId ? { ...v, quality } : v
-  );
+  // Append to the version's score history instead of overwriting, so drift
+  // detection keeps its baseline. Seed history from the existing `quality` for
+  // sessions saved before qualityHistory existed (backward compatible).
+  const updatedVersions = session.versions.map((v) => {
+    if (v.id !== versionId) return v;
+    const seeded = v.qualityHistory?.length ? v.qualityHistory : v.quality ? [v.quality] : [];
+    const last = seeded[seeded.length - 1];
+    const history =
+      last && last.evaluatedAt === quality.evaluatedAt ? seeded : [...seeded, quality];
+    return { ...v, quality, qualityHistory: history };
+  });
 
   const updatedSession: Session = {
     ...session,

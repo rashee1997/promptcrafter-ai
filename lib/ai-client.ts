@@ -3,6 +3,7 @@ import {
   ABTestResult,
   CaseEvaluationRequest,
   CaseEvaluationResult,
+  EvaluateRequest,
   GenerationRequest,
   PromptQuality,
   ProviderConfig,
@@ -151,13 +152,14 @@ export async function testPromptExecution(
 /** F1 — score a prompt against the quality rubric via the LLM judge. */
 export async function evaluatePromptQuality(
   provider: ProviderConfig,
-  prompt: string
+  prompt: string,
+  context?: EvaluateRequest['context']
 ): Promise<PromptQuality | null> {
   try {
     const res = await fetch('/api/evaluate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, prompt }),
+      body: JSON.stringify({ provider, prompt, context }),
     });
     if (!res.ok) return null;
     const data = await res.json();
