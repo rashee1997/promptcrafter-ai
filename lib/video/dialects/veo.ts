@@ -6,13 +6,21 @@
 // No AI generation call, no model id — this only formats already-stored text.
 
 import type { VideoShot } from '@/types/video';
-import { parseUniversalPrompt } from './shared';
+import {
+  parseUniversalPrompt,
+  shotReferenceImages,
+  type VideoReferenceImage,
+} from './shared';
 
 export const VEO_DIALECT = {
   id: 'veo',
   label: 'Veo 3.1 / Flow',
   hint: 'Structural tags + motion vectors',
 } as const;
+
+export interface VeoOptions {
+  referenceImages?: VideoReferenceImage[];
+}
 
 /** Camera language that implies an explicit camera vector path. */
 const MOTION_KEYWORDS =
@@ -31,9 +39,11 @@ function audioCue(parts: ReturnType<typeof parseUniversalPrompt>): string {
 
 /**
  * Re-expresses the stored 6-part universal shot prompt in the Veo dialect:
- * every section appears as an ingredient tag; nothing is summarized.
+ * every section appears as an ingredient tag; nothing is summarized. Locked
+ * character reference images are appended as reference-image tags (the Veo
+ * API's imageUrl-style parameter payload).
  */
-export function formatVeoShot(shot: VideoShot): string {
+export function formatVeoShot(shot: VideoShot, options?: VeoOptions): string {
   const parts = parseUniversalPrompt(shot.promptText);
   const lines = [
     `[Subject: ${parts.subject}]`,
@@ -45,6 +55,9 @@ export function formatVeoShot(shot: VideoShot): string {
     `[Environment: ${parts.environment}]`,
     `[Style: ${parts.lens}]`,
     `[Duration: ${Math.round(shot.durationSeconds || 12)}s]`,
+    ...shotReferenceImages(shot, options?.referenceImages).map(
+      (r) => `[Reference image: ${r.characterName}] — image_url: ${r.dataUrl}`
+    ),
   ].filter(Boolean);
 
   return lines.join('\n');

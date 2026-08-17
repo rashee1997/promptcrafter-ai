@@ -2,23 +2,31 @@
 
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle, Pencil, Plus, Users, X } from 'lucide-react';
+import { AlertTriangle, GripVertical, Pencil, Plus, Users, X } from 'lucide-react';
 import type { VideoCharacter, VideoProject } from '@/types/video';
+import { useStoryBible } from '@/lib/video/story-bible';
 import { CharacterForm } from './character-form';
+import { CharacterImageThumb } from './character-image-thumb';
 
 interface SidebarCharactersPanelProps {
   project: VideoProject;
   onUpdate: (next: VideoProject) => void;
 }
 
+/** Drag payload type — dropped onto shot cards to lock a character reference. */
+export const CHARACTER_DRAG_TYPE = 'application/x-video-character';
+
 /**
  * Sidebar cast panel. "+ Add Character" opens the shared character sheet;
  * editing an existing character after activation surfaces a drift-warning
  * modal (changing appearance/wardrobe can desync already-approved shots).
+ * Rows show saved Story Bible reference images and are draggable onto shots
+ * in the storyboard timeline (Phase 4).
  */
 export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersPanelProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<VideoCharacter | null>(null);
+  const { entries } = useStoryBible();
   const characters = project.storyBible?.characters ?? [];
   const active = project.status === 'active';
 
@@ -71,28 +79,58 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
           No cast yet — add a character to anchor continuity.
         </p>
       ) : (
-        <ul className="space-y-1.5">
-          {characters.map((c) => (
-            <li
-              key={c.id}
-              className="group flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted/60 px-2.5 py-2"
-            >
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-text-primary truncate">{c.name}</p>
-                <p className="text-[10px] text-text-muted truncate">{c.role || '—'}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => openEdit(c)}
-                aria-label={`Edit ${c.name}`}
-                title="Edit character"
-                className="p-1.5 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-1.5">
+            {characters.map((c) => {
+              const saved = entries.filter((e) => e.characterId === c.id);
+              return (
+                <li
+                  key={c.id}
+                  draggable={active}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(CHARACTER_DRAG_TYPE, c.id);
+                    e.dataTransfer.setData('text/plain', c.name);
+                    e.dataTransfer.effectAllowed = 'copy';
+                  }}
+                  onDragEnd={(e) => {
+                    e.dataTransfer.clearData();
+                  }}
+                  title={active ? `Drag ${c.name} onto a shot to lock their reference image` : undefined}
+                  className="group flex items-center gap-2 rounded-lg border border-border bg-surface-muted/60 px-2.5 py-2 cursor-grab active:cursor-grabbing"
+                >
+                  <GripVertical className="w-3.5 h-3.5 text-text-muted/50 shrink-0" aria-hidden="true" />
+                  {saved[0] ? (
+                    <CharacterImageThumb entry={saved[0]} className="h-8 w-8 shrink-0 border border-border" />
+                  ) : (
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-code border border-border text-text-muted">
+                      <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-text-primary truncate">{c.name}</p>
+                    <p className="text-[10px] text-text-muted truncate">
+                      {saved.length > 0 ? `${saved.length} reference image${saved.length === 1 ? '' : 's'}` : c.role || '—'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(c)}
+                    aria-label={`Edit ${c.name}`}
+                    title="Edit character"
+                    className="p-1.5 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {active && characters.length > 0 && (
+            <p className="text-[9px] text-text-muted leading-relaxed">
+              Drag a character onto a shot to lock their reference image into that shot&apos;s dialect export.
+            </p>
+          )}
+        </>
       )}
 
       <AnimatePresence>

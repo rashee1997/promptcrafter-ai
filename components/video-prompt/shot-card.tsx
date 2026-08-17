@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Copy, SquarePlay, Timer, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Check, ChevronDown, ChevronUp, Copy, SquarePlay, Timer, Trash2, X } from 'lucide-react';
 import type { VideoCharacter, VideoShot } from '@/types/video';
 import {
   formatShotForDialect,
   type VideoDialect,
 } from '@/lib/video/model-dialects';
+import { blobToDataUrl } from '@/lib/compression';
+import { useStoryBible } from '@/lib/video/story-bible';
 import { useInlineCopy } from '@/lib/use-inline-copy';
 import { cn } from '@/lib/utils';
 import { DialectTabs } from './dialect-tabs';
+import { CHARACTER_DRAG_TYPE } from './sidebar-characters-panel';
 
 interface ShotCardProps {
   shot: VideoShot;
@@ -21,6 +24,9 @@ interface ShotCardProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
+  /** Lock/unlock a Story Bible character reference on this shot (drag & drop). */
+  onAddCharacterRef: (shotId: string, characterId: string) => void;
+  onRemoveCharacterRef: (shotId: string, characterId: string) => void;
 }
 
 /**
@@ -28,6 +34,11 @@ interface ShotCardProps {
  * chips, description, the dialect tabs (Task 5.2), and a live preview of the
  * dialect-formatted prompt that updates instantly on tab switch (pure
  * function — no async, no flash). Copy uses the app's inline-copy pattern.
+ *
+ * Phase 4 — shot cards are also drop targets: dragging a character from the
+ * sidebar locks their reference image into the shot, and the dialect preview
+ * injects that image's base64 payload into the target model's reference
+ * parameter (image_url / reference images).
  */
 export function ShotCard({
   shot,
@@ -37,14 +48,67 @@ export function ShotCard({
   onMoveUp,
   onMoveDown,
   onDelete,
+  onAddCharacterRef,
+  onRemoveCharacterRef,
 }: ShotCardProps) {
   const [dialectId, setDialectId] = useState<VideoDialect['id']>('universal');
   const { copiedKey, copy } = useInlineCopy(1200);
+  const { entries } = useStoryBible();
+  const [dragOver, setDragOver] = useState(false);
   const groupId = `shot-${shot.shotNumber}`;
 
+  /** Saved Story Bible images for characters locked onto this shot. */
+  const refEntries = useMemo(
+    () =>
+      entries.filter(
+        (e) => e.characterId && shot.characterIds?.includes(e.characterId)
+      ),
+    [entries, shot.characterIds]
+  );
+
+  /** Converts the locked blobs to base64 data URLs for dialect injection. */
+  const [refDataUrls, setRefDataUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let alive = true;
+    const convert = async () => {
+      const map: Record<string, string> = {};
+      for (const entry of refEntries) {
+        if (entry.imageDataUrl) map[entry.id] = entry.imageDataUrl;
+        else if (entry.imageBlob) {
+          try {
+            map[entry.id] = await blobToDataUrl(entry.imageBlob);
+          } catch {
+            // Keep the entry out of the payload when it can't be read.
+          }
+        }
+      }
+      if (alive) setRefDataUrls(map);
+    };
+    void convert();
+    return () => {
+      alive = false;
+    };
+  }, [refEntries]);
+
+  const referenceImages = useMemo(
+    () =>
+      refEntries.flatMap((entry) =>
+        entry.characterId && refDataUrls[entry.id]
+          ? [
+              {
+                characterId: entry.characterId,
+                characterName: entry.characterName,
+                dataUrl: refDataUrls[entry.id],
+              },
+            ]
+          : []
+      ),
+    [refEntries, refDataUrls]
+  );
+
   const preview = useMemo(
-    () => formatShotForDialect(shot, dialectId, { characters }),
-    [shot, dialectId, characters]
+    () => formatShotForDialect(shot, dialectId, { characters, referenceImages }),
+    [shot, dialectId, characters, referenceImages]
   );
   const copied = copiedKey === shot.id;
 
@@ -52,8 +116,34 @@ export function ShotCard({
     void copy(preview, shot.id);
   };
 
+  const characterName = (id: string) =>
+    characters?.find((c) => c.id === id)?.name ?? 'Locked character';
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const characterId = e.dataTransfer.getData(CHARACTER_DRAG_TYPE);
+    if (characterId) onAddCharacterRef(shot.id, characterId);
+  };
+
   return (
-    <div className="w-full rounded-xl border border-border bg-surface-card/70 backdrop-blur-xl p-3.5 space-y-2.5">
+    <div
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes(CHARACTER_DRAG_TYPE)) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target) setDragOver(false);
+      }}
+      onDrop={handleDrop}
+      className={cn(
+        'w-full rounded-xl border border-border bg-surface-card/70 backdrop-blur-xl p-3.5 space-y-2.5 transition-colors',
+        dragOver && 'border-brand/70 ring-1 ring-brand/40 bg-brand/5'
+      )}
+    >
       {/* Header — Shot N, duration, reorder + delete controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -111,6 +201,32 @@ export function ShotCard({
         </div>
       </div>
 
+      {/* Locked character reference chips */}
+      {shot.characterIds && shot.characterIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+            Locked refs:
+          </span>
+          {shot.characterIds.map((id) => (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent"
+            >
+              {characterName(id)}
+              <button
+                type="button"
+                onClick={() => onRemoveCharacterRef(shot.id, id)}
+                aria-label={`Unlock ${characterName(id)} from Shot ${shot.shotNumber}`}
+                title="Remove reference"
+                className="rounded p-0.5 hover:text-danger transition-colors"
+              >
+                <X className="w-3 h-3" aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Dialect selector + live preview */}
       <div className="space-y-1.5">
         <DialectTabs value={dialectId} onChange={setDialectId} groupId={groupId} />
@@ -144,6 +260,11 @@ export function ShotCard({
             )}
           </button>
         </div>
+        {dragOver && (
+          <p className="text-[10px] font-semibold text-brand">
+            Drop to lock this character&apos;s reference image into Shot {shot.shotNumber}.
+          </p>
+        )}
       </div>
 
       {/* Handoff caption */}

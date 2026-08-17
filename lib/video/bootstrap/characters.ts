@@ -19,6 +19,14 @@ export const charactersSchema = z.object({
           .describe('Fixed visual appearance: age, build, face, hair, distinguishing marks'),
         wardrobe: z.string().describe('Fixed wardrobe: clothing, colors, textures, accessories'),
         voiceTone: z.string().describe('Voice/vocal tone for audio continuity'),
+        narrativeDescription: z
+          .string()
+          .describe('Director-facing narrative description of the character in 1–2 sentences, for the story bible'),
+        imagePrompt: z
+          .string()
+          .describe(
+            'Copy-ready character-sheet image prompt for EXTERNAL image models in the exact structure: "[Subject details]. 360-degree character sheet turnaround: front view, side profile view, back view, and extreme face close-up. [Style]. Pure white background. Empty hands, no props. 4K resolution."'
+          ),
       })
     )
     .min(1)
@@ -36,7 +44,11 @@ export interface GenerateCharactersArgs {
   previous?: VideoCharacter[] | null;
 }
 
-const SYSTEM = `You are a casting director for a short-form video production. You extract the people who must appear, then propose any missing supporting characters the script implies. Every character gets a FIXED visual appearance and wardrobe so the story bible can lock continuity — describe them the same way every time, as if writing a character sheet for a VFX team.`;
+const SYSTEM = `You are a casting director for a short-form video production. You extract the people who must appear, then propose any missing supporting characters the script implies. Every character gets a FIXED visual appearance and wardrobe so the story bible can lock continuity — describe them the same way every time, as if writing a character sheet for a VFX team.
+
+IMAGE PROMPT RULE — every character must also carry an \`imagePrompt\` for EXTERNAL image models (Midjourney, Imagen UI, …). Build it EXACTLY in this structure:
+\"[Subject details]. 360-degree character sheet turnaround: front view, side profile view, back view, and extreme face close-up. [Style]. Pure white background. Empty hands, no props. 4K resolution.\"
+The subject details name the character's locked appearance and wardrobe concretely; the style slot is the project's look direction (from the script treatment tone) in 2–4 words. The imagePrompt must be copy-paste ready — no labels, no JSON, just the prompt text.`;
 
 export async function generateCharacters({
   provider,
@@ -81,5 +93,7 @@ export async function generateCharacters({
     appearance: c.appearance.trim(),
     wardrobe: c.wardrobe.trim(),
     voiceTone: c.voiceTone.trim(),
+    narrativeDescription: c.narrativeDescription?.trim() ?? '',
+    imagePrompt: c.imagePrompt?.trim() ?? '',
   }));
 }

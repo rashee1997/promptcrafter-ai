@@ -332,7 +332,13 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
             <BootstrapScriptStep data={script} busy={busy} onRevise={(p) => void runStage(1, p)} onConfirm={confirmStage} />
           )}
           {step === 2 && characters.length > 0 && (
-            <BootstrapCharactersStep data={characters} busy={busy} onChange={setCharacters} onConfirm={confirmStage} />
+            <BootstrapCharactersStep
+              data={characters}
+              busy={busy}
+              projectId={project.id}
+              onChange={setCharacters}
+              onConfirm={confirmStage}
+            />
           )}
           {step === 3 && locations.length > 0 && (
             <BootstrapScenesStep data={locations} busy={busy} onChange={setLocations} onSuggest={handleSuggestLocation} onConfirm={confirmStage} />

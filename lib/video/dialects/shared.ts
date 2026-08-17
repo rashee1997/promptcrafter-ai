@@ -6,6 +6,17 @@
 
 import type { VideoCharacter, VideoShot } from '@/types/video';
 
+/**
+ * A locked character's saved reference image, resolved to a base64 data URL
+ * at render time. Dialect adapters inject these into the exact reference
+ * parameter their target video model expects (image_url / reference images).
+ */
+export interface VideoReferenceImage {
+  characterId: string;
+  characterName: string;
+  dataUrl: string;
+}
+
 export interface UniversalPromptParts {
   subject: string;
   action: string;
@@ -66,6 +77,19 @@ export function parseUniversalPrompt(text: string): UniversalPromptParts {
     environment: join('ENVIRONMENT') || subjectBlock,
     lens: join('LENS') || subjectBlock,
   };
+}
+
+/**
+ * The reference images explicitly locked to this shot (via characterIds).
+ * Deterministic — only ids dropped onto the shot are returned, so a character
+ * mentioned in prose but not locked never injects a payload.
+ */
+export function shotReferenceImages(
+  shot: VideoShot,
+  referenceImages?: VideoReferenceImage[]
+): VideoReferenceImage[] {
+  const locked = new Set(shot.characterIds ?? []);
+  return (referenceImages ?? []).filter((r) => locked.has(r.characterId));
 }
 
 /** Joins text into one sentence, avoiding doubled terminal punctuation. */

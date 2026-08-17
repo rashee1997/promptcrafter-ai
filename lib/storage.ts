@@ -1,15 +1,18 @@
 import { CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
+import type { StoryBibleCharacterImage } from '@/types/video';
 import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
+import { blobToDataUrl } from './compression';
 
 const DB_NAME = 'PromptCrafter_DB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_HISTORY = 'history';
 const STORE_SESSIONS = 'sessions';
 const STORE_PROVIDERS = 'providers';
 const STORE_SETTINGS = 'settings';
 const STORE_CUSTOM_PRESETS = 'customPresets';
 const STORE_VIDEO_PROJECTS = 'videoProjects';
+const STORE_STORY_BIBLE = 'storyBible';
 
 /**
  * Default Gemini model used whenever a request doesn't carry an explicit
@@ -160,6 +163,15 @@ export function openDB(): Promise<IDBDatabase> {
         // per project independently of the prompt-engineering session store.
         if (!db.objectStoreNames.contains(STORE_VIDEO_PROJECTS)) {
           db.createObjectStore(STORE_VIDEO_PROJECTS, { keyPath: 'id' });
+        }
+
+        // Schema v5: Story Bible character images (compressed WebP blobs). Kept
+        // separate from video projects because blobs are large and must be
+        // queryable per project + timestamp without loading whole projects.
+        if (!db.objectStoreNames.contains(STORE_STORY_BIBLE)) {
+          const storyBibleStore = db.createObjectStore(STORE_STORY_BIBLE, { keyPath: 'id' });
+          storyBibleStore.createIndex('projectId', 'projectId', { unique: false });
+          storyBibleStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
 
         // Schema migration v1 -> v2: read from `history` store and populate `sessions`
@@ -322,6 +334,118 @@ export async function deleteCustomPreset(id: string): Promise<void> {
   } catch {
     const entries = getLocalCustomPresets().filter((e) => e.id !== id);
     setLocalCustomPresets(entries);
+  }
+}
+
+// --- Story Bible Character Image Storage API (Video Prompt Studio) ---
+// Persists compressed WebP blobs per project. IndexedDB stores Blobs natively
+// (structured clone); the LocalStorage fallback mirrors them as data URLs.
+
+const STORY_BIBLE_LS_KEY = 'promptcrafter_story_bible';
+
+function getLocalStoryBible(): StoryBibleCharacterImage[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORY_BIBLE_LS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLocalStoryBible(entries: StoryBibleCharacterImage[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORY_BIBLE_LS_KEY, JSON.stringify(entries));
+  } catch (err) {
+    console.warn('Story Bible LocalStorage write skipped:', err);
+  }
+}
+
+/** LocalStorage fallback — Blobs become data URLs before JSON serialization. */
+async function toSerializable(entry: StoryBibleCharacterImage): Promise<StoryBibleCharacterImage> {
+  if (entry.imageBlob && !entry.imageDataUrl) {
+    try {
+      return { ...entry, imageBlob: undefined, imageDataUrl: await blobToDataUrl(entry.imageBlob) };
+    } catch {
+      return { ...entry, imageBlob: undefined };
+    }
+  }
+  return entry;
+}
+
+/** Saves one compressed character reference image to the Story Bible store. */
+export async function saveStoryBibleCharacterImage(
+  input: Omit<StoryBibleCharacterImage, 'id' | 'timestamp'>
+): Promise<StoryBibleCharacterImage> {
+  const full: StoryBibleCharacterImage = {
+    ...input,
+    id: crypto.randomUUID(),
+    timestamp: Date.now(),
+  };
+
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_STORY_BIBLE, 'readwrite');
+    const store = tx.objectStore(STORE_STORY_BIBLE);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.put(full);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const entries = getLocalStoryBible();
+    entries.unshift(await toSerializable(full));
+    setLocalStoryBible(entries);
+  }
+
+  return full;
+}
+
+/** Loads every Story Bible character image for a project (newest first). */
+export async function getStoryBibleCharacterImages(
+  projectId: string
+): Promise<StoryBibleCharacterImage[]> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_STORY_BIBLE, 'readonly');
+      const store = tx.objectStore(STORE_STORY_BIBLE);
+      const index = store.index('projectId');
+      const request = index.openCursor(IDBKeyRange.only(projectId), 'prev');
+      const items: StoryBibleCharacterImage[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          items.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(items);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    return getLocalStoryBible()
+      .filter((e) => e.projectId === projectId)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }
+}
+
+/** Removes one Story Bible character image. */
+export async function deleteStoryBibleCharacterImage(id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_STORY_BIBLE, 'readwrite');
+    const store = tx.objectStore(STORE_STORY_BIBLE);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    setLocalStoryBible(getLocalStoryBible().filter((e) => e.id !== id));
   }
 }
 

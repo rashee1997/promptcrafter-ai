@@ -4,6 +4,7 @@
 // labels only (where the prompt is pasted) — they never select an LLM.
 
 import type { VideoCharacter, VideoShot } from '@/types/video';
+import type { VideoReferenceImage } from './dialects/shared';
 import { formatVeoShot } from './dialects/veo';
 import { formatHiggsfieldShot } from './dialects/higgsfield';
 import { formatKlingShot } from './dialects/kling';
@@ -18,6 +19,12 @@ export interface VideoDialect {
 export interface DialectFormatOptions {
   /** Story Bible cast — lets the Higgsfield / Kling adapters anchor names and voices. */
   characters?: VideoCharacter[];
+  /**
+   * Saved Story Bible character images (base64 data URLs) resolved for the
+   * shot's locked characters. Adapters inject them into the target model's
+   * reference-image parameter (image_url / reference images).
+   */
+  referenceImages?: VideoReferenceImage[];
 }
 
 /** Registry — universal (the stored source of truth) first, then the four target dialects. */
@@ -40,13 +47,13 @@ export function formatShotForDialect(
 ): string {
   switch (dialectId) {
     case 'veo':
-      return formatVeoShot(shot);
+      return formatVeoShot(shot, options);
     case 'higgsfield':
       return formatHiggsfieldShot(shot, options);
     case 'kling':
       return formatKlingShot(shot, options);
     case 'seedance':
-      return formatSeedanceShot(shot);
+      return formatSeedanceShot(shot, options);
     case 'universal':
     default:
       return shot.promptText?.trim() || '';

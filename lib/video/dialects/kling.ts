@@ -5,7 +5,13 @@
 // the shot carries a voiceTone in the Story Bible.
 
 import type { VideoCharacter, VideoShot } from '@/types/video';
-import { asSentence, findPromptCharacters, parseUniversalPrompt } from './shared';
+import {
+  asSentence,
+  findPromptCharacters,
+  parseUniversalPrompt,
+  shotReferenceImages,
+  type VideoReferenceImage,
+} from './shared';
 
 export const KLING_DIALECT = {
   id: 'kling',
@@ -15,6 +21,7 @@ export const KLING_DIALECT = {
 
 export interface KlingOptions {
   characters?: VideoCharacter[];
+  referenceImages?: VideoReferenceImage[];
 }
 
 /**
@@ -48,6 +55,11 @@ export function formatKlingShot(shot: VideoShot, options?: KlingOptions): string
       '',
       'VOICE BINDING — no dialogue in this shot; ambience and score carry the beat across cuts.'
     );
+  }
+
+  const refs = shotReferenceImages(shot, options?.referenceImages);
+  if (refs.length > 0) {
+    lines.push('', ...refs.map((r) => `FIRST-FRAME REFERENCE (image_url) — ${r.characterName}: ${r.dataUrl}`));
   }
 
   const handoff = shot.continuityHandoff?.trim();

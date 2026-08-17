@@ -6,13 +6,22 @@
 // coherent across shots.
 
 import type { VideoShot } from '@/types/video';
-import { asSentence, parseUniversalPrompt } from './shared';
+import {
+  asSentence,
+  parseUniversalPrompt,
+  shotReferenceImages,
+  type VideoReferenceImage,
+} from './shared';
 
 export const SEEDANCE_DIALECT = {
   id: 'seedance',
   label: 'Seedance 2.0',
   hint: 'Reference-frame + audio markers',
 } as const;
+
+export interface SeedanceOptions {
+  referenceImages?: VideoReferenceImage[];
+}
 
 /** Audio marker line — deterministic scaffold, derived from the action beat. */
 function audioMarker(parts: ReturnType<typeof parseUniversalPrompt>): string {
@@ -24,8 +33,9 @@ function audioMarker(parts: ReturnType<typeof parseUniversalPrompt>): string {
  * Re-expresses the stored 6-part universal shot prompt in the Seedance
  * dialect. `[Ref: shot-<n>_frame]` is a placeholder for the frame exported
  * with this shot; swap the number for the real asset filename at export time.
+ * Locked character reference images append as image_url payload lines.
  */
-export function formatSeedanceShot(shot: VideoShot): string {
+export function formatSeedanceShot(shot: VideoShot, options?: SeedanceOptions): string {
   const parts = parseUniversalPrompt(shot.promptText);
   const lines = [
     asSentence(`PROMPT — ${parts.subject}, ${parts.action}`),
@@ -35,6 +45,9 @@ export function formatSeedanceShot(shot: VideoShot): string {
     `LENS — ${parts.lens}`,
     `REFERENCE FRAME — [Ref: shot-${Math.round(shot.shotNumber || 0)}_frame]`,
     audioMarker(parts),
+    ...shotReferenceImages(shot, options?.referenceImages).map(
+      (r) => `REFERENCE IMAGE — ${r.characterName} (image_url): ${r.dataUrl}`
+    ),
   ];
 
   const handoff = shot.continuityHandoff?.trim();

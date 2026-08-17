@@ -4,6 +4,7 @@ import React from 'react';
 import { CheckCircle2, Clapperboard } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
 import type { VideoProject } from '@/types/video';
+import { StoryBibleProvider } from '@/lib/video/story-bible';
 import { StatusBadge } from './project-card';
 import { BootstrapFlow } from './bootstrap-flow';
 import { Sidebar } from './sidebar';
@@ -28,7 +29,8 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
   const intent = project.customInstructions.trim() || project.name;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-6 space-y-5">
+    <StoryBibleProvider projectId={project.id}>
+      <div className="rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
@@ -99,6 +101,7 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
           ? 'Approve a draft to add it to the storyboard, then reorder and copy each shot in the dialect of your target model (Veo · Higgsfield · Kling · Seedance).'
           : 'Confirming Stage 5 activates the production and locks the Visual Style & VFX direction.'}
       </p>
-    </div>
+      </div>
+    </StoryBibleProvider>
   );
 }

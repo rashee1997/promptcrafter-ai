@@ -260,7 +260,10 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
       <ChatInput
         project={project}
         busy={streaming}
-        onSend={(text) => void sendMessage({ text })}
+        onSend={(text, files) => {
+          const attachments = files && files.length > 0 ? files : undefined;
+          void sendMessage(attachments ? { text, files: attachments } : { text });
+        }}
       />
     </div>
   );

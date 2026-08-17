@@ -56,6 +56,47 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
     onUpdateRef.current(updated);
   };
 
+  /** Persists a character-reference change on one shot + logs it. */
+  const persistCharacterRef = (shotId: string, update: (shot: VideoShot) => VideoShot, logEntry: string) => {
+    const base = projectRef.current;
+    const updated: VideoProject = {
+      ...base,
+      shots: base.shots.map((s) => (s.id === shotId ? update(s) : s)),
+      storyBible: {
+        ...base.storyBible,
+        continuityLog: [...(base.storyBible.continuityLog ?? []), logEntry],
+      },
+      updatedAt: Date.now(),
+    };
+    void saveVideoProject(updated);
+    onUpdateRef.current(updated);
+  };
+
+  /** Drag & drop — lock a Story Bible character reference onto a shot. */
+  const handleAddCharacterRef = (shotId: string, characterId: string) => {
+    const shot = projectRef.current.shots.find((s) => s.id === shotId);
+    if (!shot) return;
+    const ids = shot.characterIds ?? [];
+    if (ids.includes(characterId)) return;
+    const name = projectRef.current.storyBible?.characters?.find((c) => c.id === characterId)?.name ?? 'character';
+    persistCharacterRef(
+      shotId,
+      (s) => ({ ...s, characterIds: [...ids, characterId] }),
+      `Shot ${shot.shotNumber} locked to character "${name}" reference image.`
+    );
+  };
+
+  const handleRemoveCharacterRef = (shotId: string, characterId: string) => {
+    const shot = projectRef.current.shots.find((s) => s.id === shotId);
+    if (!shot) return;
+    const name = projectRef.current.storyBible?.characters?.find((c) => c.id === characterId)?.name ?? 'character';
+    persistCharacterRef(
+      shotId,
+      (s) => ({ ...s, characterIds: (s.characterIds ?? []).filter((id) => id !== characterId) }),
+      `Shot ${shot.shotNumber} released character "${name}" reference image.`
+    );
+  };
+
   const handleMove = (index: number, direction: 'up' | 'down') => {
     const target = direction === 'up' ? index - 1 : index + 1;
     if (target < 0 || target >= shots.length) return;
@@ -148,6 +189,8 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
                 onDelete={() =>
                   setPendingDelete({ shot, midChain: i > 0 && i < shots.length - 1 })
                 }
+                onAddCharacterRef={handleAddCharacterRef}
+                onRemoveCharacterRef={handleRemoveCharacterRef}
               />
             </Fragment>
           ))}
