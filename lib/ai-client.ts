@@ -15,6 +15,12 @@ import {
   SuggestNegativePromptResponse,
   TestPromptRequest,
 } from '@/types';
+import type { VideoLocation } from '@/types/video';
+import type {
+  SuggestVideoLocationRequest,
+  VideoBootstrapRequest,
+  VideoBootstrapResponse,
+} from '@/lib/video/bootstrap/types';
 
 export async function generatePromptStream(
   request: GenerationRequest,
@@ -294,5 +300,40 @@ export async function runCaseEvaluation(
   } catch (err) {
     console.error('runCaseEvaluation failed:', err);
     return null;
+  }
+}
+
+/** Video Prompt Studio — run one AI bootstrap stage (script → VFX). */
+export async function runVideoBootstrap(
+  request: VideoBootstrapRequest
+): Promise<VideoBootstrapResponse> {
+  const res = await fetch('/api/video-bootstrap', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: `Server HTTP ${res.status}` }));
+    throw new Error(errData.error || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+/** Video Prompt Studio — low-latency ad-hoc location scouting. */
+export async function suggestVideoLocations(
+  request: SuggestVideoLocationRequest
+): Promise<VideoLocation[]> {
+  try {
+    const res = await fetch('/api/suggest-video-location', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.locations) ? data.locations : [];
+  } catch (err) {
+    console.error('suggestVideoLocations failed:', err);
+    return [];
   }
 }

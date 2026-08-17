@@ -8,6 +8,7 @@ import { ImagePromptStudio } from '@/components/image-prompt-studio';
 import { ProjectDashboard } from '@/components/video-prompt/project-dashboard';
 import { StudioHeader } from '@/components/video-prompt/studio-header';
 import { NewProjectModal } from '@/components/video-prompt/new-project-modal';
+import { ProjectWorkspace } from '@/components/video-prompt/project-workspace';
 import { PromptForm } from '@/components/prompt-form';
 import { PromptOutput } from '@/components/prompt-output';
 import { HistoryPanel } from '@/components/history-panel';
@@ -626,6 +627,18 @@ export default function HomePage() {
     toast.success('Project deleted', 'Removed from your production portfolio.');
   };
 
+  // Phase 3 — called when the bootstrap wizard saves an updated project
+  // (e.g. activation after Stage 5). Refresh the portfolio from storage and
+  // surface the status change; the workspace itself persisted the project.
+  const handleVideoProjectUpdate = async (project: VideoProject) => {
+    setVideoProjects(await getVideoProjects());
+    setActiveVideoProjectId(project.id);
+    toast.success(
+      'Production activated',
+      `"${project.name}" — story bible locked, ready for shot drafting.`
+    );
+  };
+
   const activeVersion = currentSession
     ? currentSession.versions.find((v) => v.id === currentSession.activeVersionId) ||
       currentSession.versions[currentSession.versions.length - 1]
@@ -864,36 +877,11 @@ export default function HomePage() {
                     onBackToDashboard={handleBackToVideoDashboard}
                   />
                   {activeVideoProject ? (
-                    <div className="rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-6 space-y-4">
-                      <div>
-                        <h3 className="text-sm font-bold text-text-primary">Production workspace</h3>
-                        <p className="mt-1 text-xs text-text-secondary leading-relaxed">
-                          This is where the story bible, characters, locations, and shot plan will
-                          live. Phase 3 wires the script-to-shots workflow — your Directorial Brief
-                          is preserved below until then.
-                        </p>
-                      </div>
-                      {activeVideoProject.customInstructions && (
-                        <div className="rounded-xl border border-border bg-surface-code p-4">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
-                            Directorial brief
-                          </p>
-                          <p className="text-xs text-text-primary whitespace-pre-wrap leading-relaxed font-mono">
-                            {activeVideoProject.customInstructions}
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border">
-                          {activeVideoProject.shots.length} shot
-                          {activeVideoProject.shots.length === 1 ? '' : 's'} planned
-                        </span>
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border">
-                          {activeVideoProject.storyBible?.characters?.length ?? 0} character
-                          {activeVideoProject.storyBible?.characters?.length === 1 ? '' : 's'}
-                        </span>
-                      </div>
-                    </div>
+                    <ProjectWorkspace
+                      project={activeVideoProject}
+                      provider={activeProvider}
+                      onUpdate={handleVideoProjectUpdate}
+                    />
                   ) : (
                     <ProjectDashboard
                       projects={videoProjects}
