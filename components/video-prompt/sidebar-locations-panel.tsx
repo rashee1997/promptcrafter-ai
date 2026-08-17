@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { MapPin, Pencil, Plus, X } from 'lucide-react';
+import { MapPin, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
-import type { VideoLocation, VideoProject } from '@/types/video';
+import type { VideoLocation, VideoProject, VideoShot } from '@/types/video';
 import { suggestVideoLocations } from '@/lib/ai-client';
+import { ConfirmModal } from '@/components/confirm-modal';
 import { LocationForm } from './location-form';
 
 interface SidebarLocationsPanelProps {
@@ -22,6 +23,10 @@ interface SidebarLocationsPanelProps {
 export function SidebarLocationsPanel({ project, provider, onUpdate }: SidebarLocationsPanelProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<VideoLocation | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    location: VideoLocation;
+    shots: VideoShot[];
+  } | null>(null);
   const locations = project.storyBible?.locations ?? [];
 
   const openAdd = () => {
@@ -60,6 +65,37 @@ export function SidebarLocationsPanel({ project, provider, onUpdate }: SidebarLo
       existingLocations: locations,
       provider,
     });
+  };
+
+  /** A7 — deleting a location whose name is anchored in shot prompts warns first. */
+  const requestDelete = (l: VideoLocation) => {
+    const name = l.name.trim().toLowerCase();
+    const affected = name
+      ? project.shots.filter((s) =>
+          `${s.promptText ?? ''}\n${s.description ?? ''}`.toLowerCase().includes(name)
+        )
+      : [];
+    if (affected.length > 0) {
+      setPendingDelete({ location: l, shots: affected });
+    } else {
+      confirmDelete(l);
+    }
+  };
+
+  const confirmDelete = (l: VideoLocation) => {
+    onUpdate({
+      ...project,
+      storyBible: {
+        ...project.storyBible,
+        locations: locations.filter((x) => x.id !== l.id),
+        continuityLog: [
+          ...(project.storyBible.continuityLog ?? []),
+          `Location "${l.name}" deleted from the Story Bible.`,
+        ],
+      },
+      updatedAt: Date.now(),
+    });
+    setPendingDelete(null);
   };
 
   return (
@@ -106,6 +142,15 @@ export function SidebarLocationsPanel({ project, provider, onUpdate }: SidebarLo
               >
                 <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
+              <button
+                type="button"
+                onClick={() => requestDelete(l)}
+                aria-label={`Delete ${l.name}`}
+                title="Delete location"
+                className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
             </li>
           ))}
         </ul>
@@ -147,6 +192,21 @@ export function SidebarLocationsPanel({ project, provider, onUpdate }: SidebarLo
           </div>
         )}
       </AnimatePresence>
+
+      {/* A7 — delete confirmation listing the shots that keep this location's name */}
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        title={pendingDelete ? `Delete ${pendingDelete.location.name}?` : 'Delete location?'}
+        message={
+          pendingDelete
+            ? `This location is anchored in ${pendingDelete.shots.length} shot prompt${pendingDelete.shots.length === 1 ? '' : 's'} (${pendingDelete.shots.map((s) => `Shot ${s.shotNumber}`).join(', ')}). Deleting it removes the location from the Story Bible; approved shots keep their existing prompt text but lose the fixed environment anchor for future drafts.`
+            : ''
+        }
+        confirmLabel="Delete Location"
+        variant="danger"
+        onConfirm={() => pendingDelete && confirmDelete(pendingDelete.location)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

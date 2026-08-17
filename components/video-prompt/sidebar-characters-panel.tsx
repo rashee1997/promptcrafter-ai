@@ -2,14 +2,20 @@
 
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle, GripVertical, Pencil, Plus, Users, X } from 'lucide-react';
-import type { VideoCharacter, VideoProject } from '@/types/video';
+import { AlertTriangle, GripVertical, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import type { ProviderConfig } from '@/types';
+import type { VideoCharacter, VideoProject, VideoShot } from '@/types/video';
+import { regenerateCharacterImagePrompt } from '@/lib/ai-client';
 import { useStoryBible } from '@/lib/video/story-bible-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 import { CharacterForm } from './character-form';
 import { CharacterImageThumb } from './character-image-thumb';
+import { CharacterReferencePanel } from './character-reference-panel';
 
 interface SidebarCharactersPanelProps {
   project: VideoProject;
+  /** Settings-active provider — powers the image-prompt regenerate loop (D2). */
+  provider: ProviderConfig;
   onUpdate: (next: VideoProject) => void;
 }
 
@@ -23,15 +29,29 @@ export const CHARACTER_DRAG_TYPE = 'application/x-video-character';
  * Rows show saved Story Bible reference images and are draggable onto shots
  * in the storyboard timeline (Phase 4).
  */
-export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersPanelProps) {
+export function SidebarCharactersPanel({ project, provider, onUpdate }: SidebarCharactersPanelProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<VideoCharacter | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    character: VideoCharacter;
+    shots: VideoShot[];
+  } | null>(null);
   const { entries } = useStoryBible();
   const characters = project.storyBible?.characters ?? [];
   const active = project.status === 'active';
+  const isEdit = editing ? characters.some((c) => c.id === editing.id) : false;
 
   const openAdd = () => {
-    setEditing(null);
+    // A fresh id up front so the reference panel's uploads bind to a stable
+    // character id that the form (initial) also uses on save.
+    setEditing({
+      id: `char-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: '',
+      role: '',
+      appearance: '',
+      wardrobe: '',
+      voiceTone: '',
+    });
     setModalOpen(true);
   };
 
@@ -41,10 +61,13 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
   };
 
   const save = (character: VideoCharacter) => {
-    const existing = characters.some((c) => c.id === character.id);
+    // The reference panel edits the live `editing` object; merge the latest
+    // imagePrompt in case the panel changed it after the form mounted.
+    const merged = { ...character, imagePrompt: editing?.imagePrompt ?? character.imagePrompt };
+    const existing = characters.some((c) => c.id === merged.id);
     const next = existing
-      ? characters.map((c) => (c.id === character.id ? character : c))
-      : [...characters, character];
+      ? characters.map((c) => (c.id === merged.id ? merged : c))
+      : [...characters, merged];
     onUpdate({
       ...project,
       storyBible: { ...project.storyBible, characters: next },
@@ -52,6 +75,50 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
     });
     setModalOpen(false);
     setEditing(null);
+  };
+
+  /** D2 — regenerate just the open character's imagePrompt text via AI. */
+  const handleRegenerateImagePrompt = async (): Promise<void> => {
+    if (!editing) return;
+    const next = await regenerateCharacterImagePrompt({
+      provider,
+      character: editing,
+      styleContext: project.storyBible?.style?.lookAndMood,
+    });
+    if (next) setEditing((prev) => (prev ? { ...prev, imagePrompt: next } : prev));
+  };
+
+  /** A7 — deleting a character whose id is locked onto shots warns first. */
+  const requestDelete = (c: VideoCharacter) => {
+    const affected = project.shots.filter((s) => s.characterIds?.includes(c.id));
+    if (affected.length > 0) {
+      setPendingDelete({ character: c, shots: affected });
+    } else {
+      confirmDelete(c);
+    }
+  };
+
+  const confirmDelete = (c: VideoCharacter) => {
+    const nextCharacters = characters.filter((x) => x.id !== c.id);
+    const nextShots = project.shots.map((s) =>
+      s.characterIds?.includes(c.id)
+        ? { ...s, characterIds: s.characterIds.filter((id) => id !== c.id) }
+        : s
+    );
+    onUpdate({
+      ...project,
+      storyBible: {
+        ...project.storyBible,
+        characters: nextCharacters,
+        continuityLog: [
+          ...(project.storyBible.continuityLog ?? []),
+          `Character "${c.name}" deleted; locked reference images released from their shots.`,
+        ],
+      },
+      shots: nextShots,
+      updatedAt: Date.now(),
+    });
+    setPendingDelete(null);
   };
 
   return (
@@ -83,6 +150,7 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
           <ul className="space-y-1.5">
             {characters.map((c) => {
               const saved = entries.filter((e) => e.characterId === c.id);
+              const primary = saved.find((e) => e.isPrimary) ?? saved[0];
               return (
                 <li
                   key={c.id}
@@ -99,8 +167,8 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
                   className="group flex items-center gap-2 rounded-lg border border-border bg-surface-muted/60 px-2.5 py-2 cursor-grab active:cursor-grabbing"
                 >
                   <GripVertical className="w-3.5 h-3.5 text-text-muted/50 shrink-0" aria-hidden="true" />
-                  {saved[0] ? (
-                    <CharacterImageThumb entry={saved[0]} className="h-8 w-8 shrink-0 border border-border" />
+                  {primary ? (
+                    <CharacterImageThumb entry={primary} className="h-8 w-8 shrink-0 border border-border" />
                   ) : (
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-code border border-border text-text-muted">
                       <Users className="h-3.5 w-3.5" aria-hidden="true" />
@@ -121,6 +189,15 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
                   >
                     <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => requestDelete(c)}
+                    aria-label={`Delete ${c.name}`}
+                    title="Delete character"
+                    className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
                 </li>
               );
             })}
@@ -138,7 +215,7 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
           <div
             role="dialog"
             aria-modal="true"
-            aria-label={editing ? `Edit ${editing.name}` : 'Add character'}
+            aria-label={isEdit ? `Edit ${editing?.name}` : 'Add character'}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-code/60 backdrop-blur-md"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) {
@@ -156,7 +233,7 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
             >
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h4 className="text-sm font-bold text-text-primary">
-                  {editing ? `Edit ${editing.name}` : 'Add character'}
+                  {isEdit ? `Edit ${editing?.name}` : 'Add character'}
                 </h4>
                 <button
                   type="button"
@@ -192,10 +269,44 @@ export function SidebarCharactersPanel({ project, onUpdate }: SidebarCharactersP
                   setEditing(null);
                 }}
               />
+
+              {/* D2 — the shared reference panel: edit/regenerate the image
+                  prompt, upload candidates, set the primary. Present both on
+                  add (pre-save) and edit (post-activation). */}
+              {editing && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+                    Character reference image
+                  </p>
+                  <CharacterReferencePanel
+                    character={editing}
+                    projectId={project.id}
+                    onEditPrompt={(text) => setEditing((prev) => (prev ? { ...prev, imagePrompt: text } : prev))}
+                    onRegeneratePrompt={async () => {
+                      await handleRegenerateImagePrompt();
+                    }}
+                  />
+                </div>
+              )}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* A7 — delete confirmation listing the shots that lose the anchor */}
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        title={pendingDelete ? `Delete ${pendingDelete.character.name}?` : 'Delete character?'}
+        message={
+          pendingDelete
+            ? `This character is locked as a reference on ${pendingDelete.shots.length} shot${pendingDelete.shots.length === 1 ? '' : 's'} (${pendingDelete.shots.map((s) => `Shot ${s.shotNumber}`).join(', ')}). Deleting it removes the character from the Story Bible and releases those reference locks — approved shots keep their existing prompt text.`
+            : ''
+        }
+        confirmLabel="Delete Character"
+        variant="danger"
+        onConfirm={() => pendingDelete && confirmDelete(pendingDelete.character)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

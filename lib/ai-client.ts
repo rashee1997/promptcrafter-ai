@@ -15,7 +15,7 @@ import {
   SuggestNegativePromptResponse,
   TestPromptRequest,
 } from '@/types';
-import type { VideoLocation } from '@/types/video';
+import type { VideoCharacter, VideoLocation } from '@/types/video';
 import type {
   SuggestVideoLocationRequest,
   VideoBootstrapRequest,
@@ -305,18 +305,44 @@ export async function runCaseEvaluation(
 
 /** Video Prompt Studio — run one AI bootstrap stage (script → VFX). */
 export async function runVideoBootstrap(
-  request: VideoBootstrapRequest
+  request: VideoBootstrapRequest,
+  signal?: AbortSignal
 ): Promise<VideoBootstrapResponse> {
   const res = await fetch('/api/video-bootstrap', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
+    signal,
   });
   if (!res.ok) {
     const errData = await res.json().catch(() => ({ error: `Server HTTP ${res.status}` }));
     throw new Error(errData.error || `HTTP ${res.status}`);
   }
   return await res.json();
+}
+
+/** Video Prompt Studio — regenerate ONE character's copy-ready image prompt. */
+export async function regenerateCharacterImagePrompt(
+  request: {
+    provider: ProviderConfig;
+    character: VideoCharacter;
+    revisionNote?: string;
+    styleContext?: string;
+  },
+  signal?: AbortSignal
+): Promise<string> {
+  const res = await fetch('/api/video-character-image-prompt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: `Server HTTP ${res.status}` }));
+    throw new Error(errData.error || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return typeof data?.imagePrompt === 'string' && data.imagePrompt.trim() ? data.imagePrompt.trim() : '';
 }
 
 /** Video Prompt Studio — low-latency ad-hoc location scouting. */

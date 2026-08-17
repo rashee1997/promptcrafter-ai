@@ -115,7 +115,7 @@ export function Sidebar({ project, provider, onUpdate }: SidebarProps) {
       <hr className="border-border" aria-hidden="true" />
 
       {/* Cast + locations */}
-      <SidebarCharactersPanel project={project} onUpdate={applyUpdate} />
+      <SidebarCharactersPanel project={project} provider={provider} onUpdate={applyUpdate} />
       <SidebarLocationsPanel project={project} provider={provider} onUpdate={applyUpdate} />
     </aside>
   );

@@ -433,6 +433,38 @@ export async function getStoryBibleCharacterImages(
   }
 }
 
+/**
+ * Marks one Story Bible image as the character's primary reference, clearing
+ * the flag on the project's other entries. Falls back to LocalStorage.
+ */
+export async function setStoryBibleCharacterImagePrimary(projectId: string, id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_STORY_BIBLE, 'readwrite');
+    const store = tx.objectStore(STORE_STORY_BIBLE);
+    const index = store.index('projectId');
+    const entries = await new Promise<StoryBibleCharacterImage[]>((resolve, reject) => {
+      const req = index.getAll(IDBKeyRange.only(projectId));
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    for (const entry of entries) {
+      if (entry.isPrimary === (entry.id === id)) continue;
+      await new Promise<void>((resolve, reject) => {
+        const req = store.put({ ...entry, isPrimary: entry.id === id });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+  } catch {
+    setLocalStoryBible(
+      getLocalStoryBible().map((e) =>
+        e.projectId === projectId ? { ...e, isPrimary: e.id === id } : e
+      )
+    );
+  }
+}
+
 /** Removes one Story Bible character image. */
 export async function deleteStoryBibleCharacterImage(id: string): Promise<void> {
   try {

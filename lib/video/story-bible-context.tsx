@@ -10,6 +10,7 @@ import {
   deleteStoryBibleCharacterImage,
   getStoryBibleCharacterImages,
   saveStoryBibleCharacterImage,
+  setStoryBibleCharacterImagePrimary,
 } from '@/lib/storage';
 import type { StoryBibleCharacterImage } from '@/types/video';
 
@@ -28,6 +29,8 @@ export interface StoryBibleContextValue {
   loading: boolean;
   saveCharacterImage: (input: SaveCharacterImageInput) => Promise<StoryBibleCharacterImage | null>;
   deleteCharacterImage: (id: string) => Promise<void>;
+  /** Marks one image as the character's primary reference (clears the others). */
+  setPrimaryCharacterImage: (id: string) => Promise<void>;
 }
 
 const StoryBibleContext = createContext<StoryBibleContextValue | null>(null);
@@ -82,9 +85,22 @@ export function StoryBibleProvider({ projectId, children }: { projectId: string;
     }
   }, []);
 
+  const setPrimaryCharacterImage = useCallback(async (id: string) => {
+    try {
+      const entry = entries.find((e) => e.id === id);
+      if (!entry) return;
+      await setStoryBibleCharacterImagePrimary(entry.projectId, id);
+      setEntries((prev) =>
+        prev.map((e) => (e.projectId === entry.projectId ? { ...e, isPrimary: e.id === id } : e))
+      );
+    } catch (err) {
+      console.error('Story Bible primary update failed:', err);
+    }
+  }, [entries]);
+
   const value = useMemo<StoryBibleContextValue>(
-    () => ({ entries, loading, saveCharacterImage, deleteCharacterImage }),
-    [entries, loading, saveCharacterImage, deleteCharacterImage]
+    () => ({ entries, loading, saveCharacterImage, deleteCharacterImage, setPrimaryCharacterImage }),
+    [entries, loading, saveCharacterImage, deleteCharacterImage, setPrimaryCharacterImage]
   );
 
   return <StoryBibleContext.Provider value={value}>{children}</StoryBibleContext.Provider>;
