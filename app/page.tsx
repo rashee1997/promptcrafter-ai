@@ -29,7 +29,7 @@ import {
   Clapperboard,
 } from 'lucide-react';
 import { PromptInput, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
-import { VideoProject } from '@/types/video';
+import { ScriptTreatment, VideoProject } from '@/types/video';
 import {
   clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
@@ -596,7 +596,11 @@ export default function HomePage() {
   const activeVideoProject =
     videoProjects.find((p) => p.id === activeVideoProjectId) ?? null;
 
-  const handleCreateVideoProject = async (title: string, customInstructions: string) => {
+  const handleCreateVideoProject = async (
+    title: string,
+    customInstructions: string,
+    confirmedScript?: ScriptTreatment | null
+  ) => {
     const timestamp = Date.now();
     const project: VideoProject = {
       id: `video-${timestamp}-${Math.random().toString(36).slice(2, 7)}`,
@@ -608,6 +612,9 @@ export default function HomePage() {
       chatHistory: [],
       createdAt: timestamp,
       updatedAt: timestamp,
+      // Part 3 — the AI overview confirmed before creation; BootstrapFlow seeds
+      // Stage 1 from it and opens on Stage 2 instead of regenerating.
+      draftScriptOverview: confirmedScript ?? null,
     };
     await saveVideoProject(project);
     setVideoProjects(await getVideoProjects());
@@ -968,6 +975,7 @@ export default function HomePage() {
       <NewProjectModal
         isOpen={videoModalOpen}
         onClose={() => setVideoModalOpen(false)}
+        provider={activeProvider}
         onCreate={handleCreateVideoProject}
       />
 

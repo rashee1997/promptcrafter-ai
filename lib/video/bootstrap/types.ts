@@ -5,6 +5,7 @@
 
 import type { ProviderConfig } from '@/types';
 import type {
+  ScriptTreatment,
   VideoCharacter,
   VideoEffects,
   VideoLocation,
@@ -13,13 +14,9 @@ import type {
 
 export type VideoBootstrapStage = 1 | 2 | 3 | 4 | 5;
 
-/** Stage 1 output — script treatment. */
-export interface ScriptTreatment {
-  logline: string;
-  actBeats: string[];
-  tone: string;
-  overview: string;
-}
+/** Stage 1 output — script treatment. Defined in types/video.ts because
+ *  VideoProject persists a creation-time draft of it. */
+export type { ScriptTreatment };
 
 /** Stage 4 candidate — a visual style option (VideoStyle + picker metadata). */
 export interface StyleCandidate extends VideoStyle {
