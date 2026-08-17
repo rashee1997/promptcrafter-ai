@@ -428,10 +428,11 @@ export interface ImagePromptInput {
 
 /**
  * Persistence scope of a saved custom chip preset — image-only rows
- * (lighting, composition…), logo-only rows (mark type, palette…), or shared
- * rows (style, mood, resolution…) that appear in both studio modes.
+ * (lighting, composition…), logo-only rows (mark type, palette…), shared
+ * rows (style, mood, resolution…) that appear in both studio modes, or the
+ * text studio's rows (tone, framework).
  */
-export type CustomPresetMode = 'image' | 'logo' | 'both';
+export type CustomPresetMode = 'image' | 'logo' | 'text' | 'both';
 
 /**
  * A user-saved custom chip value for the Image/Logo Prompt Studio. Custom
