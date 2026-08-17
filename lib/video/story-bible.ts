@@ -159,3 +159,25 @@ export function parseDraftedShot(text: string): DraftedShot | null {
       : 12,
   };
 }
+
+export interface ShotRebuildResult {
+  shots: VideoShot[];
+  logEntry: string;
+}
+
+/**
+ * Phase 5 — deterministic continuity chain rebuild. The caller supplies the
+ * shots in the DESIRED sequence (after a reorder or removal); this function
+ * renumbers them 1..N in that order and returns a continuityLog entry.
+ *
+ * Each shot's promptText and continuityHandoff are preserved verbatim — only
+ * shotNumber changes, so the drafted anchors stay locked (offline-safe). The
+ * `action` phrase describes what happened (e.g. "Timeline reordered — Shot 4
+ * moved after Shot 2" or "Shot 3 deleted; handoff between Shot 2 and Shot 4
+ * is now direct") and becomes the log entry the workspace appends.
+ */
+export function rebuildShotContinuity(shots: VideoShot[], action: string): ShotRebuildResult {
+  const renumbered = shots.map((shot, i) => ({ ...shot, shotNumber: i + 1 }));
+  const logEntry = `${action}; continuity chain renumbered 1–${renumbered.length}.`;
+  return { shots: renumbered, logEntry };
+}

@@ -8,6 +8,7 @@ import { StatusBadge } from './project-card';
 import { BootstrapFlow } from './bootstrap-flow';
 import { Sidebar } from './sidebar';
 import { ChatThread } from './chat-thread';
+import { ShotList } from './shot-list';
 
 interface ProjectWorkspaceProps {
   project: VideoProject;
@@ -38,7 +39,13 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
               : 'One intent in, a full story bible out: the studio drafts, you review, confirm, and lock.'}
           </p>
         </div>
-        <StatusBadge status={project.status} />
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border tabular-nums">
+            <Clapperboard className="w-3 h-3 text-brand" aria-hidden="true" />
+            {project.shots.length} shot{project.shots.length === 1 ? '' : 's'}
+          </span>
+          <StatusBadge status={project.status} />
+        </div>
       </div>
 
       {/* Directorial brief */}
@@ -62,12 +69,16 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
 
           <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
             <Sidebar project={project} provider={provider} onUpdate={onUpdate} />
-            <ChatThread
-              key={project.id}
-              project={project}
-              providerConfig={provider}
-              onProjectUpdate={onUpdate}
-            />
+            <div className="space-y-5 min-w-0">
+              <ChatThread
+                key={project.id}
+                project={project}
+                providerConfig={provider}
+                onProjectUpdate={onUpdate}
+              />
+              {/* Phase 5 — dialect-ready storyboard under the chat column */}
+              <ShotList project={project} onUpdate={onUpdate} />
+            </div>
           </div>
         </div>
       ) : (
@@ -85,7 +96,7 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
       <p className="flex items-center gap-1.5 text-[10px] text-text-muted">
         <Clapperboard className="w-3 h-3 text-brand" aria-hidden="true" />
         {active
-          ? 'Approve a draft to add it to the storyboard; the drafter then proposes the next shot.'
+          ? 'Approve a draft to add it to the storyboard, then reorder and copy each shot in the dialect of your target model (Veo · Higgsfield · Kling · Seedance).'
           : 'Confirming Stage 5 activates the production and locks the Visual Style & VFX direction.'}
       </p>
     </div>
