@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { Clapperboard, Square } from 'lucide-react';
+import { Clapperboard, Sparkles, Square } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
 import type { ChatMessage, DraftedShot, ThinkingOrbState, VideoProject, VideoShot } from '@/types/video';
 import {
@@ -73,6 +73,12 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
       })
   );
 
+  /** True while an Approve save is in flight — guards the double-click race. */
+  const [approving, setApproving] = useState(false);
+  /** Set when the director hits Stop so a truncated stream is tagged, never
+   *  persisted as a finished draft (A8). */
+  const stoppedRef = useRef(false);
+
   const { messages, status, error, sendMessage, stop, regenerate, clearError } = useChat({
     transport,
     messages: seed,
@@ -85,58 +91,83 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
   const orbState: ThinkingOrbState =
     status === 'submitted' ? 'searching' : status === 'streaming' ? 'working' : 'breathing';
 
-  /** Writes the thread into project.chatHistory and hands it up. */
+  /** Writes the thread into project.chatHistory and hands it up. A stream the
+   *  director stopped is tagged so the next turn never treats a cut-off draft
+   *  as finished context. */
   const persistChat = async (finished: UIMessage[]) => {
+    const wasStopped = stoppedRef.current;
+    stoppedRef.current = false;
     const chatHistory: ChatMessage[] = finished
       .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .map((m) => ({
-        id: m.id,
-        role: m.role,
-        content: getMessageText(m),
-        timestamp: Date.now(),
-      }));
+      .map((m, i, arr) => {
+        let content = getMessageText(m);
+        if (wasStopped && m.role === 'assistant' && i === arr.length - 1 && content.trim()) {
+          content = `${content.trimEnd()}\n\n[stopped by director — draft incomplete]`;
+        }
+        return { id: m.id, role: m.role, content, timestamp: Date.now() };
+      });
     const updated: VideoProject = { ...projectRef.current, chatHistory, updatedAt: Date.now() };
     await saveVideoProject(updated);
     onProjectUpdateRef.current(updated);
   };
 
+  /** Approve commits the shot to the storyboard ONLY — it never auto-drafts
+   *  the next shot (Issue 2). */
   const handleApprove = async (draft: DraftedShot) => {
-    if (streaming) return;
-    const base = projectRef.current;
-    const now = Date.now();
-    const existing = base.shots.find((s) => s.shotNumber === draft.shotNumber);
-    const shot: VideoShot = {
-      id: existing?.id ?? `shot-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      shotNumber: draft.shotNumber,
-      description: draft.description,
-      promptText: draft.promptText,
-      continuityHandoff: draft.continuityHandoff,
-      durationSeconds: draft.durationSeconds,
-      confirmed: true,
-      createdAt: existing?.createdAt ?? now,
-    };
-    const shots = existing
-      ? base.shots.map((s) => (s.shotNumber === draft.shotNumber ? shot : s))
-      : [...base.shots, shot].sort((a, b) => a.shotNumber - b.shotNumber);
-    const updated: VideoProject = {
-      ...base,
-      shots,
-      storyBible: {
-        ...base.storyBible,
-        continuityLog: [
-          ...(base.storyBible.continuityLog ?? []),
-          `Shot ${draft.shotNumber} approved — ${draft.description}`,
-        ],
-      },
-      updatedAt: now,
-    };
-    projectRef.current = updated; // next request's system prompt sees the new storyboard
-    await saveVideoProject(updated);
-    onProjectUpdateRef.current(updated);
-    // Advance the scene beat: the drafter immediately proposes the next shot.
-    await sendMessage({
-      text: `Shot ${draft.shotNumber} was approved and added to the storyboard. Draft the next shot.`,
+    if (streaming || approving) return;
+    setApproving(true);
+    try {
+      const base = projectRef.current;
+      const now = Date.now();
+      const existing = base.shots.find((s) => s.shotNumber === draft.shotNumber);
+      const shot: VideoShot = {
+        id: existing?.id ?? `shot-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        shotNumber: draft.shotNumber,
+        description: draft.description,
+        promptText: draft.promptText,
+        continuityHandoff: draft.continuityHandoff,
+        durationSeconds: draft.durationSeconds,
+        dialogue: draft.dialogue,
+        negativePrompt: draft.negativePrompt,
+        confirmed: true,
+        createdAt: existing?.createdAt ?? now,
+      };
+      const shots = existing
+        ? base.shots.map((s) => (s.shotNumber === draft.shotNumber ? shot : s))
+        : [...base.shots, shot].sort((a, b) => a.shotNumber - b.shotNumber);
+      const updated: VideoProject = {
+        ...base,
+        shots,
+        storyBible: {
+          ...base.storyBible,
+          continuityLog: [
+            ...(base.storyBible.continuityLog ?? []),
+            `Shot ${draft.shotNumber} approved — ${draft.description}`,
+          ],
+        },
+        updatedAt: now,
+      };
+      projectRef.current = updated; // next request's system prompt sees the new storyboard
+      await saveVideoProject(updated);
+      onProjectUpdateRef.current(updated);
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  /** Explicit "Draft Next Shot" — the director asks for shot N+1 when ready;
+   *  it never fires as a side effect of Approve. */
+  const handleDraftNext = () => {
+    if (streaming || approving) return;
+    void sendMessage({
+      text: 'Draft the next shot, continuing the scene from the last approved shot.',
     });
+  };
+
+  /** Stop marks the stream as interrupted so persistence tags it (A8). */
+  const handleStop = () => {
+    stoppedRef.current = true;
+    stop();
   };
 
   const handleRevise = (draft: DraftedShot) => {
@@ -204,10 +235,26 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
                   {draft && !live && (
                     <ShotDraftCard
                       draft={draft}
-                      disabled={streaming}
+                      disabled={streaming || approving}
                       onApprove={(d) => void handleApprove(d)}
                       onRevise={handleRevise}
                     />
+                  )}
+                  {message.role === 'assistant' && !live && text && !draft && (
+                    <div className="rounded-xl border border-warning/30 bg-warning/5 p-3.5 text-[11px] text-warning">
+                      <p className="font-bold">No shot draft in this reply</p>
+                      <p className="mt-0.5 break-words">
+                        This reply didn&apos;t include a shot draft — ask the drafter to try again, or click Retry.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void regenerate()}
+                        disabled={streaming || approving}
+                        className="mt-2 px-2.5 py-1 rounded-lg text-xs font-semibold bg-surface-muted border border-border hover:border-warning/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Retry draft
+                      </button>
+                    </div>
                   )}
                   {live && (
                     <MessageToolbar>
@@ -217,7 +264,7 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
                       </span>
                       <button
                         type="button"
-                        onClick={stop}
+                        onClick={handleStop}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-surface-muted text-text-secondary border border-border hover:text-danger hover:border-danger/40 transition-colors"
                       >
                         <Square className="w-3 h-3" aria-hidden="true" />
@@ -256,6 +303,26 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
+
+      {/* Explicit next-shot affordance — generation only fires on this click */}
+      {project.shots.length > 0 && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleDraftNext}
+            disabled={streaming || approving}
+            title="Ask the drafter to propose the next shot, continuing from the last approved one"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+              'bg-surface-muted text-text-secondary border-border hover:border-brand/40 hover:text-brand',
+              (streaming || approving) && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+            Draft Next Shot
+          </button>
+        </div>
+      )}
 
       <ChatInput
         project={project}

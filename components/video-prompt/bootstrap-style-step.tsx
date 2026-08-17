@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Check, Palette, RefreshCw } from 'lucide-react';
 import type { StyleCandidate } from '@/lib/video/bootstrap/types';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,9 @@ interface BootstrapStyleStepProps {
   selectedId: string | null;
   busy: boolean;
   onSelect: (id: string) => void;
-  onRegenerate: () => void;
+  /** Regenerate the options; an optional director note is threaded through as
+   *  the revisionPrompt ("keep this but make the grade warmer"). */
+  onRegenerate: (note?: string) => void;
   onConfirm: () => void;
 }
 
@@ -86,6 +88,13 @@ export function BootstrapStyleStep({
   onRegenerate,
   onConfirm,
 }: BootstrapStyleStepProps) {
+  const [note, setNote] = useState('');
+
+  const handleRegenerate = () => {
+    onRegenerate(note.trim() || undefined);
+    setNote('');
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -95,8 +104,9 @@ export function BootstrapStyleStep({
         </p>
         <button
           type="button"
-          onClick={onRegenerate}
+          onClick={() => onRegenerate()}
           disabled={busy}
+          title="Reroll without a note"
           className={cn(
             'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors shrink-0',
             'bg-surface-muted text-text-secondary border-border hover:border-brand/40 hover:text-brand',
@@ -105,6 +115,35 @@ export function BootstrapStyleStep({
         >
           <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
           Regenerate
+        </button>
+      </div>
+
+      {/* D1 — regenerate with a director note instead of a blind reroll */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleRegenerate();
+          }}
+          placeholder="Direct the reroll — e.g. \u201ckeep the grade but make it warmer\u201d"
+          aria-label="Revision note for the visual style options"
+          className="flex-1 px-3 py-2 rounded-xl text-xs bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow"
+        />
+        <button
+          type="button"
+          onClick={handleRegenerate}
+          disabled={!note.trim() || busy}
+          className={cn(
+            'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors shrink-0',
+            note.trim() && !busy
+              ? 'bg-surface-muted text-text-secondary border-border hover:border-brand/40 hover:text-brand'
+              : 'opacity-40 cursor-not-allowed'
+          )}
+        >
+          <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+          Reroll with note
         </button>
       </div>
 

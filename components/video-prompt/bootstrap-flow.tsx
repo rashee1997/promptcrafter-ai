@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Clapperboard } from 'lucide-react';
+import { Clapperboard, Sparkles } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
 import type { ThinkingOrbState, VideoCharacter, VideoLocation, VideoProject } from '@/types/video';
-import { runVideoBootstrap, suggestVideoLocations } from '@/lib/ai-client';
+import { regenerateCharacterImagePrompt, runVideoBootstrap, suggestVideoLocations } from '@/lib/ai-client';
 import { getSavedProviders } from '@/lib/storage';
 import { saveVideoProject } from '@/lib/video-storage';
 import type { BootstrapContext, EffectsCandidate, ScriptTreatment, StyleCandidate, VideoBootstrapResponse, VideoBootstrapStage } from '@/lib/video/bootstrap/types';
@@ -44,6 +44,15 @@ const BUSY_LABELS: Record<VideoBootstrapStage, string> = {
   5: 'Solving the VFX direction…',
 };
 
+/** Short director-facing blurb shown on each stage's explicit Generate CTA. */
+const GENERATE_HINTS: Record<VideoBootstrapStage, string> = {
+  1: 'Draft a logline, three act beats, tone, and overview from the directorial brief.',
+  2: 'Extract the cast from the confirmed treatment, with fixed appearance and wardrobe.',
+  3: 'Scout shootable locations with fixed environment descriptions.',
+  4: 'Pitch distinct visual style options — grade, stock, and aspect ratio.',
+  5: 'Pitch VFX direction options grounded in the locked visual style.',
+};
+
 /**
  * Phase 3 — 5-stage AI-orchestrated project bootstrap. A single intent is
  * drafted, reviewed, and confirmed stage-by-stage; the Thinking Orb animates
@@ -69,13 +78,17 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
   // stay in the encrypted provider store. An unset stage falls back to the
   // Settings-global provider, never mutating it.
   const [stageOverrides, setStageOverrides] = useState<Partial<Record<VideoBootstrapStage, StageModelRef>>>({});
-  const startedRef = useRef(false);
+  /** Stages whose saved override provider is missing from Settings (A9). */
+  const [overrideFallbacks, setOverrideFallbacks] = useState<Partial<Record<VideoBootstrapStage, boolean>>>({});
   const busyRef = useRef(false);
+  const seededRef = useRef(false);
 
   /**
    * Resolves the provider for a stage: the per-stage override pointer, looked
    * up live in the saved (decrypted) provider store so the current key/model
-   * list is always used; otherwise the Settings-global provider.
+   * list is always used; otherwise the Settings-global provider. When the
+   * override points at a provider that was deleted from Settings, the fallback
+   * is NOT silent — a per-stage warning is surfaced (A9).
    */
   const stageProvider = async (stage: VideoBootstrapStage): Promise<ProviderConfig> => {
     const ref = stageOverrides[stage];
@@ -83,9 +96,13 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     try {
       const saved = await getSavedProviders();
       const found = saved.find((p) => p.id === ref.providerId);
-      if (!found) return provider;
+      if (!found) {
+        setOverrideFallbacks((prev) => ({ ...prev, [stage]: true }));
+        return provider;
+      }
       return { ...found, model: ref.model, activeModel: ref.model };
     } catch {
+      setOverrideFallbacks((prev) => ({ ...prev, [stage]: true }));
       return provider;
     }
   };
@@ -162,6 +179,14 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     setBusy(true);
     setError(null);
     try {
+      // Part 3 — once the director regenerates Stage 1 inside the wizard, the
+      // creation-time overview is stale; clear it so it never resurfaces on a
+      // later reload of the project.
+      if (stage === 1 && project.draftScriptOverview) {
+        await saveVideoProject({ ...project, draftScriptOverview: null, updatedAt: Date.now() }).catch(() => {
+          // Persistence failure here must not block generation.
+        });
+      }
       const res = await runVideoBootstrap({
         stage, intent, customInstructions, previousContext: buildContext(stage), revisionPrompt, provider: await stageProvider(stage),
       });
@@ -180,6 +205,9 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
       const updated: VideoProject = {
         ...project,
         status: 'active',
+        // Part 3 — the creation-time overview is consumed the moment the wizard
+        // finalizes; never let a stale draft resurface.
+        draftScriptOverview: null,
         storyBible: {
           characters,
           locations,
@@ -204,30 +232,64 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     }
   }
 
+  /** True when a stage already has reviewed/generated data on screen. */
+  function stageHasData(stage: VideoBootstrapStage): boolean {
+    return stage === 1 ? !!script
+      : stage === 2 ? characters.length > 0
+      : stage === 3 ? locations.length > 0
+      : stage === 4 ? styleOptions.length > 0
+      : effectsOptions.length > 0;
+  }
+
+  /** Confirm locks the stage in and advances the UI — it never auto-generates
+   *  the next stage (Issue 1). Generation is always an explicit button click. */
   function confirmStage() {
     if (busy || finalizing) return;
     setConfirmed((prev) => [...new Set([...prev, step])]);
     if (step < 5) {
-      const next = (step + 1) as VideoBootstrapStage;
-      setStep(next);
-      void runStage(next);
+      setStep((step + 1) as VideoBootstrapStage);
     } else {
       void finalize();
     }
   }
 
+  /** Sidebar navigation between stages — pure navigation, no hidden
+   *  generation side effects (Issue 1). A stage without data shows its own
+   *  explicit Generate CTA. */
   function goTo(stage: VideoBootstrapStage) {
     if (busy || finalizing || stage > maxReachable || stage === step) return;
     setStep(stage);
     setError(null);
-    const hasData =
-      stage === 1 ? !!script
-      : stage === 2 ? characters.length > 0
-      : stage === 3 ? locations.length > 0
-      : stage === 4 ? styleOptions.length > 0
-      : effectsOptions.length > 0;
-    if (!hasData) void runStage(stage);
   }
+
+  /** D2 — regenerate ONE character's imagePrompt text via the Stage 2 override. */
+  const handleRegenerateImagePrompt = async (character: VideoCharacter): Promise<string> => {
+    return regenerateCharacterImagePrompt({
+      provider: await stageProvider(2),
+      character,
+      styleContext: script?.tone,
+    });
+  };
+
+  /** D3 — re-draft just this character (keeps its id so saved images stay linked). */
+  const handleRegenerateCharacter = async (character: VideoCharacter): Promise<VideoCharacter | null> => {
+    try {
+      const res = await runVideoBootstrap({
+        stage: 2,
+        intent,
+        customInstructions,
+        previousContext: { script: script ?? null, characters: [character] },
+        revisionPrompt: `Regenerate ONLY the character "${character.name}" — keep the same identity, role, and continuity; improve the draft.`,
+        provider: await stageProvider(2),
+      });
+      if (res.stage === 2 && res.data.characters.length > 0) {
+        return { ...res.data.characters[0], id: character.id };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
 
   async function handleSuggestLocation(hint: string) {
     if (busyRef.current) return;
@@ -249,11 +311,18 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     }
   }
 
-  // Kick off Stage 1 once on mount (guarded against StrictMode double-effects).
+  // Part 3 — seed Stage 1 from the overview the director confirmed at project
+  // creation (C8). The wizard opens on Stage 2 with Stage 1 pre-confirmed;
+  // nothing auto-runs — Stage 2 still waits for its explicit Generate click.
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    void runStage(1);
+    if (seededRef.current) return;
+    seededRef.current = true;
+    const seeded = project.draftScriptOverview;
+    if (seeded) {
+      setScript(seeded);
+      setConfirmed([1]);
+      setStep(2);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -281,26 +350,43 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
           stage={step}
           defaultProvider={provider}
           value={stageOverrides[step] ?? null}
-          onChange={(p) =>
+          onChange={(p) => {
+            // Re-selecting a provider clears any stale fallback warning.
+            setOverrideFallbacks((prev) => ({ ...prev, [step]: false }));
             setStageOverrides((prev) => {
               const next = { ...prev };
               if (p) next[step] = p;
               else delete next[step];
               return next;
-            })
-          }
+            });
+          }}
         />
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
             Stage {step} of 5 · {meta.hint}
           </p>
+          {overrideFallbacks[step] && (
+            <p
+              role="status"
+              className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-warning/30 bg-warning/5 px-2 py-1 text-[10px] font-semibold text-warning"
+            >
+              <Clapperboard className="w-3 h-3" aria-hidden="true" />
+              Saved override provider is no longer available — using the Settings default for this stage.
+            </p>
+          )}
           <h3 className="mt-0.5 text-base font-bold text-text-primary truncate">
-            {working ? busyLabel : `Review the ${meta.label.toLowerCase()} draft`}
+            {working
+              ? busyLabel
+              : stageHasData(step)
+                ? `Review the ${meta.label.toLowerCase()} draft`
+                : `Draft the ${meta.label.toLowerCase()}`}
           </h3>
           <p className="mt-0.5 text-xs text-text-secondary leading-relaxed">
             {working
               ? 'The studio is drafting this stage from everything you confirmed so far.'
-              : 'Adjust anything below, then confirm to lock this stage and continue.'}
+              : stageHasData(step)
+                ? 'Adjust anything below, then confirm to lock this stage and continue.'
+                : 'Nothing runs until you click Generate — confirm only locks in what you review.'}
           </p>
         </div>
       </div>
@@ -328,6 +414,26 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
             </div>
           )}
 
+          {!stageHasData(step) && (
+            <div className="rounded-2xl border border-border bg-surface-card/50 p-8 flex flex-col items-center gap-3 text-center">
+              <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/25">
+                <Sparkles className="w-5 h-5 text-brand" aria-hidden="true" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <p className="text-sm font-bold text-text-primary">Draft the {meta.label.toLowerCase()}</p>
+                <p className="text-xs text-text-secondary leading-relaxed">{GENERATE_HINTS[step]}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void runStage(step)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all"
+              >
+                <Sparkles className="w-4 h-4" aria-hidden="true" />
+                Generate {meta.label}
+              </button>
+            </div>
+          )}
+
           {step === 1 && script && (
             <BootstrapScriptStep data={script} busy={busy} onRevise={(p) => void runStage(1, p)} onConfirm={confirmStage} />
           )}
@@ -338,16 +444,18 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
               projectId={project.id}
               onChange={setCharacters}
               onConfirm={confirmStage}
+              onRegenerateImagePrompt={handleRegenerateImagePrompt}
+              onRegenerateCharacter={handleRegenerateCharacter}
             />
           )}
           {step === 3 && locations.length > 0 && (
             <BootstrapScenesStep data={locations} busy={busy} onChange={setLocations} onSuggest={handleSuggestLocation} onConfirm={confirmStage} />
           )}
           {step === 4 && styleOptions.length > 0 && (
-            <BootstrapStyleStep data={styleOptions} selectedId={selectedStyleId} busy={busy} onSelect={setSelectedStyleId} onRegenerate={() => void runStage(4)} onConfirm={confirmStage} />
+            <BootstrapStyleStep data={styleOptions} selectedId={selectedStyleId} busy={busy} onSelect={setSelectedStyleId} onRegenerate={(note) => void runStage(4, note)} onConfirm={confirmStage} />
           )}
           {step === 5 && effectsOptions.length > 0 && (
-            <BootstrapEffectsStep data={effectsOptions} selectedId={selectedEffectsId} busy={busy} onSelect={setSelectedEffectsId} onRegenerate={() => void runStage(5)} onConfirm={confirmStage} />
+            <BootstrapEffectsStep data={effectsOptions} selectedId={selectedEffectsId} busy={busy} onSelect={setSelectedEffectsId} onRegenerate={(note) => void runStage(5, note)} onConfirm={confirmStage} />
           )}
         </>
       )}
