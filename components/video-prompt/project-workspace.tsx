@@ -4,7 +4,7 @@ import React from 'react';
 import { CheckCircle2, Clapperboard } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
 import type { VideoProject } from '@/types/video';
-import { StoryBibleProvider } from '@/lib/video/story-bible';
+import { StoryBibleProvider } from '@/lib/video/story-bible-context';
 import { StatusBadge } from './project-card';
 import { BootstrapFlow } from './bootstrap-flow';
 import { Sidebar } from './sidebar';

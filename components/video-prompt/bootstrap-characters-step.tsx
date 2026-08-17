@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { Check, Copy, ImagePlus, Plus, Trash2, Users } from 'lucide-react';
 import type { VideoCharacter } from '@/types/video';
 import { compressToWebP } from '@/lib/compression';
-import { useStoryBible } from '@/lib/video/story-bible';
+import { useStoryBible } from '@/lib/video/story-bible-context';
 import { useInlineCopy } from '@/lib/use-inline-copy';
 import { toast } from '@/components/toast';
 import { cn } from '@/lib/utils';

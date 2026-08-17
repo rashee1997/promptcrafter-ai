@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, GripVertical, Pencil, Plus, Users, X } from 'lucide-react';
 import type { VideoCharacter, VideoProject } from '@/types/video';
-import { useStoryBible } from '@/lib/video/story-bible';
+import { useStoryBible } from '@/lib/video/story-bible-context';
 import { CharacterForm } from './character-form';
 import { CharacterImageThumb } from './character-image-thumb';
 

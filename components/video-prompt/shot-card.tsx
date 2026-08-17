@@ -8,7 +8,7 @@ import {
   type VideoDialect,
 } from '@/lib/video/model-dialects';
 import { blobToDataUrl } from '@/lib/compression';
-import { useStoryBible } from '@/lib/video/story-bible';
+import { useStoryBible } from '@/lib/video/story-bible-context';
 import { useInlineCopy } from '@/lib/use-inline-copy';
 import { cn } from '@/lib/utils';
 import { DialectTabs } from './dialect-tabs';
