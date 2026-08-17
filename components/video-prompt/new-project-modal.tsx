@@ -108,7 +108,7 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
               {/* Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-brand to-accent text-white shadow-orb border border-brand/30">
+                  <div className="p-2.5 rounded-xl bg-brand text-white shadow-orb border border-brand/30">
                     <Clapperboard className="w-5 h-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -212,7 +212,7 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
                     type="submit"
                     className={cn(
                       'flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
-                      'bg-gradient-to-br from-brand to-accent shadow-glow hover:brightness-110 active:scale-[0.985] transition-all'
+                      'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all'
                     )}
                   >
                     <Clapperboard className="w-4 h-4" aria-hidden="true" />

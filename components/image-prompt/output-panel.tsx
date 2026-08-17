@@ -87,7 +87,7 @@ export function OutputPanel({
           <div className="flex flex-col items-center justify-center text-center py-16 px-4">
             <div className="relative">
               <div className="absolute inset-0 bg-brand/20 rounded-full blur-2xl" />
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-brand to-accent flex items-center justify-center shadow-orb border border-brand/30">
+              <div className="relative w-16 h-16 rounded-2xl bg-brand flex items-center justify-center shadow-orb border border-brand/30">
                 <ImagePlus className="w-7 h-7 text-white" />
               </div>
             </div>

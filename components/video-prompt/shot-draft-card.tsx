@@ -56,7 +56,7 @@ export function ShotDraftCard({ draft, disabled, onApprove, onRevise }: ShotDraf
           disabled={disabled}
           className={cn(
             'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all',
-            'bg-gradient-to-br from-brand to-accent shadow-glow hover:brightness-110 active:scale-[0.985]',
+            'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985]',
             disabled && 'opacity-50 cursor-not-allowed'
           )}
         >

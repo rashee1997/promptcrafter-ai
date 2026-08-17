@@ -689,7 +689,7 @@ export function PromptForm({
             <button
               type="submit"
               disabled={isGenerating || !topic.trim()}
-              className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.985]"
+              className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.985]"
             >
               {isGenerating ? (
                 <>

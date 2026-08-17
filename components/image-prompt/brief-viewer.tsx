@@ -238,7 +238,7 @@ export function BriefViewer({
             'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.985]',
             copyAllCopied
               ? 'bg-success/10 border border-success/40 text-success'
-              : 'bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow'
+              : 'bg-brand hover:bg-brand-hover text-white shadow-glow'
           )}
         >
           {copyAllCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}

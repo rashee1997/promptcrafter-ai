@@ -241,7 +241,7 @@ export function TestPromptModal({
                 <button
                   onClick={handleRunTest}
                   disabled={isLoading || abRunning}
-                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all shrink-0"
+                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all shrink-0"
                 >
                   {isLoading ? (
                     <>

@@ -767,7 +767,7 @@ export function PromptOutput({
           <button
             type="button"
             onClick={() => handleCopy(rawPromptText, 'prompt')}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center gap-2 transition-all active:scale-95"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center gap-2 transition-all active:scale-95"
           >
             {copiedType === 'prompt' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
             <span>{copiedType === 'prompt' ? 'Copied!' : 'Copy'}</span>
@@ -1070,7 +1070,7 @@ export function PromptOutput({
                   type="button"
                   onClick={handleRunSuite}
                   disabled={suiteRunning}
-                  className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                  className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
                 >
                   {suiteRunning ? (
                     <>

@@ -70,7 +70,7 @@ export function Navbar({
           <div className="h-16 flex items-center justify-between gap-2 sm:gap-4">
             {/* Brand Logo & Name */}
             <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-brand to-accent flex items-center justify-center shadow-orb border border-brand/30">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-brand flex items-center justify-center shadow-orb border border-brand/30">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>

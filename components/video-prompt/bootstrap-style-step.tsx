@@ -36,7 +36,7 @@ function StyleCard({
       )}
     >
       {selected && (
-        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-brand to-accent text-white flex items-center justify-center shadow-glow">
+        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-brand text-white flex items-center justify-center shadow-glow">
           <Check className="w-3.5 h-3.5" aria-hidden="true" />
         </span>
       )}
@@ -126,7 +126,7 @@ export function BootstrapStyleStep({
           disabled={busy || !selectedId}
           className={cn(
             'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
-            'bg-gradient-to-br from-brand to-accent shadow-glow hover:brightness-110 active:scale-[0.985] transition-all',
+            'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all',
             (busy || !selectedId) && 'opacity-50 cursor-not-allowed'
           )}
         >

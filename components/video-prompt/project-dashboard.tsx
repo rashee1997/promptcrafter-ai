@@ -154,7 +154,7 @@ export function ProjectDashboard({
             aria-hidden="true"
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent"
           />
-          <div className="relative mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-brand to-accent shadow-orb border border-brand/30 flex items-center justify-center">
+          <div className="relative mx-auto w-16 h-16 rounded-2xl bg-brand shadow-orb border border-brand/30 flex items-center justify-center">
             <Clapperboard className="w-7 h-7 text-white" />
             <Sparkles className="absolute -top-2 -right-2 w-4 h-4 text-warning" />
           </div>
@@ -169,7 +169,7 @@ export function ProjectDashboard({
           <button
             type="button"
             onClick={onNewProject}
-            className="mt-6 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-xl text-white bg-gradient-to-br from-brand to-accent shadow-glow hover:brightness-110 active:scale-[0.985] transition-all"
+            className="mt-6 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all"
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
             Create New Project

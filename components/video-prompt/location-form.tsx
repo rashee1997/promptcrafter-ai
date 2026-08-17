@@ -164,7 +164,7 @@ export function LocationForm({ initial, onSuggest, onSubmit, onCancel }: Locatio
             type="button"
             onClick={() => canSave && onSubmit(draft)}
             disabled={!canSave}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-br from-brand to-accent shadow-glow hover:brightness-110 active:scale-[0.985] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             Save location

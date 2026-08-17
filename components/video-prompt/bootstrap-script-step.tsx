@@ -119,7 +119,7 @@ export function BootstrapScriptStep({
             disabled={busy}
             className={cn(
               'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
-              'bg-gradient-to-br from-brand to-accent shadow-glow hover:brightness-110 active:scale-[0.985] transition-all',
+              'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all',
               busy && 'opacity-50 cursor-not-allowed'
             )}
           >

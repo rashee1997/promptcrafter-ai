@@ -45,7 +45,7 @@ export function ReadingProgress() {
       aria-valuenow={Math.round(progress)}
     >
       <div
-        className="h-full bg-gradient-to-r from-brand to-accent transition-[width] duration-150 ease-out"
+        className="h-full bg-brand transition-[width] duration-150 ease-out"
         style={{ width: `${progress}%` }}
       />
     </div>

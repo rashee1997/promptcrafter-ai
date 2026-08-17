@@ -8,7 +8,7 @@ export function SiteHeader() {
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2.5 min-w-0">
           <span
-            className="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-brand to-accent flex items-center justify-center shadow-orb border border-brand/30"
+            className="w-8 h-8 shrink-0 rounded-lg bg-brand flex items-center justify-center shadow-orb border border-brand/30"
             aria-hidden="true"
           >
             <Sparkles className="w-4 h-4 text-white" />
@@ -30,7 +30,7 @@ export function SiteHeader() {
           </Link>
           <Link
             href="/"
-            className="px-3 py-1.5 rounded-lg bg-gradient-to-br from-brand to-accent hover:brightness-110 text-white font-semibold text-xs sm:text-sm shadow-glow transition-all"
+            className="px-3 py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-white font-semibold text-xs sm:text-sm shadow-glow transition-all"
           >
             Open the app
           </Link>
