@@ -1,18 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Building2, Check, ChevronDown, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, RefreshCw, Shapes, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { Bookmark, Building2, Check, ChevronDown, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Plus, RefreshCw, Shapes, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
 import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
 import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
-import { ProviderConfig } from '@/types';
+import { ImagePlatform, ProviderConfig } from '@/types';
 import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
 import { CHIP_DOTS, ChipRow } from './chip-row';
 import { StudioFormHandlers, StudioFormState, StudioMode } from './studio-types';
+import { CustomChipEditor, useCustomChipEntry } from './use-custom-chip-entry';
 
 interface PromptFormProps {
   state: StudioFormState;
@@ -56,6 +57,51 @@ export function PromptForm({
   const styleOptions = isLogo ? LOGO_STYLE_PRESETS : STYLE_PRESETS;
   const activeStyle = isLogo ? state.logoStyle : state.style;
   const selectStyle = (id: string) => (isLogo ? handlers.setLogoStyle(id) : handlers.setStyle(id));
+
+  // Custom value entry + saved presets for the bespoke (non-ChipRow) rows.
+  // The style grid is shared across modes; palette is logo-only; platforms are
+  // shared. ChipRow/MultiChipRow rows get the same behavior internally.
+  const styleCustom = useCustomChipEntry({ field: 'style', mode: 'both' });
+  const paletteCustom = useCustomChipEntry({ field: 'palette', mode: 'logo' });
+  const platformsCustom = useCustomChipEntry({ field: 'platforms', mode: 'both' });
+
+  // A value that matches no built-in preset renders as a selected custom chip.
+  const styleIsCustom =
+    !!activeStyle &&
+    !styleOptions.some((s) => s.id === activeStyle) &&
+    !styleCustom.saved.some((e) => e.value === activeStyle);
+  const paletteIsCustom =
+    !!state.palette &&
+    !LOGO_PALETTE_PRESETS.some((p) => p.id === state.palette) &&
+    !paletteCustom.saved.some((e) => e.value === state.palette);
+  const customPlatforms = state.platforms.filter(
+    (p) => !PLATFORM_OPTIONS.some((o) => o.id === p) && !platformsCustom.saved.some((e) => e.value === p)
+  );
+
+  const handleStyleConfirm = () => {
+    const v = styleCustom.confirmDraft();
+    if (v !== null) selectStyle(v);
+  };
+  const handleStyleSave = async () => {
+    const v = await styleCustom.saveDraft();
+    if (v !== null) selectStyle(v);
+  };
+  const handlePaletteConfirm = () => {
+    const v = paletteCustom.confirmDraft();
+    if (v !== null) handlers.setPalette(v);
+  };
+  const handlePaletteSave = async () => {
+    const v = await paletteCustom.saveDraft();
+    if (v !== null) handlers.setPalette(v);
+  };
+  const handlePlatformConfirm = () => {
+    const v = platformsCustom.confirmDraft();
+    if (v !== null) handlers.togglePlatform(v as ImagePlatform);
+  };
+  const handlePlatformSave = async () => {
+    const v = await platformsCustom.saveDraft();
+    if (v !== null) handlers.togglePlatform(v as ImagePlatform);
+  };
 
   /** Tier-2 collapsed summary — same .filter(Boolean).join(' · ') pattern as art-direction.tsx. */
   const platformLabels = PLATFORM_OPTIONS.filter((p) => state.platforms.includes(p.id)).map((p) => p.label);
@@ -204,6 +250,75 @@ export function PromptForm({
                 </button>
               );
             })}
+
+            {/* Saved custom style presets — bookmarked chips, deletable on hover. */}
+            {styleCustom.saved.map((entry) => {
+              const selected = activeStyle === entry.value;
+              return (
+                <div key={entry.id} className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => selectStyle(entry.value)}
+                    title={`Saved: ${entry.label}`}
+                    aria-pressed={selected}
+                    className={cn(
+                      'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left w-full',
+                      selected
+                        ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                        : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                    )}
+                  >
+                    <Bookmark className="w-3 h-3 shrink-0 text-warning" />
+                    <span className="truncate">{entry.label}</span>
+                    {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => styleCustom.remove(entry.id)}
+                    title="Delete saved value"
+                    aria-label={`Delete saved value ${entry.label}`}
+                    className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-surface-elevated border border-border text-text-muted hover:text-danger shadow-sm transition-colors"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* Trailing cell: selected custom value, the inline editor, or the trigger. */}
+            {styleIsCustom ? (
+              <button
+                type="button"
+                onClick={() => selectStyle(activeStyle)}
+                title="Custom value"
+                aria-pressed
+                className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm text-left"
+              >
+                <Plus className="w-3 h-3 text-brand shrink-0" />
+                <span className="truncate">{activeStyle}</span>
+                <Check className="w-3 h-3 text-brand ml-auto shrink-0" />
+              </button>
+            ) : styleCustom.entering ? (
+              <div className="col-span-2 sm:col-span-3">
+                <CustomChipEditor
+                  draft={styleCustom.draft}
+                  onDraftChange={styleCustom.changeDraft}
+                  onConfirm={handleStyleConfirm}
+                  onSave={handleStyleSave}
+                  onCancel={styleCustom.cancel}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={styleCustom.begin}
+                aria-label="Add a custom style value"
+                className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border border-dashed border-border text-text-muted hover:text-brand hover:border-brand/40 transition-all text-left"
+              >
+                <Plus className="w-3 h-3 shrink-0" />
+                Custom
+              </button>
+            )}
           </div>
         </div>
 
@@ -214,6 +329,8 @@ export function PromptForm({
           options={ASPECT_RATIOS}
           value={state.aspectRatio}
           onChange={handlers.setAspectRatio}
+          field="aspectRatio"
+          mode="both"
         />
 
         {/* ── TIER 2 · REFINE — single accordion, collapsed by default ── */}
@@ -251,6 +368,8 @@ export function PromptForm({
                   options={LOGO_INDUSTRY_PRESETS}
                   value={state.industry}
                   onChange={(id) => handlers.setIndustry(state.industry === id ? undefined : id)}
+                  field="industry"
+                  mode="logo"
                 />
 
                 <div className="space-y-1.5">
@@ -277,6 +396,8 @@ export function PromptForm({
                   options={LOGO_MARK_TYPES}
                   value={state.logoType}
                   onChange={handlers.setLogoType}
+                  field="logoType"
+                  mode="logo"
                 />
 
                 <ChipRow
@@ -285,6 +406,8 @@ export function PromptForm({
                   options={LOGO_CONCEPT_PRESETS}
                   value={state.concept}
                   onChange={(id) => handlers.setConcept(state.concept === id ? undefined : id)}
+                  field="concept"
+                  mode="logo"
                 />
 
                 <div className="space-y-2">
@@ -320,6 +443,75 @@ export function PromptForm({
                         </button>
                       );
                     })}
+
+                    {/* Saved custom palette presets — bookmarked chips (no swatch, just the label), deletable on hover. */}
+                    {paletteCustom.saved.map((entry) => {
+                      const selected = state.palette === entry.value;
+                      return (
+                        <div key={entry.id} className="relative group">
+                          <button
+                            type="button"
+                            onClick={() => handlers.setPalette(entry.value)}
+                            title={`Saved: ${entry.label}`}
+                            aria-pressed={selected}
+                            className={cn(
+                              'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left w-full',
+                              selected
+                                ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                                : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                            )}
+                          >
+                            <Bookmark className="w-3 h-3 shrink-0 text-warning" />
+                            <span className="truncate">{entry.label}</span>
+                            {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => paletteCustom.remove(entry.id)}
+                            title="Delete saved value"
+                            aria-label={`Delete saved value ${entry.label}`}
+                            className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-surface-elevated border border-border text-text-muted hover:text-danger shadow-sm transition-colors"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {/* Trailing cell: selected custom value, the inline editor, or the trigger. */}
+                    {paletteIsCustom ? (
+                      <button
+                        type="button"
+                        onClick={() => handlers.setPalette(state.palette)}
+                        title="Custom value"
+                        aria-pressed
+                        className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm text-left"
+                      >
+                        <Plus className="w-3 h-3 text-brand shrink-0" />
+                        <span className="truncate">{state.palette}</span>
+                        <Check className="w-3 h-3 text-brand ml-auto shrink-0" />
+                      </button>
+                    ) : paletteCustom.entering ? (
+                      <div className="col-span-2 sm:col-span-3">
+                        <CustomChipEditor
+                          draft={paletteCustom.draft}
+                          onDraftChange={paletteCustom.changeDraft}
+                          onConfirm={handlePaletteConfirm}
+                          onSave={handlePaletteSave}
+                          onCancel={paletteCustom.cancel}
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={paletteCustom.begin}
+                        aria-label="Add a custom palette value"
+                        className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border border-dashed border-border text-text-muted hover:text-brand hover:border-brand/40 transition-all text-left"
+                      >
+                        <Plus className="w-3 h-3 shrink-0" />
+                        Custom
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -354,6 +546,76 @@ export function PromptForm({
                     </button>
                   );
                 })}
+
+                {/* Saved custom platform presets — bookmarked chips, deletable on hover. */}
+                {platformsCustom.saved.map((entry) => {
+                  const selected = state.platforms.includes(entry.value as ImagePlatform);
+                  return (
+                    <div key={entry.id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => handlers.togglePlatform(entry.value as ImagePlatform)}
+                        title={`Saved: ${entry.label}`}
+                        aria-pressed={selected}
+                        className={cn(
+                          'flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
+                          selected
+                            ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                            : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                        )}
+                      >
+                        <Bookmark className="w-3 h-3 shrink-0 text-warning" />
+                        <span className="max-w-[160px] truncate">{entry.label}</span>
+                        {selected && <Check className="w-3 h-3 text-brand shrink-0" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => platformsCustom.remove(entry.id)}
+                        title="Delete saved value"
+                        aria-label={`Delete saved value ${entry.label}`}
+                        className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-surface-elevated border border-border text-text-muted hover:text-danger shadow-sm transition-colors"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* Confirmed custom platform values — selected chips that toggle off like any other. */}
+                {customPlatforms.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => handlers.togglePlatform(v as ImagePlatform)}
+                    title="Custom value"
+                    aria-pressed
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm"
+                  >
+                    <Plus className="w-3 h-3 text-brand shrink-0" />
+                    <span className="max-w-[160px] truncate">{v}</span>
+                    <Check className="w-3 h-3 text-brand shrink-0" />
+                  </button>
+                ))}
+
+                {platformsCustom.entering ? (
+                  <CustomChipEditor
+                    draft={platformsCustom.draft}
+                    onDraftChange={platformsCustom.changeDraft}
+                    onConfirm={handlePlatformConfirm}
+                    onSave={handlePlatformSave}
+                    onCancel={platformsCustom.cancel}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={platformsCustom.begin}
+                    aria-label="Add a custom platform value"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-dashed border-border text-text-muted hover:text-brand hover:border-brand/40 transition-all"
+                  >
+                    <Plus className="w-3 h-3 shrink-0" />
+                    Custom
+                  </button>
+                )}
               </div>
             </div>
           </Expandable>

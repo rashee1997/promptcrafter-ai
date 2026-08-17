@@ -123,6 +123,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={LIGHTING_PRESETS}
             value={lighting}
             onChange={(id) => handlers.setLighting(lighting === id ? undefined : id)}
+            field="lighting"
+            mode="image"
           />
         )}
         {isLogo && (
@@ -132,6 +134,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={LOGO_SHAPE_PRESETS}
             value={state.shapeLanguage}
             onChange={(id) => handlers.setShapeLanguage(state.shapeLanguage === id ? undefined : id)}
+            field="shapeLanguage"
+            mode="logo"
           />
         )}
         {isLogo && (
@@ -141,6 +145,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={LOGO_TYPOGRAPHY_PRESETS}
             value={state.typography}
             onChange={(id) => handlers.setTypography(state.typography === id ? undefined : id)}
+            field="typography"
+            mode="logo"
           />
         )}
         {isLogo && (
@@ -150,6 +156,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={LOGO_LOCKUP_PRESETS}
             value={state.lockup}
             onChange={(id) => handlers.setLockup(state.lockup === id ? undefined : id)}
+            field="lockup"
+            mode="logo"
           />
         )}
         {isLogo && (
@@ -159,6 +167,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={LOGO_HIDDEN_MEANING_PRESETS}
             value={state.hiddenMeaning}
             onChange={(id) => handlers.setHiddenMeaning(state.hiddenMeaning === id ? undefined : id)}
+            field="hiddenMeaning"
+            mode="logo"
           />
         )}
         {isLogo && (
@@ -169,6 +179,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             values={state.usage}
             onChange={handlers.setUsage}
             helper="Drives small-size and one-color constraints — an app icon needs favicon-level simplicity, packaging needs ink-safe contrast."
+            field="usage"
+            mode="logo"
           />
         )}
         {isLogo && (
@@ -178,6 +190,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={LOGO_BOLDNESS_PRESETS}
             value={state.boldness}
             onChange={(id) => handlers.setBoldness(state.boldness === id ? undefined : id)}
+            field="boldness"
+            mode="logo"
           />
         )}
         <ChipRow
@@ -186,6 +200,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
           options={MOOD_PRESETS}
           value={mood}
           onChange={(id) => handlers.setMood(mood === id ? undefined : id)}
+          field="mood"
+          mode="both"
         />
         {!isLogo && (
           <ChipRow
@@ -194,6 +210,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={COMPOSITION_PRESETS}
             value={composition}
             onChange={(id) => handlers.setComposition(composition === id ? undefined : id)}
+            field="composition"
+            mode="image"
           />
         )}
         {!isLogo && (
@@ -203,6 +221,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={CAMERA_PRESETS}
             value={camera}
             onChange={(id) => handlers.setCamera(camera === id ? undefined : id)}
+            field="camera"
+            mode="image"
           />
         )}
         {!isLogo && (
@@ -212,6 +232,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             options={COLOR_GRADE_PRESETS}
             value={colorGrade}
             onChange={(id) => handlers.setColorGrade(colorGrade === id ? undefined : id)}
+            field="colorGrade"
+            mode="image"
           />
         )}
         <ChipRow
@@ -220,6 +242,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
           options={RESOLUTION_OPTIONS}
           value={resolution}
           onChange={(id) => handlers.setResolution(resolution === id ? undefined : id)}
+          field="resolution"
+          mode="both"
         />
 
         {/* In-image text */}

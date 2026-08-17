@@ -426,6 +426,27 @@ export interface ImagePromptInput {
   boldness?: string;
 }
 
+/**
+ * Persistence scope of a saved custom chip preset — image-only rows
+ * (lighting, composition…), logo-only rows (mark type, palette…), or shared
+ * rows (style, mood, resolution…) that appear in both studio modes.
+ */
+export type CustomPresetMode = 'image' | 'logo' | 'both';
+
+/**
+ * A user-saved custom chip value for the Image/Logo Prompt Studio. Custom
+ * values are field-scoped (one list per StudioFormState key) and mode-scoped
+ * so image-only, logo-only, and shared rows each keep their own presets.
+ */
+export interface CustomPresetEntry {
+  id: string; // uuid (crypto.randomUUID)
+  field: string; // StudioFormState key this belongs to, e.g. 'style', 'lighting', 'palette', 'usage'
+  mode: CustomPresetMode;
+  label: string; // what's shown on the chip
+  value: string; // the raw string used as the actual setting value
+  createdAt: number;
+}
+
 /** Request contract for the Image Prompt Studio API route. */
 export interface ImagePromptGenerationRequest {
   provider: ProviderConfig;

@@ -1,13 +1,14 @@
-import { HistoryItem, PromptQuality, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
+import { CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
 import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
 
 const DB_NAME = 'PromptCrafter_DB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_HISTORY = 'history';
 const STORE_SESSIONS = 'sessions';
 const STORE_PROVIDERS = 'providers';
 const STORE_SETTINGS = 'settings';
+const STORE_CUSTOM_PRESETS = 'customPresets';
 
 /**
  * Default Gemini model used whenever a request doesn't carry an explicit
@@ -60,6 +61,7 @@ export const DEFAULT_BUILTIN_PROVIDER: ProviderConfig = {
 const memorySessions: Session[] = [];
 const memoryHistory: HistoryItem[] = [];
 const memoryProviders: ProviderConfig[] = [DEFAULT_BUILTIN_PROVIDER];
+const memoryCustomPresets: CustomPresetEntry[] = [];
 let memoryActiveProviderId: string = DEFAULT_BUILTIN_PROVIDER.id;
 const memoryActiveModels: Record<string, string> = {};
 
@@ -145,6 +147,13 @@ function openDB(): Promise<IDBDatabase> {
           sessionsStore.createIndex('domainId', 'domainId', { unique: false });
         }
 
+        // Schema v3: dedicated store for user-saved custom chip presets (kept
+        // separate from the arbitrary key-value STORE_SETTINGS so presets stay
+        // queryable/deletable per studio field independently).
+        if (!db.objectStoreNames.contains(STORE_CUSTOM_PRESETS)) {
+          db.createObjectStore(STORE_CUSTOM_PRESETS, { keyPath: 'id' });
+        }
+
         // Schema migration v1 -> v2: read from `history` store and populate `sessions`
         if (db.objectStoreNames.contains(STORE_HISTORY) && db.objectStoreNames.contains(STORE_SESSIONS)) {
           const historyStore = tx.objectStore(STORE_HISTORY);
@@ -204,6 +213,107 @@ function setLocalSessions(sessions: Session[]): void {
     localStorage.setItem('promptcrafter_sessions', JSON.stringify(sessions));
   } catch (err) {
     console.warn('LocalStorage write skipped:', err);
+  }
+}
+
+// Fallback LocalStorage functions for custom presets (same shape as sessions)
+function getLocalCustomPresets(): CustomPresetEntry[] {
+  if (typeof window === 'undefined') return memoryCustomPresets;
+  try {
+    const raw = localStorage.getItem('promptcrafter_custom_presets');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : memoryCustomPresets;
+    }
+    return memoryCustomPresets;
+  } catch {
+    return memoryCustomPresets;
+  }
+}
+
+function setLocalCustomPresets(entries: CustomPresetEntry[]): void {
+  memoryCustomPresets.length = 0;
+  memoryCustomPresets.push(...entries);
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('promptcrafter_custom_presets', JSON.stringify(entries));
+  } catch (err) {
+    console.warn('LocalStorage write skipped:', err);
+  }
+}
+
+/**
+ * Filter a preset list to one studio field, honoring the requested mode scope:
+ * 'both' presets surface for every query; image/logo presets only for their own.
+ */
+function filterCustomPresets(
+  entries: CustomPresetEntry[],
+  field: string,
+  mode: CustomPresetMode
+): CustomPresetEntry[] {
+  return entries
+    .filter((e) => e.field === field && (mode === 'both' || e.mode === mode || e.mode === 'both'))
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+// --- Custom Preset Public Storage API (Image/Logo Prompt Studio) ---
+
+export async function getCustomPresets(field: string, mode: CustomPresetMode): Promise<CustomPresetEntry[]> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_CUSTOM_PRESETS, 'readonly');
+    const store = tx.objectStore(STORE_CUSTOM_PRESETS);
+    const all = await new Promise<CustomPresetEntry[]>((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    return filterCustomPresets(all, field, mode);
+  } catch {
+    return filterCustomPresets(getLocalCustomPresets(), field, mode);
+  }
+}
+
+export async function saveCustomPreset(
+  entry: Omit<CustomPresetEntry, 'id' | 'createdAt'>
+): Promise<CustomPresetEntry> {
+  const full: CustomPresetEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    createdAt: Date.now(),
+  };
+
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_CUSTOM_PRESETS, 'readwrite');
+    const store = tx.objectStore(STORE_CUSTOM_PRESETS);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.put(full);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const entries = getLocalCustomPresets();
+    entries.push(full);
+    setLocalCustomPresets(entries);
+  }
+
+  return full;
+}
+
+export async function deleteCustomPreset(id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_CUSTOM_PRESETS, 'readwrite');
+    const store = tx.objectStore(STORE_CUSTOM_PRESETS);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const entries = getLocalCustomPresets().filter((e) => e.id !== id);
+    setLocalCustomPresets(entries);
   }
 }
 
