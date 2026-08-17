@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
 import { AppTab, Navbar } from '@/components/navbar';
 import { ImagePromptStudio } from '@/components/image-prompt-studio';
+import { ProjectDashboard } from '@/components/video-prompt/project-dashboard';
+import { StudioHeader } from '@/components/video-prompt/studio-header';
+import { NewProjectModal } from '@/components/video-prompt/new-project-modal';
 import { PromptForm } from '@/components/prompt-form';
 import { PromptOutput } from '@/components/prompt-output';
 import { HistoryPanel } from '@/components/history-panel';
@@ -22,8 +25,10 @@ import {
   Sun,
   Moon,
   ImagePlus,
+  Clapperboard,
 } from 'lucide-react';
 import { PromptInput, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
+import { VideoProject } from '@/types/video';
 import {
   clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
@@ -46,6 +51,7 @@ import {
 } from '@/lib/storage';
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { generatePromptStream, refinePromptStream } from '@/lib/ai-client';
+import { deleteVideoProject, getVideoProjects, saveVideoProject } from '@/lib/video-storage';
 import { computePromptStats, generateVersionName, unwrapCodeBlock } from '@/lib/prompt-stats';
 
 export default function HomePage() {
@@ -73,6 +79,11 @@ export default function HomePage() {
 
   // Command palette state
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Video Prompt Studio state (Phase 2 — production hub)
+  const [videoProjects, setVideoProjects] = useState<VideoProject[]>([]);
+  const [activeVideoProjectId, setActiveVideoProjectId] = useState<string | null>(null);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
 
   // Deep link from the workspace version picker into History's diff view
   const [pendingHistoryDiff, setPendingHistoryDiff] = useState<{
@@ -152,6 +163,11 @@ export default function HomePage() {
     };
 
     loadAppData();
+  }, []);
+
+  // Load the Video Prompt Studio production portfolio.
+  useEffect(() => {
+    getVideoProjects().then(setVideoProjects);
   }, []);
 
   const handleSelectActiveProvider = async (id: string) => {
@@ -575,6 +591,41 @@ export default function HomePage() {
     setTestModalOpen(true);
   };
 
+  // ── Video Prompt Studio (Phase 2 — production hub) ──
+  const activeVideoProject =
+    videoProjects.find((p) => p.id === activeVideoProjectId) ?? null;
+
+  const handleCreateVideoProject = async (title: string, customInstructions: string) => {
+    const timestamp = Date.now();
+    const project: VideoProject = {
+      id: `video-${timestamp}-${Math.random().toString(36).slice(2, 7)}`,
+      name: title,
+      customInstructions,
+      status: 'draft',
+      storyBible: { characters: [], locations: [], continuityLog: [] },
+      shots: [],
+      chatHistory: [],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    await saveVideoProject(project);
+    setVideoProjects(await getVideoProjects());
+    setVideoModalOpen(false);
+    setActiveVideoProjectId(project.id);
+    toast.success('Project created', `"${project.name}" is ready for production planning.`);
+  };
+
+  const handleSelectVideoProject = (id: string) => setActiveVideoProjectId(id);
+
+  const handleBackToVideoDashboard = () => setActiveVideoProjectId(null);
+
+  const handleDeleteVideoProject = async (id: string) => {
+    await deleteVideoProject(id);
+    setVideoProjects(await getVideoProjects());
+    setActiveVideoProjectId((prev) => (prev === id ? null : prev));
+    toast.success('Project deleted', 'Removed from your production portfolio.');
+  };
+
   const activeVersion = currentSession
     ? currentSession.versions.find((v) => v.id === currentSession.activeVersionId) ||
       currentSession.versions[currentSession.versions.length - 1]
@@ -633,6 +684,14 @@ export default function HomePage() {
       icon: <ImagePlus className="w-4 h-4" />,
       group: 'Navigate',
       run: () => setActiveTab('image'),
+    },
+    {
+      id: 'video',
+      label: 'Open video studio',
+      hint: 'Plan video productions and manage shot-level prompts',
+      icon: <Clapperboard className="w-4 h-4" />,
+      group: 'Navigate',
+      run: () => setActiveTab('video'),
     },
     {
       id: 'history',
@@ -787,6 +846,65 @@ export default function HomePage() {
                 />
               </motion.div>
             )}
+            {activeTab === 'video' && (
+              <motion.div
+                key="video"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="max-w-6xl mx-auto"
+              >
+                <div className="space-y-6">
+                  <StudioHeader
+                    activeProject={activeVideoProject}
+                    projects={videoProjects}
+                    onSelectProject={handleSelectVideoProject}
+                    onNewProject={() => setVideoModalOpen(true)}
+                    onBackToDashboard={handleBackToVideoDashboard}
+                  />
+                  {activeVideoProject ? (
+                    <div className="rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-6 space-y-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-text-primary">Production workspace</h3>
+                        <p className="mt-1 text-xs text-text-secondary leading-relaxed">
+                          This is where the story bible, characters, locations, and shot plan will
+                          live. Phase 3 wires the script-to-shots workflow — your Directorial Brief
+                          is preserved below until then.
+                        </p>
+                      </div>
+                      {activeVideoProject.customInstructions && (
+                        <div className="rounded-xl border border-border bg-surface-code p-4">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+                            Directorial brief
+                          </p>
+                          <p className="text-xs text-text-primary whitespace-pre-wrap leading-relaxed font-mono">
+                            {activeVideoProject.customInstructions}
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border">
+                          {activeVideoProject.shots.length} shot
+                          {activeVideoProject.shots.length === 1 ? '' : 's'} planned
+                        </span>
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border">
+                          {activeVideoProject.storyBible?.characters?.length ?? 0} character
+                          {activeVideoProject.storyBible?.characters?.length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <ProjectDashboard
+                      projects={videoProjects}
+                      onSelectProject={handleSelectVideoProject}
+                      onNewProject={() => setVideoModalOpen(true)}
+                      onDeleteProject={handleDeleteVideoProject}
+                    />
+                  )}
+                </div>
+              </motion.div>
+            )}
             {activeTab === 'history' && (
               <motion.div
                 key="history"
@@ -851,6 +969,13 @@ export default function HomePage() {
         generatedPrompt={promptToTest}
         provider={activeProvider}
         providers={providers.map((p) => ({ ...p, model: p.activeModel ?? p.model }))}
+      />
+
+      {/* Video Prompt Studio — Directorial Brief modal (Phase 2) */}
+      <NewProjectModal
+        isOpen={videoModalOpen}
+        onClose={() => setVideoModalOpen(false)}
+        onCreate={handleCreateVideoProject}
       />
 
       {/* Command Palette (⌘K) */}

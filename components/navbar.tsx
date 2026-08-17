@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   ImagePlus,
+  Clapperboard,
   History,
   Settings,
   Cpu,
@@ -19,7 +20,7 @@ import { ProviderConfig } from '@/types';
 import { getProviderModelList } from '@/lib/storage';
 import { Tooltip } from './tooltip';
 
-export type AppTab = 'generator' | 'image' | 'history' | 'settings';
+export type AppTab = 'generator' | 'image' | 'video' | 'history' | 'settings';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -38,6 +39,7 @@ interface NavbarProps {
 const TABS = [
   { id: 'generator', label: 'Create', Icon: Sparkles },
   { id: 'image', label: 'Image', Icon: ImagePlus },
+  { id: 'video', label: 'Video', Icon: Clapperboard },
   { id: 'history', label: 'History', Icon: History },
   { id: 'settings', label: 'Settings', Icon: Settings },
 ] as const;
@@ -241,7 +243,7 @@ export function Navbar({
         aria-label="Primary"
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface-card/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="grid h-16 grid-cols-4 max-w-md mx-auto">
+        <div className="grid h-16 grid-cols-5 max-w-md mx-auto">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
