@@ -29,14 +29,35 @@ const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
     "description": "<one-line storyboard summary>",
     "promptText": "<the full 6-part shot prompt from SUBJECT to LENS>",
     "continuityHandoff": "<subject + camera ending state this shot leaves behind for the next shot>",
-    "durationSeconds": <integer 8–30>
+    "durationSeconds": <integer 8–30>,
+    "dialogue": [
+      { "speaker": "<exact Story Bible name>", "line": "<short spoken line>", "tone": "<delivery, optional>" }
+    ],
+    "negativePrompt": "<3–5 short comma-separated terms, most-damaging artifact first, or empty string>"
   }
 }
 \`\`\`
 - durationSeconds is the target clip length and MUST be an integer between 8 and 30 inclusive — never shorter than 8s, never longer than 30s. State the length when it matters to pacing.
 - When the director asks you to revise the previous draft, re-emit the SAME shotNumber with the improved promptText; do not increment.
 - When the director approves and asks for the next shot, increment by 1.
-- Never re-number existing confirmed shots and never draft a shot that reuses an earlier shotNumber already confirmed in the storyboard.`;
+- Never re-number existing confirmed shots and never draft a shot that reuses an earlier shotNumber already confirmed in the storyboard.
+- \`dialogue\` is a SEPARATE structured field: spoken lines NEVER go inside promptText. An empty array means the shot is silent (ambience + score carry it).
+- \`negativePrompt\` is a SEPARATE structured field: "no X" clauses NEVER go inside promptText.`;
+
+const DIALOGUE_RULES = `DIALOGUE RULES (Rule 6):
+- dialogue is a SEPARATE structured field — never write spoken lines inside promptText.
+- Every line's speaker must be an exact Story Bible character name (Rule 4) — never invent a speaker.
+- Keep each line short enough to be spoken within this shot's durationSeconds (~2–3 words per second is a safe ceiling); a line that reads longer than the shot will produce rushed or gibberish speech.
+- Leave dialogue as an empty array for a silent shot — do not force dialogue that isn't motivated by the beat.
+- For shots with 2+ speaking characters, make each speaker distinguishable by their locked Story Bible appearance, not just by name, since multi-character scenes are the most common source of crossed/misattributed lines.`;
+
+const NEGATIVE_PROMPT_RULES = `NEGATIVE PROMPT RULES (Rule 7):
+- negativePrompt is a SEPARATE field — never write "no X" clauses inside promptText.
+- 3–5 short terms, comma-separated. Fewer under-constrains the model; more causes over-constraint artifacts.
+- Order terms by how much each would ruin THIS shot — put the most damaging risk first.
+- Always include the shot-appropriate baseline: blur, distorted anatomy, flickering, unstable motion, duplicate objects.
+- If this shot has dialogue, also include: lip-sync misalignment, garbled speech, audio desync.
+- If this shot has hands/props in frame, also include: floating hands, extra fingers, morphing objects.`;
 
 /** Injects the next sequential shot number into the output contract. */
 function withNextShot(contract: string, nextShot: number): string {
@@ -74,6 +95,10 @@ HARD RULES:
 3. Clip ceiling: every shot is 8–30 seconds. Compose the action so it fits the chosen duration; never draft a shot that implies longer.
 4. Keep visual style + VFX direction locked: shots may not change color grade, film stock, aspect ratio, particle density, or pacing.
 5. Continuity: each shot's continuityHandoff describes where the subject and camera end, so the next shot can pick up without drift.
+6. Anchor every hand/prop interaction to a concrete object — never describe a hand or limb moving in empty space; give it something specific to hold, touch, or rest on (jittery/floating limbs are the #1 single-shot glitch).
+7. Do not stack contradictory descriptors in one section (e.g. "gritty realism" + "pristine, flawless skin") — pick one register per shot and hold it.
+8. ${DIALOGUE_RULES}
+9. ${NEGATIVE_PROMPT_RULES}
 
 ${withNextShot(OUTPUT_CONTRACT, nextShot)}`;
 }

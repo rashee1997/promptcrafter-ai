@@ -56,6 +56,18 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
     onUpdateRef.current(updated);
   };
 
+  /** Persists a field edit (e.g. negativePrompt) on one shot without a log entry. */
+  const persistShotPatch = (shotId: string, patch: Partial<VideoShot>) => {
+    const base = projectRef.current;
+    const updated: VideoProject = {
+      ...base,
+      shots: base.shots.map((s) => (s.id === shotId ? { ...s, ...patch } : s)),
+      updatedAt: Date.now(),
+    };
+    void saveVideoProject(updated);
+    onUpdateRef.current(updated);
+  };
+
   /** Persists a character-reference change on one shot + logs it. */
   const persistCharacterRef = (shotId: string, update: (shot: VideoShot) => VideoShot, logEntry: string) => {
     const base = projectRef.current;
@@ -191,6 +203,7 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
                 }
                 onAddCharacterRef={handleAddCharacterRef}
                 onRemoveCharacterRef={handleRemoveCharacterRef}
+                onChange={(patch) => persistShotPatch(shot.id, patch)}
               />
             </Fragment>
           ))}

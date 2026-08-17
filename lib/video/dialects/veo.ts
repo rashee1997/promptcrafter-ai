@@ -31,15 +31,25 @@ function motionTag(camera: string): string {
   return MOTION_KEYWORDS.test(camera) ? `[Motion: ${camera}]` : '';
 }
 
-/** Audio beat cue — deterministic dialect scaffold, never invented content. */
-function audioCue(parts: ReturnType<typeof parseUniversalPrompt>): string {
-  const beat = parts.action.split('.')[0].trim();
-  return `[Audio: beat resolves on "${beat || 'the action peak'}"]`;
+/**
+ * Dialogue lines in Veo's documented safe form: "speaker says: line" with a
+ * colon and NO quotes around the line — the colon form avoids Veo's
+ * baked-in-subtitle failure mode. A silent shot gets an explicit ambience cue.
+ */
+function dialogueLines(shot: VideoShot): string[] {
+  if (!shot.dialogue?.length) {
+    return ['[Audio: ambience + score, no dialogue this shot]'];
+  }
+  return shot.dialogue.map(
+    (d) => `[Dialogue] ${d.speaker} says: ${d.line}${d.tone ? ` (${d.tone})` : ''}`
+  );
 }
 
 /**
  * Re-expresses the stored 6-part universal shot prompt in the Veo dialect:
- * every section appears as an ingredient tag; nothing is summarized. Locked
+ * every section appears as an ingredient tag; nothing is summarized. Real
+ * dialogue (when present) is emitted as its own block — never a copy of the
+ * action beat — plus the subtitle guard and the shot's negative prompt. Locked
  * character reference images are appended as reference-image tags (the Veo
  * API's imageUrl-style parameter payload).
  */
@@ -48,13 +58,15 @@ export function formatVeoShot(shot: VideoShot, options?: VeoOptions): string {
   const lines = [
     `[Subject: ${parts.subject}]`,
     `[Action: ${parts.action}]`,
-    audioCue(parts),
     `[Camera: ${parts.camera}]`,
     motionTag(parts.camera),
     `[Lighting: ${parts.lighting}]`,
     `[Environment: ${parts.environment}]`,
     `[Style: ${parts.lens}]`,
     `[Duration: ${Math.round(shot.durationSeconds || 12)}s]`,
+    ...dialogueLines(shot),
+    shot.dialogue?.length ? '[No subtitles, no text overlay]' : '',
+    shot.negativePrompt ? `[Negative: ${shot.negativePrompt}]` : '',
     ...shotReferenceImages(shot, options?.referenceImages).map(
       (r) => `[Reference image: ${r.characterName}] — image_url: ${r.dataUrl}`
     ),

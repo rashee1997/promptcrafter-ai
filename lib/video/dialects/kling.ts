@@ -4,7 +4,7 @@
 // multi-shot voice binding with a lip-sync cue line whenever a character in
 // the shot carries a voiceTone in the Story Bible.
 
-import type { VideoCharacter, VideoShot } from '@/types/video';
+import type { DialogueLine, VideoCharacter, VideoShot } from '@/types/video';
 import {
   asSentence,
   findPromptCharacters,
@@ -12,6 +12,11 @@ import {
   shotReferenceImages,
   type VideoReferenceImage,
 } from './shared';
+
+/** The dialogue line for one speaker (exact Story Bible name match). */
+function shotDialogueFor(shot: VideoShot, speaker: string): DialogueLine | undefined {
+  return shot.dialogue?.find((d) => d.speaker === speaker);
+}
 
 export const KLING_DIALECT = {
   id: 'kling',
@@ -44,17 +49,25 @@ export function formatKlingShot(shot: VideoShot, options?: KlingOptions): string
     `LENS — ${parts.lens}`,
   ];
 
-  if (speaker) {
+  const dialogue = speaker ? shotDialogueFor(shot, speaker.name) : undefined;
+  if (speaker && dialogue) {
+    // Kling's native multi-shot dialogue syntax — the lip-sync cue is bound to
+    // the REAL line text (A1), never an invented placeholder.
     lines.push(
       '',
-      `VOICE BINDING — ${speaker.name} speaks with "${speaker.voiceTone}"; bind the same voice across every shot this character appears in.`,
-      `LIP-SYNC CUE — animate ${speaker.name}'s lips to the dialogue line; delivery matches "${speaker.voiceTone}".`
+      `[Character: ${speaker.role || speaker.name}, ${dialogue.tone || speaker.voiceTone}]: "${dialogue.line}"`,
+      `LIP-SYNC CUE — animate ${speaker.name}'s lips to the line above; delivery matches "${dialogue.tone || speaker.voiceTone}".`
     );
   } else {
     lines.push(
       '',
       'VOICE BINDING — no dialogue in this shot; ambience and score carry the beat across cuts.'
     );
+  }
+
+  if (shot.negativePrompt) {
+    // Kling's own "Negative Semantic Mapping" — a separate field, not inline.
+    lines.push('', `NEGATIVE — ${shot.negativePrompt}`);
   }
 
   const refs = shotReferenceImages(shot, options?.referenceImages);

@@ -5,6 +5,18 @@
 export type VideoDialect = 'veo' | 'higgsfield' | 'kling' | 'seedance';
 export type ProjectStatus = 'draft' | 'active';
 
+/**
+ * Stage 1 output — script treatment (logline, act beats, tone, overview).
+ * Lives here (not in the bootstrap pipeline types) because VideoProject
+ * persists a creation-time draft of it (Part 3 — AI-assisted Overview).
+ */
+export interface ScriptTreatment {
+  logline: string;
+  actBeats: string[];
+  tone: string;
+  overview: string;
+}
+
 export interface VideoCharacter {
   id: string;
   name: string;
@@ -68,6 +80,35 @@ export interface VideoShot {
    * Optional — shots persisted before this field existed stay readable.
    */
   characterIds?: string[];
+  /**
+   * Exact spoken lines, kept short enough to fit durationSeconds. Empty /
+   * missing = a silent shot (ambience & score carry it). Never embedded in
+   * promptText — this is the structured field the dialect adapters render per
+   * model convention. Optional — shots persisted before this feature stay
+   * readable as silent shots.
+   */
+  dialogue?: DialogueLine[];
+  /**
+   * 3–5 comma-separated negative terms, most-damaging artifact first, or an
+   * empty string. Kept out of promptText so each dialect emits it through the
+   * target model's native negative field (Kling Negative Semantic Mapping,
+   * Veo/Seedance negative lines, …).
+   */
+  negativePrompt?: string;
+}
+
+/**
+ * One spoken line locked to a shot. `speaker` must be an exact Story Bible
+ * character name (Rule 4) — never a paraphrase — so dialect adapters can bind
+ * the line to the right character's voice and mouth.
+ */
+export interface DialogueLine {
+  /** Exact Story Bible character name — never a paraphrase. */
+  speaker: string;
+  /** The exact words spoken, short enough to fit the clip's durationSeconds. */
+  line: string;
+  /** Optional delivery direction, e.g. "urgent whisper", "flat, sarcastic". */
+  tone?: string;
 }
 
 export interface ChatMessage {
@@ -107,6 +148,13 @@ export interface StoryBibleCharacterImage {
   /** Data URL mirror — used by the LocalStorage fallback path. */
   imageDataUrl?: string;
   timestamp: number;
+  /**
+   * Director-chosen primary reference for this character. Consumers pick the
+   * primary entry (falling back to the newest) for the sidebar thumbnail and
+   * dialect exports instead of blindly taking saved[0]. Optional — entries
+   * saved before this field existed behave as non-primary.
+   */
+  isPrimary?: boolean;
 }
 
 /**
@@ -125,6 +173,16 @@ export interface DraftedShot {
   continuityHandoff: string;
   /** Target clip duration in seconds (8–30). */
   durationSeconds: number;
+  /** Empty array = a silent/no-dialogue shot (ambience & score carry it). */
+  dialogue: DialogueLine[];
+  /** Comma-separated or short-phrase negative terms, 3–5 recommended. */
+  negativePrompt: string;
+  /**
+   * UI metadata (not persisted): set when the model's requested duration was
+   * clamped to the 8–30s ceiling, so the card can tell the director instead of
+   * silently truncating.
+   */
+  durationClampedFrom?: number;
 }
 
 export interface VideoProject {
@@ -137,6 +195,13 @@ export interface VideoProject {
   chatHistory: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  /**
+   * Script treatment confirmed during project creation (Part 3). When
+   * present, BootstrapFlow seeds Stage 1 from this instead of generating a
+   * fresh one, and opens directly on Stage 2. Cleared once the director
+   * revises/reconfirms Stage 1 inside the full wizard.
+   */
+  draftScriptOverview?: ScriptTreatment | null;
 }
 
 export type ThinkingOrbState =

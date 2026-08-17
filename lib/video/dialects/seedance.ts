@@ -23,10 +23,21 @@ export interface SeedanceOptions {
   referenceImages?: VideoReferenceImage[];
 }
 
-/** Audio marker line — deterministic scaffold, derived from the action beat. */
-function audioMarker(parts: ReturnType<typeof parseUniversalPrompt>): string {
-  const beat = parts.action.split('.')[0].trim();
-  return `AUDIO — score + ambience bed; beat resolves on "${beat || 'the action peak'}"`;
+/**
+ * Audio marker block — driven by REAL dialogue when the shot has it; a silent
+ * shot falls back to a plain score + ambience bed (never a copy of the action
+ * beat mislabeled as sound).
+ */
+function audioMarker(shot: VideoShot): string[] {
+  if (!shot.dialogue?.length) {
+    return ['AUDIO — score + ambience bed; no dialogue this shot.'];
+  }
+  return [
+    ...shot.dialogue.map(
+      (d) => `DIALOGUE — ${d.speaker}: "${d.line}"${d.tone ? ` (${d.tone})` : ''}`
+    ),
+    'AUDIO — the spoken dialogue above, synced to mouth movement; score + ambience bed under it.',
+  ];
 }
 
 /**
@@ -44,7 +55,8 @@ export function formatSeedanceShot(shot: VideoShot, options?: SeedanceOptions): 
     `ENVIRONMENT — ${parts.environment}`,
     `LENS — ${parts.lens}`,
     `REFERENCE FRAME — [Ref: shot-${Math.round(shot.shotNumber || 0)}_frame]`,
-    audioMarker(parts),
+    ...audioMarker(shot),
+    shot.negativePrompt ? `NEGATIVE — ${shot.negativePrompt}` : '',
     ...shotReferenceImages(shot, options?.referenceImages).map(
       (r) => `REFERENCE IMAGE — ${r.characterName} (image_url): ${r.dataUrl}`
     ),

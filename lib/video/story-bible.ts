@@ -7,6 +7,7 @@
 // `story-bible-context.tsx`.
 
 import type {
+  DialogueLine,
   DraftedShot,
   StoryBible,
   VideoProject,
@@ -157,14 +158,40 @@ export function parseDraftedShot(text: string): DraftedShot | null {
 
   if (!promptText || !Number.isFinite(shotNumber) || shotNumber < 1) return null;
 
+  // Dialogue is a first-class structured field — never parsed out of the
+  // visual promptText. Malformed/extra entries are dropped, never merged.
+  const dialogueRaw = Array.isArray(shot.dialogue) ? shot.dialogue : [];
+  const dialogue: DialogueLine[] = dialogueRaw.flatMap((d) => {
+    if (!d || typeof d !== 'object') return [];
+    const entry = d as Record<string, unknown>;
+    const speaker = typeof entry.speaker === 'string' ? entry.speaker.trim() : '';
+    const line = typeof entry.line === 'string' ? entry.line.trim() : '';
+    if (!speaker || !line) return [];
+    return [
+      {
+        speaker,
+        line,
+        ...(typeof entry.tone === 'string' && entry.tone.trim() ? { tone: entry.tone.trim() } : {}),
+      },
+    ];
+  });
+
+  const negativePrompt = typeof shot.negativePrompt === 'string' ? shot.negativePrompt.trim() : '';
+
+  // Clamp silently in the persisted value, but record what the model asked for
+  // so the UI can surface the truncation instead of hiding it (A5).
+  const rawDuration = Number.isFinite(durationSeconds) ? Math.round(durationSeconds) : 12;
+  const clampedDuration = Math.min(30, Math.max(8, rawDuration));
+
   return {
     shotNumber: Math.floor(shotNumber),
     description: description || promptText.slice(0, 140),
     promptText,
     continuityHandoff: handoff || promptText.slice(0, 140),
-    durationSeconds: Number.isFinite(durationSeconds)
-      ? Math.min(30, Math.max(8, Math.round(durationSeconds)))
-      : 12,
+    durationSeconds: clampedDuration,
+    dialogue,
+    negativePrompt,
+    ...(clampedDuration !== rawDuration ? { durationClampedFrom: rawDuration } : {}),
   };
 }
 

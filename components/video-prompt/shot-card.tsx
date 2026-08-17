@@ -12,6 +12,8 @@ import { useStoryBible } from '@/lib/video/story-bible-context';
 import { useInlineCopy } from '@/lib/use-inline-copy';
 import { cn } from '@/lib/utils';
 import { DialectTabs } from './dialect-tabs';
+import { ShotDialogueCard } from './shot-dialogue-card';
+import { NegativePromptField } from './negative-prompt-field';
 import { CHARACTER_DRAG_TYPE } from './sidebar-characters-panel';
 
 interface ShotCardProps {
@@ -27,6 +29,8 @@ interface ShotCardProps {
   /** Lock/unlock a Story Bible character reference on this shot (drag & drop). */
   onAddCharacterRef: (shotId: string, characterId: string) => void;
   onRemoveCharacterRef: (shotId: string, characterId: string) => void;
+  /** Persist a field edit (e.g. negativePrompt) back through the timeline. */
+  onChange?: (patch: Partial<VideoShot>) => void;
 }
 
 /**
@@ -50,6 +54,7 @@ export function ShotCard({
   onDelete,
   onAddCharacterRef,
   onRemoveCharacterRef,
+  onChange,
 }: ShotCardProps) {
   const [dialectId, setDialectId] = useState<VideoDialect['id']>('universal');
   const { copiedKey, copy } = useInlineCopy(1200);
@@ -57,14 +62,16 @@ export function ShotCard({
   const [dragOver, setDragOver] = useState(false);
   const groupId = `shot-${shot.shotNumber}`;
 
-  /** Saved Story Bible images for characters locked onto this shot. */
-  const refEntries = useMemo(
-    () =>
-      entries.filter(
-        (e) => e.characterId && shot.characterIds?.includes(e.characterId)
-      ),
-    [entries, shot.characterIds]
-  );
+  /** Saved Story Bible images for characters locked onto this shot — the
+   *  director-chosen primary per character, falling back to the newest. */
+  const refEntries = useMemo(() => {
+    const locked = shot.characterIds ?? [];
+    return locked.flatMap((id) => {
+      const matches = entries.filter((e) => e.characterId === id);
+      if (matches.length === 0) return [];
+      return [matches.find((e) => e.isPrimary) ?? matches[0]];
+    });
+  }, [entries, shot.characterIds]);
 
   /** Converts the locked blobs to base64 data URLs for dialect injection. */
   const [refDataUrls, setRefDataUrls] = useState<Record<string, string>>({});
@@ -226,6 +233,19 @@ export function ShotCard({
           ))}
         </div>
       )}
+
+      {/* Dialogue — locked lines, shown as a separate card below the prompt */}
+      {shot.dialogue && shot.dialogue.length > 0 && (
+        <ShotDialogueCard dialogue={shot.dialogue} durationSeconds={shot.durationSeconds} />
+      )}
+
+      {/* Negative prompt — editable on the confirmed shot, persisted via timeline */}
+      <NegativePromptField
+        value={shot.negativePrompt ?? ''}
+        onChange={(negativePrompt) => onChange?.({ negativePrompt })}
+        hasDialogue={(shot.dialogue?.length ?? 0) > 0}
+        promptText={shot.promptText}
+      />
 
       {/* Dialect selector + live preview */}
       <div className="space-y-1.5">
