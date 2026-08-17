@@ -44,11 +44,11 @@ export const MessageContent = ({
 }: MessageContentProps) => (
   <div
     className={cn(
-      "is-user:dark flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-sm",
-      // User bubbles — PromptCrafter violet glass
-      "group-[.is-user]:ml-auto group-[.is-user]:rounded-xl group-[.is-user]:border group-[.is-user]:border-purple-500/30 group-[.is-user]:bg-purple-600/30 group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-purple-100",
-      // Assistant messages — PromptCrafter slate glass
-      "group-[.is-assistant]:rounded-xl group-[.is-assistant]:border group-[.is-assistant]:border-slate-800/80 group-[.is-assistant]:bg-slate-900/80 group-[.is-assistant]:text-slate-100",
+      "flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-sm",
+      // User bubbles — brand-tinted glass, matches app tokens
+      "group-[.is-user]:ml-auto group-[.is-user]:rounded-xl group-[.is-user]:border group-[.is-user]:border-brand/30 group-[.is-user]:bg-brand/10 group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-text-primary",
+      // Assistant messages — app surface glass
+      "group-[.is-assistant]:rounded-xl group-[.is-assistant]:border group-[.is-assistant]:border-border group-[.is-assistant]:bg-surface-card/80 group-[.is-assistant]:text-text-primary",
       className
     )}
     {...props}

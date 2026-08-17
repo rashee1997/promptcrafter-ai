@@ -111,15 +111,15 @@ function ChatInputInner({ project, busy, onSend }: ChatInputProps) {
           placeholder="Describe the next shot… @ for cast/locations, # for camera moves, ! for lighting — or drop reference images/PDFs here"
           aria-label="Shot drafting message"
           className={cn(
-            'w-full resize-none border-0 bg-transparent px-3.5 py-3 text-sm leading-relaxed font-mono text-slate-100',
-            'placeholder:text-slate-500 focus:outline-none min-h-[64px] max-h-48 whitespace-pre-wrap break-words'
+            'w-full resize-none border-0 bg-transparent px-3.5 py-3 text-sm leading-relaxed font-mono text-text-primary',
+            'placeholder:text-text-muted focus:outline-none min-h-[64px] max-h-48 whitespace-pre-wrap break-words'
           )}
         />
         <TokenAutocomplete project={project} textareaRef={textareaRef} value={value} onChange={controller.textInput.setInput} />
-        <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-slate-800/80">
-          <span className="text-[10px] text-slate-500 font-medium">
-            <span className="text-slate-400">@</span> cast · <span className="text-slate-400">#</span> camera ·{' '}
-            <span className="text-slate-400">!</span> lighting · <span className="text-slate-400">⇪</span> attachments
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border">
+          <span className="text-[10px] text-text-muted font-medium">
+            <span className="text-text-secondary">@</span> cast · <span className="text-text-secondary">#</span> camera ·{' '}
+            <span className="text-text-secondary">!</span> lighting · <span className="text-text-secondary">⇪</span> attachments
           </span>
           <button
             type="submit"
