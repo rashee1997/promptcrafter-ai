@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Clapperboard } from 'lucide-react';
+import { Clapperboard } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
 import type { ThinkingOrbState, VideoCharacter, VideoLocation, VideoProject } from '@/types/video';
 import { runVideoBootstrap, suggestVideoLocations } from '@/lib/ai-client';
+import { getSavedProviders } from '@/lib/storage';
 import { saveVideoProject } from '@/lib/video-storage';
 import type { BootstrapContext, EffectsCandidate, ScriptTreatment, StyleCandidate, VideoBootstrapResponse, VideoBootstrapStage } from '@/lib/video/bootstrap/types';
 import { cn } from '@/lib/utils';
 import { ThinkingOrb } from './thinking-orb';
+import { BootstrapProgress } from './bootstrap-progress';
+import { BootstrapModelSelector, type StageModelRef } from './bootstrap-model-selector';
 import { BootstrapScriptStep } from './bootstrap-script-step';
 import { BootstrapCharactersStep } from './bootstrap-characters-step';
 import { BootstrapScenesStep } from './bootstrap-scenes-step';
@@ -22,6 +25,8 @@ interface BootstrapFlowProps {
   project: VideoProject;
   onComplete: (project: VideoProject) => void;
 }
+
+const STAGE_OVERRIDE_KEY = 'promptcrafter_video_stage_models';
 
 const STAGE_META: { id: VideoBootstrapStage; label: string; state: ThinkingOrbState; hint: string }[] = [
   { id: 1, label: 'Script', state: 'composing', hint: 'Treatment — logline, act beats, tone' },
@@ -59,8 +64,62 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
   const [effectsOptions, setEffectsOptions] = useState<EffectsCandidate[]>([]);
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
   const [selectedEffectsId, setSelectedEffectsId] = useState<string | null>(null);
+  // Task 4.5 — per-stage model overrides ({ [stage]: StageModelRef }). A ref
+  // is just { providerId, model } — never a full ProviderConfig, so API keys
+  // stay in the encrypted provider store. An unset stage falls back to the
+  // Settings-global provider, never mutating it.
+  const [stageOverrides, setStageOverrides] = useState<Partial<Record<VideoBootstrapStage, StageModelRef>>>({});
   const startedRef = useRef(false);
   const busyRef = useRef(false);
+
+  /**
+   * Resolves the provider for a stage: the per-stage override pointer, looked
+   * up live in the saved (decrypted) provider store so the current key/model
+   * list is always used; otherwise the Settings-global provider.
+   */
+  const stageProvider = async (stage: VideoBootstrapStage): Promise<ProviderConfig> => {
+    const ref = stageOverrides[stage];
+    if (!ref) return provider;
+    try {
+      const saved = await getSavedProviders();
+      const found = saved.find((p) => p.id === ref.providerId);
+      if (!found) return provider;
+      return { ...found, model: ref.model, activeModel: ref.model };
+    } catch {
+      return provider;
+    }
+  };
+
+  // Load persisted overrides once on mount; persist every change (backward
+  // compatible: missing/empty = Settings default).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STAGE_OVERRIDE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<Record<VideoBootstrapStage, unknown>>;
+      const normalized: Partial<Record<VideoBootstrapStage, StageModelRef>> = {};
+      for (const key of Object.keys(parsed) as unknown as VideoBootstrapStage[]) {
+        const v = parsed[key] as StageModelRef & { id?: string };
+        // Normalize legacy full-ProviderConfig payloads (dev builds) to refs.
+        if (v && typeof v === 'object' && typeof v.model === 'string' && typeof v.providerId === 'string') {
+          normalized[key] = { providerId: v.providerId, model: v.model };
+        } else if (v && typeof v === 'object' && typeof v.id === 'string' && typeof v.model === 'string') {
+          normalized[key] = { providerId: v.id, model: v.model };
+        }
+      }
+      setStageOverrides(normalized);
+    } catch {
+      // Corrupt override payload — keep the Settings default.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STAGE_OVERRIDE_KEY, JSON.stringify(stageOverrides));
+    } catch {
+      // Storage unavailable — overrides just don't persist.
+    }
+  }, [stageOverrides]);
 
   const selectedStyle = styleOptions.find((o) => o.id === selectedStyleId) ?? null;
   const selectedEffects = effectsOptions.find((o) => o.id === selectedEffectsId) ?? null;
@@ -104,7 +163,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     setError(null);
     try {
       const res = await runVideoBootstrap({
-        stage, intent, customInstructions, previousContext: buildContext(stage), revisionPrompt, provider,
+        stage, intent, customInstructions, previousContext: buildContext(stage), revisionPrompt, provider: await stageProvider(stage),
       });
       applyStageData(res);
     } catch (e) {
@@ -175,8 +234,10 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     busyRef.current = true;
     setBusy(true);
     try {
+      // Ad-hoc "AI scout" calls reuse the Stage 3 override so scouting latency
+      // and quality match the director's choice for that stage.
       const suggestions = await suggestVideoLocations({
-        intent: hint || intent, script, style: selectedStyle, existingLocations: locations, provider,
+        intent: hint || intent, script, style: selectedStyle, existingLocations: locations, provider: await stageProvider(3),
       });
       if (suggestions.length > 0) setLocations((prev) => [...prev, ...suggestions]);
       else setError('No locations suggested — try a more specific hint.');
@@ -202,42 +263,33 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
 
   return (
     <div className="space-y-5">
-      {/* 5-step progress bar */}
-      <div className="flex items-center gap-1.5" role="group" aria-label="Bootstrap progress">
-        {STAGE_META.map((m, i) => {
-          const done = confirmed.includes(m.id);
-          const active = step === m.id;
-          const reachable = m.id <= maxReachable;
-          return (
-            <React.Fragment key={m.id}>
-              {i > 0 && <div className={cn('h-px flex-1', done ? 'bg-brand/50' : 'bg-border')} aria-hidden="true" />}
-              <button
-                type="button"
-                onClick={() => goTo(m.id)}
-                disabled={!reachable || working}
-                title={m.hint}
-                className={cn('group flex flex-col items-center gap-1 shrink-0', !reachable && 'cursor-not-allowed')}
-              >
-                <span
-                  className={cn(
-                    'w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold transition-colors',
-                    done ? 'border-brand bg-brand/10 text-brand' : active ? 'border-brand bg-brand/20 text-brand' : 'border-border text-text-muted group-hover:border-brand/40'
-                  )}
-                >
-                  {done ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : m.id}
-                </span>
-                <span className={cn('text-[9px] font-bold uppercase tracking-wide whitespace-nowrap', active || done ? 'text-text-primary' : 'text-text-muted')}>
-                  {m.label}
-                </span>
-              </button>
-            </React.Fragment>
-          );
-        })}
-      </div>
+      {/* 5-step progress bar (extracted to keep this file under the ceiling) */}
+      <BootstrapProgress
+        meta={STAGE_META}
+        step={step}
+        confirmed={confirmed}
+        maxReachable={maxReachable}
+        disabled={working}
+        onGoTo={goTo}
+      />
 
-      {/* Stage header — Thinking Orb animates during generation */}
+      {/* Stage header — Thinking Orb animates during generation; the per-stage
+          model selector (Task 4.5) sits beside it and overrides Settings */}
       <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-4">
         <ThinkingOrb state={meta.state} size={64} className="shrink-0" />
+        <BootstrapModelSelector
+          stage={step}
+          defaultProvider={provider}
+          value={stageOverrides[step] ?? null}
+          onChange={(p) =>
+            setStageOverrides((prev) => {
+              const next = { ...prev };
+              if (p) next[step] = p;
+              else delete next[step];
+              return next;
+            })
+          }
+        />
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
             Stage {step} of 5 · {meta.hint}

@@ -59,6 +59,24 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+/**
+ * A shot proposal drafted by the chat assistant, parsed from the structured
+ * JSON block the model emits per turn (Phase 4). "Approve" promotes it into a
+ * confirmed VideoShot on the project; "Request Revision" re-drafts it.
+ */
+export interface DraftedShot {
+  /** Sequential shot number — continues from the project's last confirmed shot. */
+  shotNumber: number;
+  /** One-line storyboard summary. */
+  description: string;
+  /** The full 6-part shot prompt (Subject · Action · Camera · Lighting · Environment · Lens). */
+  promptText: string;
+  /** Subject + camera ending state handed to the next shot. */
+  continuityHandoff: string;
+  /** Target clip duration in seconds (8–30). */
+  durationSeconds: number;
+}
+
 export interface VideoProject {
   id: string;
   name: string;

@@ -1,0 +1,79 @@
+// Video Prompt Studio — Phase 4 shot-drafting system prompt builder.
+// Embeds the Directorial Brief, Story Bible digest, verbatim continuity
+// anchors (Rule 4), the previous shot's handoff, the 6-part universal prompt
+// architecture, and the strict 8–30s clip ceiling per drafted shot.
+
+import type { VideoProject } from '@/types/video';
+import {
+  buildStoryBibleDigest,
+  calculateShotHandoff,
+  formatContinuityAnchors,
+  nextShotNumber,
+} from './story-bible';
+
+const SIX_PART_ARCHITECTURE = `Every drafted shot prompt MUST be written as one complete, copy-ready shot prompt covering the 6-part universal architecture, each part on its own labeled line:
+1. SUBJECT: who/what is in frame — always the exact character name(s) from the Story Bible, never a paraphrase or invented description.
+2. ACTION: the motivated movement/beat in the 8–30s window, written as present-tense action.
+3. CAMERA: one specific motivated camera move or static framing (e.g. slow dolly-in, whip pan, handheld push, static wide) that advances the emotion.
+4. LIGHTING: the exact lighting/atmosphere treatment (locked visual style grade must be honored).
+5. ENVIRONMENT: the exact location from the Story Bible with its fixed set dressing, never a new invented space.
+6. LENS: concrete lens/focal-length language (e.g. 35mm close, 24mm wide, 85mm compression, anamorphic flare).`;
+
+const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
+- Reply conversationally to the director first — one or two short sentences of intent and reasoning.
+- Then emit EXACTLY ONE fenced JSON block (no other JSON anywhere) with this shape:
+\`\`\`json
+{
+  "shot": {
+    "shotNumber": <integer, __NEXT_SHOT__ for a new draft>,
+    "description": "<one-line storyboard summary>",
+    "promptText": "<the full 6-part shot prompt from SUBJECT to LENS>",
+    "continuityHandoff": "<subject + camera ending state this shot leaves behind for the next shot>",
+    "durationSeconds": <integer 8–30>
+  }
+}
+\`\`\`
+- durationSeconds is the target clip length and MUST be an integer between 8 and 30 inclusive — never shorter than 8s, never longer than 30s. State the length when it matters to pacing.
+- When the director asks you to revise the previous draft, re-emit the SAME shotNumber with the improved promptText; do not increment.
+- When the director approves and asks for the next shot, increment by 1.
+- Never re-number existing confirmed shots and never draft a shot that reuses an earlier shotNumber already confirmed in the storyboard.`;
+
+/** Injects the next sequential shot number into the output contract. */
+function withNextShot(contract: string, nextShot: number): string {
+  return contract.replace('__NEXT_SHOT__', String(nextShot));
+}
+
+/**
+ * Builds the conversational system prompt for /api/video-chat. Every
+ * generation call resolves the model separately via resolveVideoModel(); this
+ * function only supplies the context the model must draft against.
+ */
+export function buildShotDraftingSystemPrompt(project: VideoProject): string {
+  const bible = project.storyBible ?? { characters: [], locations: [], continuityLog: [] };
+  const brief = project.customInstructions?.trim() || project.name || '(No brief supplied)';
+  const nextShot = nextShotNumber(project);
+  const lastShot = project.shots[project.shots.length - 1];
+
+  return `You are the shot drafter on a short-form video production. You work inside the director's multi-turn drafting thread: you propose ONE sequential shot per turn, the director approves it into the storyboard or asks for a revision, and you keep character, setting, and visual style anchors perfectly stable across every shot.
+
+DIRECTORIAL BRIEF:
+${brief}
+
+STORY BIBLE:
+${buildStoryBibleDigest(bible)}
+
+VERBATIM CONTINUITY ANCHORS — reuse these EXACT strings every time (Rule 4):
+${formatContinuityAnchors(bible)}
+
+CONTINUITY HANDOFF FROM THE STORYBOARD:
+${calculateShotHandoff(lastShot)}
+
+HARD RULES:
+1. Inspect the Story Bible BEFORE drafting. Character names, visual descriptions, wardrobe, location names, environment descriptions, the locked visual style, and the locked VFX direction are NON-NEGOTIABLE and must appear verbatim — never invent a new character, a new location, or a different grade.
+2. ${SIX_PART_ARCHITECTURE}
+3. Clip ceiling: every shot is 8–30 seconds. Compose the action so it fits the chosen duration; never draft a shot that implies longer.
+4. Keep visual style + VFX direction locked: shots may not change color grade, film stock, aspect ratio, particle density, or pacing.
+5. Continuity: each shot's continuityHandoff describes where the subject and camera end, so the next shot can pick up without drift.
+
+${withNextShot(OUTPUT_CONTRACT, nextShot)}`;
+}

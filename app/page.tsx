@@ -627,16 +627,21 @@ export default function HomePage() {
     toast.success('Project deleted', 'Removed from your production portfolio.');
   };
 
-  // Phase 3 — called when the bootstrap wizard saves an updated project
-  // (e.g. activation after Stage 5). Refresh the portfolio from storage and
-  // surface the status change; the workspace itself persisted the project.
+  // Phase 3 + Phase 4 — called whenever the workspace persists an updated
+  // project (bootstrap activation, sidebar edits, shot approvals, chat sync).
+  // Refresh the portfolio from storage and surface the change neutrally.
   const handleVideoProjectUpdate = async (project: VideoProject) => {
+    const wasActive = activeVideoProject?.status === 'active';
     setVideoProjects(await getVideoProjects());
     setActiveVideoProjectId(project.id);
-    toast.success(
-      'Production activated',
-      `"${project.name}" — story bible locked, ready for shot drafting.`
-    );
+    if (wasActive) {
+      toast.success('Project saved', `"${project.name}" — storyboard and continuity updated.`);
+    } else {
+      toast.success(
+        'Production activated',
+        `"${project.name}" — story bible locked, ready for shot drafting.`
+      );
+    }
   };
 
   const activeVersion = currentSession
