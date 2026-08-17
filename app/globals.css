@@ -37,6 +37,26 @@
   --color-overlay: var(--overlay);
   --color-caret: var(--caret);
 
+  /* AI Elements (shadcn-compatible aliases) — map the shadcn utility
+     vocabulary used by installed AI Elements primitives onto PromptCrafter's
+     semantic tokens so both themes stay consistent. */
+  --color-background: var(--surface-page);
+  --color-foreground: var(--text-primary);
+  --color-primary: var(--brand);
+  --color-primary-foreground: oklch(1 0 0);
+  --color-secondary: var(--surface-muted);
+  --color-secondary-foreground: var(--text-secondary);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--brand-soft);
+  --color-accent-foreground: var(--text-primary);
+  --color-popover: var(--surface-elevated);
+  --color-popover-foreground: var(--text-primary);
+  --color-input: var(--surface-input);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: oklch(1 0 0);
+  --color-ring: var(--focus-ring);
+
   /* Semantic */
   --color-success: var(--success);
   --color-success-muted: var(--success-muted);
@@ -94,6 +114,7 @@
 
 /* ── Light Theme ── */
 :root {
+  --radius: 0.625rem;
   --surface-page: oklch(0.97 0.005 260);
   --surface-card: oklch(1 0 0);
   --surface-elevated: oklch(0.98 0.01 260);

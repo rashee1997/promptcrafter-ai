@@ -3,12 +3,13 @@ import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
 
 const DB_NAME = 'PromptCrafter_DB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_HISTORY = 'history';
 const STORE_SESSIONS = 'sessions';
 const STORE_PROVIDERS = 'providers';
 const STORE_SETTINGS = 'settings';
 const STORE_CUSTOM_PRESETS = 'customPresets';
+const STORE_VIDEO_PROJECTS = 'videoProjects';
 
 /**
  * Default Gemini model used whenever a request doesn't carry an explicit
@@ -114,7 +115,7 @@ function convertHistoryItemToSession(item: HistoryItem): Session {
   };
 }
 
-function openDB(): Promise<IDBDatabase> {
+export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
       return reject(new Error('IndexedDB not supported in this environment'));
@@ -152,6 +153,13 @@ function openDB(): Promise<IDBDatabase> {
         // queryable/deletable per studio field independently).
         if (!db.objectStoreNames.contains(STORE_CUSTOM_PRESETS)) {
           db.createObjectStore(STORE_CUSTOM_PRESETS, { keyPath: 'id' });
+        }
+
+        // Schema v4: dedicated store for Video Prompt Studio projects. Kept
+        // separate from sessions so video projects stay queryable/deletable
+        // per project independently of the prompt-engineering session store.
+        if (!db.objectStoreNames.contains(STORE_VIDEO_PROJECTS)) {
+          db.createObjectStore(STORE_VIDEO_PROJECTS, { keyPath: 'id' });
         }
 
         // Schema migration v1 -> v2: read from `history` store and populate `sessions`
