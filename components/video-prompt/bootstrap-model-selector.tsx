@@ -104,8 +104,8 @@ export function BootstrapModelSelector({ stage, defaultProvider, value, onChange
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={`Model for stage ${stage}`}
-        title={value ? `Stage ${stage} override — ${effectiveModel}` : `Stage ${stage} uses the Settings model`}
+        aria-label={`Model for stage ${stage + 1}`}
+        title={value ? `Stage ${stage} override — ${effectiveModel}` : `Stage ${stage + 1} uses the Settings model`}
         className={cn(
           'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono border transition-colors',
           value ? 'bg-brand/10 text-brand border-brand/30' : 'bg-surface-muted text-text-secondary border-border hover:border-brand/50'

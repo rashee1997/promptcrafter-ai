@@ -12,7 +12,17 @@ import type {
   VideoStyle,
 } from '@/types/video';
 
-export type VideoBootstrapStage = 1 | 2 | 3 | 4 | 5;
+/**
+ * Phase 2 — the wizard now has 6 internal steps (0–5). Stage 0 is the
+ * UI-only platform picker; Stages 1–5 are the AI generation pipeline.
+ */
+export type VideoBootstrapStage = 0 | 1 | 2 | 3 | 4 | 5;
+
+/**
+ * The server-side API only handles AI generation stages (1–5). The platform
+ * picker (Stage 0) never hits the API.
+ */
+export type APIBootstrapStage = 1 | 2 | 3 | 4 | 5;
 
 /** Stage 1 output — script treatment. Defined in types/video.ts because
  *  VideoProject persists a creation-time draft of it. */
@@ -56,9 +66,9 @@ export interface BootstrapContext {
   effects?: EffectsCandidate | null;
 }
 
-/** POST /api/video-bootstrap body. */
+/** POST /api/video-bootstrap body — only AI generation stages (1–5). */
 export interface VideoBootstrapRequest {
-  stage: VideoBootstrapStage;
+  stage: APIBootstrapStage;
   intent: string;
   customInstructions?: string;
   previousContext?: BootstrapContext;
@@ -66,7 +76,7 @@ export interface VideoBootstrapRequest {
   provider: ProviderConfig;
 }
 
-/** POST /api/video-bootstrap response — typed per stage. */
+/** POST /api/video-bootstrap response — typed per stage (1–5). */
 export type VideoBootstrapResponse =
   | { stage: 1; data: ScriptTreatment }
   | { stage: 2; data: CharactersProposal }

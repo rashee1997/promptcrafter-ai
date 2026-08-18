@@ -19,7 +19,7 @@ interface ProjectWorkspaceProps {
 
 /**
  * Phase 3 + Phase 4 — the open project's workspace. Draft projects run the
- * 5-stage BootstrapFlow wizard; activating (Stage 5 confirm) flips status to
+ * 6-stage BootstrapFlow wizard; activating (Stage 5 confirm) flips status to
  * `active`, locking Visual Style + VFX direction, and renders the Phase 4
  * conversational workspace: the Active Project Sidebar (2-tier lock rules)
  * beside the Multi-Turn Shot Drafting Chat Thread.
@@ -84,7 +84,7 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
           </div>
         </div>
       ) : (
-        /* 5-stage bootstrap wizard */
+        /* 6-stage bootstrap wizard */
         <BootstrapFlow
           key={project.id}
           intent={intent}

@@ -33,10 +33,12 @@ interface BootstrapProgressProps {
 }
 
 /**
- * Phase 3 — the 5-step progress rail of the bootstrap wizard (extracted so
+ * Phase 2 — the 6-step progress rail of the bootstrap wizard (extracted so
  * bootstrap-flow.tsx stays under the ~350-line ceiling). Done stages show a
  * check; the current stage is brand-tinted; unreachable stages are muted.
  * Stages with a per-stage model override show a small accent dot.
+ * Step numbers are displayed 1-indexed (Platform = 1, Script = 2, …) even
+ * though internal ids are 0-indexed (0 = Platform, 1 = Script, …).
  */
 export function BootstrapProgress({ meta, step, confirmed, maxReachable, disabled, onGoTo, stageOverrides }: BootstrapProgressProps) {
   return (
@@ -65,7 +67,7 @@ export function BootstrapProgress({ meta, step, confirmed, maxReachable, disable
                       : 'border-border text-text-muted group-hover:border-brand/40'
                 )}
               >
-                {done ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : m.id}
+                {done ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : i + 1}
               </span>
               <span className="relative inline-flex items-center gap-1">
                 <span

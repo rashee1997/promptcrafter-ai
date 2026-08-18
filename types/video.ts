@@ -5,6 +5,16 @@
 export type VideoDialect = 'veo' | 'higgsfield' | 'kling' | 'seedance';
 export type ProjectStatus = 'draft' | 'active';
 
+/** Phase 2 — the director picks one target platform before any shot is drafted. */
+export type VideoTargetPlatform =
+  | 'veo'
+  | 'kling'
+  | 'seedance'
+  | 'higgsfield'
+  | 'runway'
+  | 'luma'
+  | 'pika';
+
 /**
  * Stage 1 output — script treatment (logline, act beats, tone, overview).
  * Lives here (not in the bootstrap pipeline types) because VideoProject
@@ -222,6 +232,19 @@ export interface VideoProject {
    * revises/reconfirms Stage 1 inside the full wizard.
    */
   draftScriptOverview?: ScriptTreatment | null;
+  /**
+   * Phase 2 — the director picks a target platform before any shot is
+   * drafted. Every subsequent shot is written for that platform's constraints.
+   * Optional for backward compatibility: old projects without a platform set
+   * fall back to generic behavior.
+   */
+  targetPlatform?: VideoTargetPlatform | null;
+  /**
+   * Phase 2 — only used when targetPlatform === 'higgsfield'. Higgsfield is a
+   * routing layer over other models; the director picks the underlying model
+   * here so the drafting AI knows the real constraints.
+   */
+  targetPlatformSubModel?: string | null;
 }
 
 export type ThinkingOrbState =
