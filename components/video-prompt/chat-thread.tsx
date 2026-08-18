@@ -129,6 +129,8 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         durationSeconds: draft.durationSeconds,
         dialogue: draft.dialogue,
         negativePrompt: draft.negativePrompt,
+        ...(draft.emotion ? { emotion: draft.emotion } : {}),
+        ...(draft.shotFunction ? { shotFunction: draft.shotFunction } : {}),
         confirmed: true,
         createdAt: existing?.createdAt ?? now,
       };

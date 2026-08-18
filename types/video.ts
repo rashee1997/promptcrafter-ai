@@ -95,6 +95,18 @@ export interface VideoShot {
    * Veo/Seedance negative lines, …).
    */
   negativePrompt?: string;
+  /**
+   * The emotion this shot carries (e.g. "guilt", "resolve", "quiet dread").
+   * Director Skill — drives the emotional arc across a storyboard.
+   */
+  emotion?: string;
+  /**
+   * The dramatic function this shot serves in the sequence:
+   * Establish / Reveal / Power / Pressure / Detail / Reaction / Shift /
+   * Impact / Aftermath / Exit. Director Skill — makes the whole storyboard
+   * have a shape instead of repeating the same beat.
+   */
+  shotFunction?: string;
 }
 
 /**
@@ -183,6 +195,14 @@ export interface DraftedShot {
    * silently truncating.
    */
   durationClampedFrom?: number;
+  /** The emotion this shot carries (e.g. "guilt", "resolve"). */
+  emotion?: string;
+  /**
+   * The dramatic function this shot serves in the sequence:
+   * Establish / Reveal / Power / Pressure / Detail / Reaction / Shift /
+   * Impact / Aftermath / Exit.
+   */
+  shotFunction?: string;
 }
 
 export interface VideoProject {

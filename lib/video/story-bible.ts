@@ -1,10 +1,15 @@
 // Video Prompt Studio — Phase 4 story-bible context helpers.
 // These build the compact digests, verbatim continuity anchors, and shot
-// handoff lines that the chat system prompt embeds (Rule 4), and parse the
-// structured JSON block the model emits per drafted shot turn.
+// handoff lines that the chat system prompt embeds, and parse the structured
+// JSON block the model emits per drafted shot turn.
 // Server-safe: this module must stay free of React so the API routes can
 // import it. The client-only StoryBibleProvider lives in
 // `story-bible-context.tsx`.
+//
+// Director Skill (Phase 1): identity-vs-conditions split inspired by the
+// "visual-skills" project by Serge Shima (CC-BY-4.0).
+// https://github.com/smixs/visual-skills — all data shapes and prompt text
+// below are our own; this is attribution, not copied content.
 
 import type {
   DialogueLine,
@@ -68,24 +73,32 @@ export function buildStoryBibleDigest(bible: StoryBible): string {
 }
 
 /**
- * Verbatim continuity anchors (Rule 4): the exact character names, visual
- * descriptions, location names, style, and VFX phrasing the model MUST reuse
- * word-for-word so characters/settings never drift across shots.
+ * Identity anchors — the things that NEVER change: character name + physical
+ * appearance (face, build, hair, marks), core location geography/architecture,
+ * locked visual style, and locked VFX direction. These must be reused
+ * word-for-word across every shot.
+ *
+ * Director Skill (Phase 1): split from the old monolithic
+ * `formatContinuityAnchors` to separate locked identity from adaptable scene
+ * conditions. Inspired by the identity-vs-conditions distinction in Serge
+ * Shima's visual-skills repo (CC-BY-4.0).
  */
-export function formatContinuityAnchors(bible: StoryBible): string {
+export function formatIdentityAnchors(bible: StoryBible): string {
   const anchors: string[] = [];
 
   if (bible.characters?.length) {
     anchors.push(
       bible.characters
-        .map((c) => `${c.name} = "${clip(c.appearance, 240)}" / wardrobe "${clip(c.wardrobe, 240)}"`)
+        .map((c) => `${c.name} = "${clip(c.appearance, 240)}"`)
         .join('; ')
     );
   }
 
   if (bible.locations?.length) {
     anchors.push(
-      bible.locations.map((l) => `${l.name} = "${clip(l.description, 280)}"`).join('; ')
+      bible.locations
+        .map((l) => `${l.name} = "${clip(l.description, 280)}"`)
+        .join('; ')
     );
   }
 
@@ -97,7 +110,40 @@ export function formatContinuityAnchors(bible: StoryBible): string {
     anchors.push(`VFX = "${clip(bible.effects.vfxDirection, 240)}"`);
   }
 
-  return anchors.join('\n') || '(No anchors yet — invent consistent names and lock them in the draft.)';
+  return anchors.join('\n') || '(No identity anchors yet — invent consistent names and lock them in the draft.)';
+}
+
+/**
+ * Scene defaults — the adaptable starting point for wardrobe, prop-in-hand,
+ * location weather/time-of-day/lighting, and other scene conditions. The model
+ * may evolve these across shots ONLY when the story motivates it (new day,
+ * after an event, weather turning for dramatic pressure). Any change must be
+ * stated explicitly in `continuityHandoff` so the next shot inherits it.
+ *
+ * Director Skill (Phase 1): split from the old monolithic
+ * `formatContinuityAnchors` so characters' faces stay locked while wardrobe
+ * and location conditions can breathe with the story.
+ */
+export function formatSceneDefaults(bible: StoryBible): string {
+  const parts: string[] = [];
+
+  if (bible.characters?.length) {
+    parts.push(
+      bible.characters
+        .map((c) => `${c.name} wardrobe = "${clip(c.wardrobe, 240)}"`)
+        .join('; ')
+    );
+  }
+
+  if (bible.locations?.length) {
+    parts.push(
+      bible.locations
+        .map((l) => `${l.name} starting conditions = "${clip(l.description, 280)}"`)
+        .join('; ')
+    );
+  }
+
+  return parts.join('\n') || '(No scene defaults yet — use the Story Bible digest as your starting point.)';
 }
 
 /**
@@ -178,6 +224,10 @@ export function parseDraftedShot(text: string): DraftedShot | null {
 
   const negativePrompt = typeof shot.negativePrompt === 'string' ? shot.negativePrompt.trim() : '';
 
+  // Director Skill — optional craft fields from the model output.
+  const emotion = typeof shot.emotion === 'string' ? shot.emotion.trim() : '';
+  const shotFunction = typeof shot.shotFunction === 'string' ? shot.shotFunction.trim() : '';
+
   // Clamp silently in the persisted value, but record what the model asked for
   // so the UI can surface the truncation instead of hiding it (A5).
   const rawDuration = Number.isFinite(durationSeconds) ? Math.round(durationSeconds) : 12;
@@ -191,6 +241,8 @@ export function parseDraftedShot(text: string): DraftedShot | null {
     durationSeconds: clampedDuration,
     dialogue,
     negativePrompt,
+    ...(emotion ? { emotion } : {}),
+    ...(shotFunction ? { shotFunction } : {}),
     ...(clampedDuration !== rawDuration ? { durationClampedFrom: rawDuration } : {}),
   };
 }

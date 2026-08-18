@@ -37,6 +37,16 @@ export function ShotDraftCard({ draft, disabled, onApprove, onRevise }: ShotDraf
           <Clapperboard className="w-3 h-3" aria-hidden="true" />
           Shot {draftState.shotNumber} draft
         </span>
+        {draftState.shotFunction && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/30">
+            {draftState.shotFunction}
+          </span>
+        )}
+        {draftState.emotion && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border italic">
+            {draftState.emotion}
+          </span>
+        )}
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border tabular-nums">
           <Timer className="w-3 h-3 text-accent" aria-hidden="true" />
           {draftState.durationSeconds}s

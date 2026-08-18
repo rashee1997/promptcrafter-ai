@@ -158,6 +158,16 @@ export function ShotCard({
             <SquarePlay className="w-3 h-3" aria-hidden="true" />
             Shot {shot.shotNumber}
           </span>
+          {shot.shotFunction && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/30 shrink-0">
+              {shot.shotFunction}
+            </span>
+          )}
+          {shot.emotion && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border italic shrink-0">
+              {shot.emotion}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border tabular-nums shrink-0">
             <Timer className="w-3 h-3 text-accent" aria-hidden="true" />
             {shot.durationSeconds}s
