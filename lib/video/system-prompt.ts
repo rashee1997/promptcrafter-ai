@@ -1,8 +1,8 @@
 // Video Prompt Studio — Phase 4 shot-drafting system prompt builder.
 // Embeds the Directorial Brief, Story Bible digest, identity locks, scene
 // defaults, the previous shot's handoff, the 6-part universal prompt
-// architecture, the Director Skill rules, and the strict 8–30s clip ceiling
-// per drafted shot.
+// architecture, the Director Skill rules, and the platform-specific clip
+// ceiling per drafted shot.
 //
 // Director Skill (Phase 1): director craft rules, identity-vs-conditions
 // continuity split, and shot function tags. Inspired by the "visual-skills"
@@ -18,6 +18,7 @@ import {
   formatSceneDefaults,
   nextShotNumber,
 } from './story-bible';
+import { getPlatformSpec } from './platforms';
 
 const DIRECTOR_RULES = `DIRECTOR CRAFT:
 - Every shot needs: one environmental-pressure detail (rain, flickering light, a cramped hallway — something in the space pushing on the character), one physical micro-action (a hand gripping something, a jaw tightening — not just "he moves"), and one sound/visual motif (something that recurs or means something). Missing all three = rewrite the shot.
@@ -26,7 +27,7 @@ const DIRECTOR_RULES = `DIRECTOR CRAFT:
 
 const SIX_PART_ARCHITECTURE = `Every drafted shot prompt MUST be written as one complete, copy-ready shot prompt covering the 6-part universal architecture, each part on its own labeled line:
 1. SUBJECT: who/what is in frame — always the exact character name(s) from the Story Bible, never a paraphrase or invented description.
-2. ACTION: the motivated movement/beat in the 8–30s window, written as present-tense action.
+2. ACTION: the motivated movement/beat in the __DURATION__ window, written as present-tense action.
 3. CAMERA: one specific motivated camera move or static framing (e.g. slow dolly-in, whip pan, handheld push, static wide) that advances the emotion.
 4. LIGHTING: the exact lighting/atmosphere treatment (locked visual style grade must be honored).
 5. ENVIRONMENT: the exact location from the Story Bible with its fixed set dressing, never a new invented space.
@@ -42,7 +43,7 @@ const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
     "description": "<one-line storyboard summary>",
     "promptText": "<the full 6-part shot prompt from SUBJECT to LENS>",
     "continuityHandoff": "<subject + camera ending state + any scene-condition changes and WHY they changed, so the next shot inherits them instead of reverting>",
-    "durationSeconds": <integer 8–30>,
+    "durationSeconds": <integer __DURATION_RANGE__>,
     "dialogue": [
       { "speaker": "<exact Story Bible name>", "line": "<short spoken line>", "tone": "<delivery, optional>" }
     ],
@@ -52,7 +53,7 @@ const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
   }
 }
 \`\`\`
-- durationSeconds is the target clip length and MUST be an integer between 8 and 30 inclusive — never shorter than 8s, never longer than 30s. State the length when it matters to pacing.
+- durationSeconds is the target clip length and MUST be an integer between __DURATION_RANGE__ inclusive — never shorter than __DURATION_MIN__s, never longer than __DURATION_MAX__s. State the length when it matters to pacing.
 - When the director asks you to revise the previous draft, re-emit the SAME shotNumber with the improved promptText; do not increment.
 - When the director approves and asks for the next shot, increment by 1.
 - Never re-number existing confirmed shots and never draft a shot that reuses an earlier shotNumber already confirmed in the storyboard.
@@ -81,16 +82,55 @@ function withNextShot(contract: string, nextShot: number): string {
   return contract.replace('__NEXT_SHOT__', String(nextShot));
 }
 
+/** Injects duration placeholders into template strings. */
+function withDuration(text: string, min: number, max: number): string {
+  return text
+    .replace(/__DURATION_RANGE__/g, `${min}–${max}`)
+    .replace(/__DURATION_MIN__/g, String(min))
+    .replace(/__DURATION_MAX__/g, String(max))
+    .replace(/__DURATION__/g, `${min}–${max}s`);
+}
+
 /**
  * Builds the conversational system prompt for /api/video-chat. Every
  * generation call resolves the model separately via resolveVideoModel(); this
  * function only supplies the context the model must draft against.
+ *
+ * Phase 3 — when the project has a targetPlatform, the platform's
+ * draftingSystemPromptBlock replaces the generic duration rule and injects
+ * platform-specific dialogue/negative-prompt syntax.
  */
 export function buildShotDraftingSystemPrompt(project: VideoProject): string {
   const bible = project.storyBible ?? { characters: [], locations: [], continuityLog: [] };
   const brief = project.customInstructions?.trim() || project.name || '(No brief supplied)';
   const nextShot = nextShotNumber(project);
   const lastShot = project.shots[project.shots.length - 1];
+
+  // Phase 3 — look up the platform spec so the AI gets real constraints.
+  const platformSpec = getPlatformSpec(project.targetPlatform);
+
+  const durationMin = platformSpec?.durationCeilingSeconds ?? 30;
+  const durationFloor = platformSpec ? Math.min(8, durationMin) : 8;
+  const durationMax = platformSpec?.durationCeilingSeconds ?? 30;
+
+  const platformBlock = platformSpec
+    ? `\n${platformSpec.draftingSystemPromptBlock}\n`
+    : '';
+
+  const rules = withDuration(
+    `HARD RULES:
+1. Inspect the Story Bible BEFORE drafting. Character names, visual descriptions, wardrobe, location names, environment descriptions, the locked visual style, and the locked VFX direction are NON-NEGOTIABLE and must appear verbatim — never invent a new character, a new location, or a different grade.
+2. ${SIX_PART_ARCHITECTURE}
+3. Clip ceiling: every shot is ${durationFloor}–${durationMax} seconds. Compose the action so it fits the chosen duration; never draft a shot that implies longer.
+4. Keep visual style + VFX direction locked: shots may not change color grade, film stock, aspect ratio, particle density, or pacing.
+5. Continuity: each shot's continuityHandoff describes where the subject and camera end AND any scene-condition changes (wardrobe, weather, time-of-day) with the reason they changed, so the next shot can pick up without drift.
+6. Anchor every hand/prop interaction to a concrete object — never describe a hand or limb moving in empty space; give it something specific to hold, touch, or rest on (jittery/floating limbs are the #1 single-shot glitch).
+7. Do not stack contradictory descriptors in one section (e.g. "gritty realism" + "pristine, flawless skin") — pick one register per shot and hold it.
+8. ${DIALOGUE_RULES}
+9. ${NEGATIVE_PROMPT_RULES}`,
+    durationFloor,
+    durationMax,
+  );
 
   return `You are the shot drafter on a short-form video production. You work inside the director's multi-turn drafting thread: you propose ONE sequential shot per turn, the director approves it into the storyboard or asks for a revision, and you keep character, setting, and visual style anchors perfectly stable across every shot.
 
@@ -111,16 +151,6 @@ ${calculateShotHandoff(lastShot)}
 
 ${DIRECTOR_RULES}
 
-HARD RULES:
-1. Inspect the Story Bible BEFORE drafting. Character names, visual descriptions, wardrobe, location names, environment descriptions, the locked visual style, and the locked VFX direction are NON-NEGOTIABLE and must appear verbatim — never invent a new character, a new location, or a different grade.
-2. ${SIX_PART_ARCHITECTURE}
-3. Clip ceiling: every shot is 8–30 seconds. Compose the action so it fits the chosen duration; never draft a shot that implies longer.
-4. Keep visual style + VFX direction locked: shots may not change color grade, film stock, aspect ratio, particle density, or pacing.
-5. Continuity: each shot's continuityHandoff describes where the subject and camera end AND any scene-condition changes (wardrobe, weather, time-of-day) with the reason they changed, so the next shot can pick up without drift.
-6. Anchor every hand/prop interaction to a concrete object — never describe a hand or limb moving in empty space; give it something specific to hold, touch, or rest on (jittery/floating limbs are the #1 single-shot glitch).
-7. Do not stack contradictory descriptors in one section (e.g. "gritty realism" + "pristine, flawless skin") — pick one register per shot and hold it.
-8. ${DIALOGUE_RULES}
-9. ${NEGATIVE_PROMPT_RULES}
-
-${withNextShot(OUTPUT_CONTRACT, nextShot)}`;
+${rules}${platformBlock}
+${withNextShot(withDuration(OUTPUT_CONTRACT, durationFloor, durationMax), nextShot)}`;
 }

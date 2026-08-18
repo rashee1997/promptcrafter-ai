@@ -5,6 +5,43 @@
 export type VideoDialect = 'veo' | 'higgsfield' | 'kling' | 'seedance';
 export type ProjectStatus = 'draft' | 'active';
 
+/**
+ * Phase 3 — single source of truth for every video generation platform.
+ * The drafting AI reads `draftingSystemPromptBlock`; the Phase 2 picker UI
+ * reads `usageInstructions` and `strengths`. Both derive from the same
+ * object — no duplicated information.
+ */
+export interface PlatformSpec {
+  id: VideoTargetPlatform;
+  label: string;
+  vendor: string;
+  summary: string;
+  strengths: string[];
+  durationCeilingSeconds: number;
+  supportsMultiShot: boolean;
+  supportsNativeDialogue: boolean;
+  /**
+   * Exact dialogue / negative-prompt syntax for this platform, shown to the
+   * drafting AI so it uses the right format instead of a generic one.
+   */
+  dialogueSyntaxNote: string;
+  /**
+   * How negative prompts should be handled: 'dedicated-field' means a
+   * separate parameter, 'inline' means appended to the prompt text.
+   */
+  negativePromptConvention: 'dedicated-field' | 'inline';
+  /** Max reference images the platform accepts per generation. */
+  referenceImageLimit: number;
+  /** Short usage tips shown to the director in the picker card. */
+  usageInstructions: string[];
+  /**
+   * Platform-specific block injected into the drafting AI's system prompt.
+   * Overrides the generic 8–30s duration ceiling and dialogue rules with
+   * this platform's real numbers and syntax.
+   */
+  draftingSystemPromptBlock: string;
+}
+
 /** Phase 2 — the director picks one target platform before any shot is drafted. */
 export type VideoTargetPlatform =
   | 'veo'

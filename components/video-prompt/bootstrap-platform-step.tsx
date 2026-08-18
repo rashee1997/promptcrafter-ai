@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Check, ChevronDown, Clock, MessageSquare, Film } from 'lucide-react';
+import { Check, ChevronDown, Clock, MessageSquare, Film, Lightbulb, Zap } from 'lucide-react';
 import type { VideoTargetPlatform } from '@/types/video';
 import { cn } from '@/lib/utils';
+import { PLATFORM_SPECS } from '@/lib/video/platforms';
 
 interface BootstrapPlatformStepProps {
   /** Currently selected platform (null = none yet). */
@@ -16,76 +17,27 @@ interface BootstrapPlatformStepProps {
 }
 
 /**
- * Platform card data — one card per supported video generation platform.
- * Each entry holds the key constraints the director needs to make an informed
- * choice: duration cap, whether dialogue is supported, and whether the
- * platform can produce multiple shots in a single generation.
+ * Platform card data — derived from the single-source-of-truth platform
+ * specs (lib/video/platforms/). The drafting AI and this picker card both
+ * read from the same objects so there is never duplicated information.
  */
-const PLATFORMS: {
-  id: VideoTargetPlatform;
-  name: string;
-  summary: string;
-  maxDuration: string;
-  supportsDialogue: boolean;
-  multiShot: boolean;
-}[] = [
-  {
-    id: 'veo',
-    name: 'Veo',
-    summary: "Google DeepMind's video generation model — cinematic quality.",
-    maxDuration: '8 s',
-    supportsDialogue: false,
-    multiShot: false,
-  },
-  {
-    id: 'kling',
-    name: 'Kling',
-    summary: 'High-quality video with strong motion and dialogue support.',
-    maxDuration: '10 s',
-    supportsDialogue: true,
-    multiShot: false,
-  },
-  {
-    id: 'seedance',
-    name: 'Seedance',
-    summary: "ByteDance's video model — expressive motion with dialogue.",
-    maxDuration: '10 s',
-    supportsDialogue: true,
-    multiShot: false,
-  },
-  {
-    id: 'higgsfield',
-    name: 'Higgsfield',
-    summary: 'Routing layer over multiple models with character-lock & camera tools.',
-    maxDuration: 'Varies by model',
-    supportsDialogue: false,
-    multiShot: false,
-  },
-  {
-    id: 'runway',
-    name: 'Runway',
-    summary: 'Gen-3 Alpha — industry-leading creative control.',
-    maxDuration: '10 s',
-    supportsDialogue: false,
-    multiShot: false,
-  },
-  {
-    id: 'luma',
-    name: 'Luma',
-    summary: 'Dream Machine — fast, high-quality, generous free tier.',
-    maxDuration: '5 s',
-    supportsDialogue: false,
-    multiShot: false,
-  },
-  {
-    id: 'pika',
-    name: 'Pika',
-    summary: 'Quick iterations with a playful, stylized aesthetic.',
-    maxDuration: '4 s',
-    supportsDialogue: false,
-    multiShot: false,
-  },
-];
+const PLATFORMS = (Object.keys(PLATFORM_SPECS) as VideoTargetPlatform[]).map((id) => {
+  const spec = PLATFORM_SPECS[id];
+  return {
+    id,
+    name: spec.label.split(' / ')[0].split(' ')[0], // e.g. "Veo 3.1 / Flow" → "Veo", "Kling 3.0" → "Kling"
+    summary: spec.summary,
+    maxDuration: spec.durationCeilingSeconds === 30
+      ? 'Up to 30 s'
+      : spec.durationCeilingSeconds === 15
+        ? 'Up to 15 s'
+        : `${spec.durationCeilingSeconds} s`,
+    supportsDialogue: spec.supportsNativeDialogue,
+    multiShot: spec.supportsMultiShot,
+    strengths: spec.strengths,
+    usageInstructions: spec.usageInstructions,
+  };
+});
 
 /** Underlying models Higgsfield routes to (with Soul ID / Cinema Studio on top). */
 const HIGGSFIELD_SUBMODELS = [
@@ -184,6 +136,38 @@ export function BootstrapPlatformStep({
                   {p.multiShot ? 'Multi-shot' : 'Single shot'}
                 </span>
               </div>
+
+              {/* Strengths + usage instructions — visible when selected */}
+              {isActive && (
+                <div className="w-full mt-2 pt-2 border-t border-border/50 space-y-2">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1 flex items-center gap-1">
+                      <Zap className="w-2.5 h-2.5" aria-hidden="true" />
+                      Strengths
+                    </p>
+                    <ul className="space-y-0.5">
+                      {p.strengths.slice(0, 4).map((s) => (
+                        <li key={s} className="text-[10px] text-text-secondary leading-relaxed">
+                          • {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1 flex items-center gap-1">
+                      <Lightbulb className="w-2.5 h-2.5" aria-hidden="true" />
+                      Usage tips
+                    </p>
+                    <ul className="space-y-0.5">
+                      {p.usageInstructions.slice(0, 4).map((u) => (
+                        <li key={u} className="text-[10px] text-text-secondary leading-relaxed">
+                          • {u}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </button>
           );
         })}
