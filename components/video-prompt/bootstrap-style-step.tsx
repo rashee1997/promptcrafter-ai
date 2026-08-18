@@ -14,6 +14,8 @@ interface BootstrapStyleStepProps {
    *  the revisionPrompt ("keep this but make the grade warmer"). */
   onRegenerate: (note?: string) => void;
   onConfirm: () => void;
+  /** When true, downstream stages have confirmed work that regeneration may affect. */
+  hasDownstreamWork?: boolean;
 }
 
 function StyleCard({
@@ -87,12 +89,19 @@ export function BootstrapStyleStep({
   onSelect,
   onRegenerate,
   onConfirm,
+  hasDownstreamWork,
 }: BootstrapStyleStepProps) {
   const [note, setNote] = useState('');
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   const handleRegenerate = () => {
+    if (hasDownstreamWork && !confirmRegen) {
+      setConfirmRegen(true);
+      return;
+    }
     onRegenerate(note.trim() || undefined);
     setNote('');
+    setConfirmRegen(false);
   };
 
   return (
@@ -119,6 +128,23 @@ export function BootstrapStyleStep({
       </div>
 
       {/* D1 — regenerate with a director note instead of a blind reroll */}
+      {confirmRegen && (
+        <p className="text-[11px] text-warning font-semibold rounded-lg border border-warning/30 bg-warning/5 px-3 py-2">
+          Later stages may reference this style — regenerating will replace the current selection.
+          {' '}
+          <button
+            type="button"
+            onClick={() => { setConfirmRegen(false); handleRegenerate(); }}
+            className="underline hover:text-warning/80"
+          >
+            Confirm regen
+          </button>
+          {' '}or{' '}
+          <button type="button" onClick={() => setConfirmRegen(false)} className="underline hover:text-warning/80">
+            Cancel
+          </button>
+        </p>
+      )}
       <div className="flex gap-2">
         <input
           type="text"

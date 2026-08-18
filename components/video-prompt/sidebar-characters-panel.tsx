@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle, GripVertical, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, GripVertical, Link, Pencil, Plus, SquarePlay, Trash2, Users, X } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
 import type { VideoCharacter, VideoProject, VideoShot } from '@/types/video';
 import { regenerateCharacterImagePrompt } from '@/lib/ai-client';
 import { useStoryBible } from '@/lib/video/story-bible-context';
 import { ConfirmModal } from '@/components/confirm-modal';
+import { cn } from '@/lib/utils';
 import { CharacterForm } from './character-form';
 import { CharacterImageThumb } from './character-image-thumb';
 import { CharacterReferencePanel } from './character-reference-panel';
@@ -39,7 +40,9 @@ export function SidebarCharactersPanel({ project, provider, onUpdate }: SidebarC
   const { entries } = useStoryBible();
   const characters = project.storyBible?.characters ?? [];
   const active = project.status === 'active';
+  const [lockToShot, setLockToShot] = useState<string | null>(null);
   const isEdit = editing ? characters.some((c) => c.id === editing.id) : false;
+  const shots = project.shots ?? [];
 
   const openAdd = () => {
     // A fresh id up front so the reference panel's uploads bind to a stable
@@ -189,6 +192,77 @@ export function SidebarCharactersPanel({ project, provider, onUpdate }: SidebarC
                   >
                     <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
+                  {active && shots.length > 0 && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setLockToShot(lockToShot === c.id ? null : c.id)}
+                        aria-label={`Lock ${c.name} to a shot (touch fallback)`}
+                        title="Lock character to a shot (touch-friendly)"
+                        className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+                      >
+                        <Link className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                      {lockToShot === c.id && (
+                        <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-border bg-surface-card shadow-lg p-1.5 space-y-0.5">
+                          <p className="text-[9px] font-bold uppercase tracking-wide text-text-muted px-2 py-1">Lock to shot:</p>
+                          {shots.map((s) => {
+                            const locked = s.characterIds?.includes(c.id);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                  if (locked) {
+                                    // Remove from this shot
+                                    const updated = {
+                                      ...project,
+                                      shots: project.shots.map((sh) =>
+                                        sh.id === s.id
+                                          ? { ...sh, characterIds: (sh.characterIds ?? []).filter((id) => id !== c.id) }
+                                          : sh
+                                      ),
+                                      updatedAt: Date.now(),
+                                    };
+                                    onUpdate(updated);
+                                  } else {
+                                    // Add to this shot
+                                    const updated = {
+                                      ...project,
+                                      shots: project.shots.map((sh) =>
+                                        sh.id === s.id
+                                          ? { ...sh, characterIds: [...(sh.characterIds ?? []), c.id] }
+                                          : sh
+                                      ),
+                                      storyBible: {
+                                        ...project.storyBible,
+                                        continuityLog: [
+                                          ...(project.storyBible.continuityLog ?? []),
+                                          `Shot ${s.shotNumber} locked to character "${c.name}" reference image.`,
+                                        ],
+                                      },
+                                      updatedAt: Date.now(),
+                                    };
+                                    onUpdate(updated);
+                                  }
+                                  setLockToShot(null);
+                                }}
+                                className={cn(
+                                  'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-semibold transition-colors text-left',
+                                  locked
+                                    ? 'bg-accent/10 text-accent'
+                                    : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+                                )}
+                              >
+                                <SquarePlay className="w-3 h-3 shrink-0" aria-hidden="true" />
+                                Shot {s.shotNumber}{locked ? ' (locked)' : ''}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => requestDelete(c)}

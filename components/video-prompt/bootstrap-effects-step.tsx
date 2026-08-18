@@ -14,6 +14,8 @@ interface BootstrapEffectsStepProps {
    *  the revisionPrompt ("same direction, heavier particle density"). */
   onRegenerate: (note?: string) => void;
   onConfirm: () => void;
+  /** When true, downstream stages have confirmed work that regeneration may affect. */
+  hasDownstreamWork?: boolean;
 }
 
 function EffectsCard({
@@ -85,12 +87,19 @@ export function BootstrapEffectsStep({
   onSelect,
   onRegenerate,
   onConfirm,
+  hasDownstreamWork,
 }: BootstrapEffectsStepProps) {
   const [note, setNote] = useState('');
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   const handleRegenerate = () => {
+    if (hasDownstreamWork && !confirmRegen) {
+      setConfirmRegen(true);
+      return;
+    }
     onRegenerate(note.trim() || undefined);
     setNote('');
+    setConfirmRegen(false);
   };
 
   return (
@@ -117,6 +126,23 @@ export function BootstrapEffectsStep({
       </div>
 
       {/* D1 — regenerate with a director note instead of a blind reroll */}
+      {confirmRegen && (
+        <p className="text-[11px] text-warning font-semibold rounded-lg border border-warning/30 bg-warning/5 px-3 py-2">
+          Regenerating VFX options will replace the current selection and may affect downstream shots.
+          {' '}
+          <button
+            type="button"
+            onClick={() => { setConfirmRegen(false); handleRegenerate(); }}
+            className="underline hover:text-warning/80"
+          >
+            Confirm regen
+          </button>
+          {' '}or{' '}
+          <button type="button" onClick={() => setConfirmRegen(false)} className="underline hover:text-warning/80">
+            Cancel
+          </button>
+        </p>
+      )}
       <div className="flex gap-2">
         <input
           type="text"

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Fragment, useMemo, useRef, useState } from 'react';
-import { Clapperboard, Film } from 'lucide-react';
+import { Clapperboard, Film, Timer } from 'lucide-react';
 import type { VideoProject, VideoShot } from '@/types/video';
 import { rebuildShotContinuity } from '@/lib/video/story-bible';
 import { saveVideoProject } from '@/lib/video-storage';
@@ -38,6 +38,11 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
   const shots = useMemo(
     () => [...(project.shots ?? [])].sort((a, b) => a.shotNumber - b.shotNumber),
     [project.shots]
+  );
+
+  const totalDuration = useMemo(
+    () => shots.reduce((sum, s) => sum + (s.durationSeconds || 0), 0),
+    [shots]
   );
 
   /** Persists the rebuilt chain + a continuityLog entry, then hands it up. */
@@ -174,6 +179,12 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
           <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-brand/10 text-brand border border-brand/25 tabular-nums">
             {shots.length} shot{shots.length === 1 ? '' : 's'}
           </span>
+          {totalDuration > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-surface-muted text-text-secondary border border-border tabular-nums">
+              <Timer className="w-2.5 h-2.5 text-accent" aria-hidden="true" />
+              {Math.floor(totalDuration / 60)}m {totalDuration % 60}s total
+            </span>
+          )}
         </div>
         <p className="text-[10px] text-text-muted">
           Reorder with the arrows — the chain renumbers and logs automatically.

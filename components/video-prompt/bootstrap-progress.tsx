@@ -13,6 +13,12 @@ export interface BootstrapStageMeta {
   hint: string;
 }
 
+/** Per-stage model override pointer (provider id + model name). */
+export interface StageModelRef {
+  providerId: string;
+  model: string;
+}
+
 interface BootstrapProgressProps {
   meta: BootstrapStageMeta[];
   step: VideoBootstrapStage;
@@ -22,14 +28,17 @@ interface BootstrapProgressProps {
   onGoTo: (stage: VideoBootstrapStage) => void;
   /** Stable key for the wizard's progress UI (project identity). */
   project?: VideoProject;
+  /** Per-stage model overrides — stages with an entry show a badge. */
+  stageOverrides?: Partial<Record<VideoBootstrapStage, StageModelRef>>;
 }
 
 /**
  * Phase 3 — the 5-step progress rail of the bootstrap wizard (extracted so
  * bootstrap-flow.tsx stays under the ~350-line ceiling). Done stages show a
  * check; the current stage is brand-tinted; unreachable stages are muted.
+ * Stages with a per-stage model override show a small accent dot.
  */
-export function BootstrapProgress({ meta, step, confirmed, maxReachable, disabled, onGoTo }: BootstrapProgressProps) {
+export function BootstrapProgress({ meta, step, confirmed, maxReachable, disabled, onGoTo, stageOverrides }: BootstrapProgressProps) {
   return (
     <div className="flex items-center gap-1.5" role="group" aria-label="Bootstrap progress">
       {meta.map((m, i) => {
@@ -58,13 +67,22 @@ export function BootstrapProgress({ meta, step, confirmed, maxReachable, disable
               >
                 {done ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : m.id}
               </span>
-              <span
-                className={cn(
-                  'text-[9px] font-bold uppercase tracking-wide whitespace-nowrap',
-                  active || done ? 'text-text-primary' : 'text-text-muted'
+              <span className="relative inline-flex items-center gap-1">
+                <span
+                  className={cn(
+                    'text-[9px] font-bold uppercase tracking-wide whitespace-nowrap',
+                    active || done ? 'text-text-primary' : 'text-text-muted'
+                  )}
+                >
+                  {m.label}
+                </span>
+                {stageOverrides?.[m.id] && (
+                  <span
+                    title={`Custom model: ${stageOverrides[m.id]!.model}`}
+                    className="w-1.5 h-1.5 rounded-full bg-accent shrink-0"
+                    aria-label="Using custom model override"
+                  />
                 )}
-              >
-                {m.label}
               </span>
             </button>
           </React.Fragment>

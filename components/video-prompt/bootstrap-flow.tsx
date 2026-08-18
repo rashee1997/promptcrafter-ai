@@ -340,6 +340,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         maxReachable={maxReachable}
         disabled={working}
         onGoTo={goTo}
+        stageOverrides={stageOverrides}
       />
 
       {/* Stage header — Thinking Orb animates during generation; the per-stage
@@ -452,10 +453,26 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
             <BootstrapScenesStep data={locations} busy={busy} onChange={setLocations} onSuggest={handleSuggestLocation} onConfirm={confirmStage} />
           )}
           {step === 4 && styleOptions.length > 0 && (
-            <BootstrapStyleStep data={styleOptions} selectedId={selectedStyleId} busy={busy} onSelect={setSelectedStyleId} onRegenerate={(note) => void runStage(4, note)} onConfirm={confirmStage} />
+            <BootstrapStyleStep
+              data={styleOptions}
+              selectedId={selectedStyleId}
+              busy={busy}
+              onSelect={setSelectedStyleId}
+              onRegenerate={(note) => void runStage(4, note)}
+              onConfirm={confirmStage}
+              hasDownstreamWork={confirmed.includes(5)}
+            />
           )}
           {step === 5 && effectsOptions.length > 0 && (
-            <BootstrapEffectsStep data={effectsOptions} selectedId={selectedEffectsId} busy={busy} onSelect={setSelectedEffectsId} onRegenerate={(note) => void runStage(5, note)} onConfirm={confirmStage} />
+            <BootstrapEffectsStep
+              data={effectsOptions}
+              selectedId={selectedEffectsId}
+              busy={busy}
+              onSelect={setSelectedEffectsId}
+              onRegenerate={(note) => void runStage(5, note)}
+              onConfirm={confirmStage}
+              hasDownstreamWork={false}
+            />
           )}
         </>
       )}

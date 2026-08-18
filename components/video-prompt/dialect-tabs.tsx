@@ -48,12 +48,13 @@ export function DialectTabs({ value, onChange, disabled, groupId = 'dialect' }: 
   };
 
   return (
-    <div
-      role="tablist"
-      aria-label="Prompt dialect"
-      aria-orientation="horizontal"
-      className="flex flex-wrap items-center gap-1.5"
-    >
+    <div className="flex flex-wrap items-center gap-1.5">
+      <div
+        role="tablist"
+        aria-label="Prompt dialect"
+        aria-orientation="horizontal"
+        className="flex flex-wrap items-center gap-1.5"
+      >
       {chips.map((dialect, i) => {
         const selected = dialect.id === value;
         return (
@@ -86,6 +87,10 @@ export function DialectTabs({ value, onChange, disabled, groupId = 'dialect' }: 
           </button>
         );
       })}
+      </div>
+      <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-mono text-text-muted/60 border border-border/50 bg-surface-muted/30 select-none">
+        ← →
+      </kbd>
     </div>
   );
 }
