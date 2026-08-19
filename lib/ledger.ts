@@ -1,5 +1,5 @@
 import { PromptQuality, PromptVersion } from '@/types';
-import { heuristicPromptQuality } from './prompt-quality';
+import { heuristicPromptQuality, isComparableQuality } from './prompt-quality';
 import { estimateCostPerCompletion, estimateGenerationCost } from './model-pricing';
 
 /**
@@ -43,7 +43,13 @@ export function buildCostLedger(versions: PromptVersion[]): LedgerRow[] {
 
     const prev = i > 0 ? rows[i - 1] : null;
     const costDelta = prev ? costPer1kCompletions - prev.costPer1kCompletions : 0;
-    const scoreDelta = prev ? quality.overall - prev.quality.overall : null;
+    // Score deltas are only meaningful between comparable measurements
+    // (same source and, for LLM scores, the same judge model + rubric version).
+    const scoreDelta = prev
+      ? isComparableQuality(prev.quality, quality)
+        ? quality.overall - prev.quality.overall
+        : null
+      : null;
     const silentCostBlowout =
       !!prev && costDelta > 0 && scoreDelta !== null && scoreDelta <= 0;
 

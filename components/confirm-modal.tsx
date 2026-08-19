@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { useScrollLock } from '@/lib/use-scroll-lock';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -36,6 +37,9 @@ export function ConfirmModal({
   // Keep Tab/Shift+Tab cycling inside the dialog while it's open
   useFocusTrap(containerRef, isOpen);
 
+  // Prevent the page behind the modal from scrolling
+  useScrollLock(isOpen);
+
   // Focus the dialog on open and restore focus to the trigger on close
   useEffect(() => {
     if (isOpen) {
@@ -63,7 +67,7 @@ export function ConfirmModal({
   const buttonColors = {
     danger: 'bg-danger hover:bg-danger/80 text-white shadow-danger/20',
     warning: 'bg-warning hover:bg-warning/80 text-white shadow-warning/20',
-    info: 'bg-brand hover:bg-indigo-500 text-white shadow-indigo-600/20',
+    info: 'bg-brand hover:bg-brand-hover text-white shadow-glow',
   };
 
   return (
@@ -85,7 +89,7 @@ export function ConfirmModal({
           <GlassCard variant="glowing" className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-danger/10 text-rose-500 border border-danger/20">
+                <div className="p-2.5 rounded-xl bg-danger/10 text-danger border border-danger/20">
                   <AlertTriangle className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <h3 id={titleId} className="text-lg font-semibold text-text-primary">

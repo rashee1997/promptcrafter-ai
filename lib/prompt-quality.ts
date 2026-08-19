@@ -1,12 +1,31 @@
-import { PromptQuality } from '@/types';
+import { EvaluationContext, PromptQuality, QualityDimensionKey, Session } from '@/types';
 import { computePromptStats, unwrapCodeBlock } from './prompt-stats';
 
 /** Case score at or above this threshold counts as "passed" in regression runs. */
 export const PASS_THRESHOLD = 75;
 
+/** Rubric/schema version for LLM-judge scores. Bump when the rubric or shape changes. */
+export const QUALITY_RUBRIC_VERSION = 'v2';
+
+/** Version of the deterministic heuristic. Bump when the formula changes. */
+export const HEURISTIC_VERSION = 'heuristic-v1';
+
+export const QUALITY_DIMENSION_KEYS: QualityDimensionKey[] = [
+  'clarity',
+  'structure',
+  'outputSpec',
+  'context',
+  'errorHandling',
+  'tokenEfficiency',
+];
+
+const IMPROVEMENT_SEVERITIES = new Set(['low', 'medium', 'high']);
+
 /**
  * The rubric prompt used by the LLM judge in /api/evaluate.
- * The judge must return strict JSON matching the PromptQuality shape.
+ * The judge must return strict JSON matching the PromptQuality shape. Scores are
+ * always judged against the TASK CONTEXT block the route appends, so the result
+ * is context-aware rather than generic boilerplate.
  */
 export const QUALITY_RUBRIC_PROMPT = `You are a rigorous prompt-quality auditor. Evaluate the AI prompt below and return STRICT JSON ONLY (no markdown, no commentary) with exactly this shape:
 
@@ -21,7 +40,7 @@ export const QUALITY_RUBRIC_PROMPT = `You are a rigorous prompt-quality auditor.
     "tokenEfficiency": { "score": <0-100>, "notes": "<one sentence>" }
   },
   "strengths": ["<2-3 concrete strengths>"],
-  "improvements": [{ "issue": "<specific gap>", "fix": "<one-line actionable fix>" }]
+  "improvements": [{ "issue": "<specific gap, quoting the relevant prompt section>", "fix": "<one-line actionable fix>", "dimension": "<clarity|structure|outputSpec|context|errorHandling|tokenEfficiency>", "severity": "<high|medium|low>" }]
 }
 
 Scoring rubric:
@@ -32,7 +51,46 @@ Scoring rubric:
 - errorHandling: does it cover edge cases, what NOT to do, and guardrails?
 - tokenEfficiency: is it lean (no fluff, repetition, or irrelevant boilerplate)? Long prompts should score lower unless every word earns its place.
 
-overall = mean of the six dimensions. Score 90-100 production-ready, 75-89 functional with gaps, 50-74 unreliable, below 50 structurally broken.`;
+TASK AWARENESS:
+- The user message includes a TASK CONTEXT block describing what this prompt is for. Score the prompt against that task: a prompt that fully satisfies the task's requirements deserves high marks even if it is shorter than usual.
+- Improvements MUST be specific to THIS prompt and THIS task: quote the section of the prompt you mean and say exactly what to change. Never suggest generic boilerplate that would apply to any prompt.
+
+overall = mean of the six dimensions (compute it yourself; the system verifies it). Score 90-100 production-ready, 75-89 functional with gaps, 50-74 unreliable, below 50 structurally broken.`;
+
+/** Build the task context sent to the judge for a session (context-aware scoring). */
+export function buildEvaluationContext(session: Session | null | undefined): EvaluationContext | undefined {
+  if (!session?.originalInput) return undefined;
+  const input = session.originalInput;
+  return {
+    domainId: session.domainId,
+    domainName: session.domainName,
+    topic: input.topic,
+    tone: input.tone,
+    framework: input.framework,
+    targetAudience: input.targetAudience,
+    additionalNotes: input.additionalNotes,
+  };
+}
+
+/**
+ * Two scores are directly comparable only when they came from the same
+ * measurement: both heuristic (same formula version) or both LLM-judge scores
+ * produced by the same judge model under the same rubric version. Mixing
+ * sources or judge identities produces meaningless deltas.
+ */
+export function isComparableQuality(a: PromptQuality, b: PromptQuality): boolean {
+  if (!a || !b || a.source !== b.source) return false;
+  if (a.source === 'heuristic') {
+    return a.judgeVersion === HEURISTIC_VERSION && b.judgeVersion === HEURISTIC_VERSION;
+  }
+  return (
+    !!a.judgeModel &&
+    !!b.judgeModel &&
+    a.judgeModel === b.judgeModel &&
+    !!a.judgeVersion &&
+    a.judgeVersion === b.judgeVersion
+  );
+}
 
 /** Run a deterministic heuristic assessment (used before/without the LLM judge). */
 export function heuristicPromptQuality(prompt: string): PromptQuality {
@@ -93,13 +151,13 @@ export function heuristicPromptQuality(prompt: string): PromptQuality {
   if (hasExamples) strengths.push('Uses examples to show the expected result.');
   if (strengths.length === 0) strengths.push('Has a clear structure to build on.');
 
-  const improvements: { issue: string; fix: string }[] = [];
-  if (!hasRole) improvements.push({ issue: 'No clear role is defined.', fix: 'Open with "You are a [expert role]..."' });
-  if (!hasClearTask) improvements.push({ issue: 'Task is vague.', fix: 'Add one sentence stating the goal: "Build/Draft/Write [deliverable]."' });
-  if (!hasFormat) improvements.push({ issue: 'Output format is not specified.', fix: 'State the exact format: sections, bullet points, JSON, or XML.' });
-  if (!hasContext) improvements.push({ issue: 'Missing context.', fix: 'Provide background, the audience, and any reference material.' });
-  if (!hasConstraints) improvements.push({ issue: 'No "what to avoid" guidance.', fix: 'Add clear rules about what the AI should not do.' });
-  if (estTokens > 800) improvements.push({ issue: 'The prompt may be too long.', fix: 'Remove repeated text and keep it concise (aim under ~600 tokens).' });
+  const improvements: { issue: string; fix: string; dimension?: QualityDimensionKey; severity?: 'low' | 'medium' | 'high' }[] = [];
+  if (!hasRole) improvements.push({ issue: 'No clear role is defined.', fix: 'Open with "You are a [expert role]..."', dimension: 'structure', severity: 'medium' });
+  if (!hasClearTask) improvements.push({ issue: 'Task is vague.', fix: 'Add one sentence stating the goal: "Build/Draft/Write [deliverable]."', dimension: 'clarity', severity: 'high' });
+  if (!hasFormat) improvements.push({ issue: 'Output format is not specified.', fix: 'State the exact format: sections, bullet points, JSON, or XML.', dimension: 'outputSpec', severity: 'high' });
+  if (!hasContext) improvements.push({ issue: 'Missing context.', fix: 'Provide background, the audience, and any reference material.', dimension: 'context', severity: 'medium' });
+  if (!hasConstraints) improvements.push({ issue: 'No "what to avoid" guidance.', fix: 'Add clear rules about what the AI should not do.', dimension: 'errorHandling', severity: 'high' });
+  if (estTokens > 800) improvements.push({ issue: 'The prompt may be too long.', fix: 'Remove repeated text and keep it concise (aim under ~600 tokens).', dimension: 'tokenEfficiency', severity: 'medium' });
 
   const overall = clamp(
     (clarityScore + structureScore + outputSpecScore + contextScore + errorHandlingScore + tokenEfficiencyScore) / 6
@@ -114,7 +172,22 @@ export function heuristicPromptQuality(prompt: string): PromptQuality {
     providerName: 'Local Heuristic',
     evaluatedAt: Date.now(),
     source: 'heuristic',
+    judgeVersion: HEURISTIC_VERSION,
   };
+}
+
+/** Normalize a dimension/severity tag coming from the LLM judge. */
+export function normalizeImprovementTag(
+  dimension: unknown,
+  severity: unknown
+): { dimension?: QualityDimensionKey; severity?: 'low' | 'medium' | 'high' } {
+  const dim = typeof dimension === 'string' && (QUALITY_DIMENSION_KEYS as string[]).includes(dimension)
+    ? (dimension as QualityDimensionKey)
+    : undefined;
+  const sev = typeof severity === 'string' && IMPROVEMENT_SEVERITIES.has(severity)
+    ? (severity as 'low' | 'medium' | 'high')
+    : undefined;
+  return { dimension: dim, severity: sev };
 }
 
 /** Merge a heuristic assessment with stored word/token counts for display. */

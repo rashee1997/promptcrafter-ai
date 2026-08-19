@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CaseEvaluationRequest, CaseEvaluationResult } from '@/types';
-import { runNonStreamingCompletion } from '@/lib/server-completion';
+import { runNonStreamingCompletion, resolveJudgeProvider } from '@/lib/server-completion';
 import { PASS_THRESHOLD } from '@/lib/prompt-quality';
 
 export const dynamic = 'force-dynamic';
@@ -11,16 +11,14 @@ const OUTPUT_JUDGE_RUBRIC = `You are a rigorous QA judge for AI model outputs. Y
 Return STRICT JSON ONLY (no markdown, no commentary) with exactly this shape:
 {
   "score": <number 0-100>,
-  "notes": "<one short sentence>",
-  "passed": <true|false>
+  "notes": "<one short sentence>"
 }
 
-Scoring: does the output (1) follow the prompt's instructions and output format, (2) answer the input completely without omissions, (3) avoid hallucination and unsupported claims, and (4) stay within the prompt's guardrails? Score 90-100 excellent, 75-89 acceptable, 50-74 flawed, below 50 failed. "passed" is true when score >= ${PASS_THRESHOLD}.`;
+Scoring: does the output (1) follow the prompt's instructions and output format, (2) answer the input completely without omissions, (3) avoid hallucination and unsupported claims, and (4) stay within the prompt's guardrails? Score 90-100 excellent, 75-89 acceptable, 50-74 flawed, below 50 failed. The system decides pass/fail from the score (passes at ${PASS_THRESHOLD}+); you only provide the score and notes.`;
 
 interface JudgePayload {
   score?: number;
   notes?: string;
-  passed?: boolean;
 }
 
 function parseJudge(text: string): JudgePayload | null {
@@ -69,14 +67,19 @@ export async function POST(req: NextRequest) {
       } satisfies CaseEvaluationResult);
     }
 
-    // Phase 2: judge the output quality
+    // Phase 2: judge the output quality with a DIFFERENT model when one is
+    // configured, so the executor doesn't grade its own work. Pass/fail is
+    // derived strictly from the score — an empty output or judge failure never
+    // counts as a pass.
     let score: number | null = null;
     let notes: string | undefined;
-    let passed = output.trim().length > 0;
+    let passed = false;
+
+    const judgeProvider = resolveJudgeProvider(provider);
 
     try {
       const judgeRaw = await runNonStreamingCompletion(
-        provider,
+        judgeProvider,
         [
           { role: 'system', content: OUTPUT_JUDGE_RUBRIC },
           {
@@ -84,16 +87,16 @@ export async function POST(req: NextRequest) {
             content: `TASK PROMPT:\n"""\n${prompt}\n"""\n\nINPUT:\n"""\n${userMessage}\n"""\n\nMODEL OUTPUT:\n"""\n${output.slice(0, 8000)}\n"""`,
           },
         ],
-        { temperature: 0.2 }
+        { temperature: 0 }
       );
       const judged = parseJudge(judgeRaw);
       if (judged && typeof judged.score === 'number') {
         score = Math.max(0, Math.min(100, Math.round(judged.score)));
         notes = typeof judged.notes === 'string' ? judged.notes : undefined;
-        passed = typeof judged.passed === 'boolean' ? judged.passed : score >= PASS_THRESHOLD;
+        passed = score >= PASS_THRESHOLD;
       }
     } catch (err) {
-      console.error('Output judge failed; using execution-only pass state:', err);
+      console.error('Output judge failed; case does not pass without a verified score:', err);
     }
 
     const result: CaseEvaluationResult = {
@@ -101,6 +104,8 @@ export async function POST(req: NextRequest) {
       score,
       passed,
       notes,
+      judgeModel: judgeProvider.model || judgeProvider.name,
+      judgeProvider: judgeProvider.name,
     };
 
     return NextResponse.json(result);

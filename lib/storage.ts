@@ -1,21 +1,59 @@
-import { HistoryItem, PromptQuality, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
+import { CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
+import type { StoryBibleCharacterImage } from '@/types/video';
 import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
+import { blobToDataUrl } from './compression';
 
 const DB_NAME = 'PromptCrafter_DB';
-const DB_VERSION = 2;
+const DB_VERSION = 5;
 const STORE_HISTORY = 'history';
 const STORE_SESSIONS = 'sessions';
 const STORE_PROVIDERS = 'providers';
 const STORE_SETTINGS = 'settings';
+const STORE_CUSTOM_PRESETS = 'customPresets';
+const STORE_VIDEO_PROJECTS = 'videoProjects';
+const STORE_STORY_BIBLE = 'storyBible';
+
+/**
+ * Default Gemini model used whenever a request doesn't carry an explicit
+ * model selection. Kept as a stable, broadly available model — the newest
+ * models are available in GEMINI_MODEL_LIST for users who opt in.
+ */
+export const GEMINI_DEFAULT_MODEL = 'gemini-3.6-flash';
+
+/**
+ * Curated Gemini API model list (official docs, August 2026) exposed in the
+ * built-in provider's model selector. Order: newest stable first, then
+ * frontier previews, then the rest of the stable family, then the proven
+ * 2.5 fallback tier. `activeModel` pins the default so the dropdown order
+ * never silently changes what model fresh users get.
+ */
+export const GEMINI_MODEL_LIST: string[] = [
+  // Latest stable — most capable Flash model
+  'gemini-3.7-flash',
+  // Current default — previous-gen Flash, reliable and multimodal
+  GEMINI_DEFAULT_MODEL,
+  // Frontier previews (may have tighter rate limits)
+  'gemini-3.1-pro-preview',
+  'gemini-3-flash-preview',
+  // Stable 3.x family
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  // Fallback tier — proven 2.5 family
+  'gemini-2.5-pro',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+];
 
 export const DEFAULT_BUILTIN_PROVIDER: ProviderConfig = {
   id: 'default-gemini',
-  name: 'Google Gemini 3.6 Flash (Server Default)',
+  name: 'Google Gemini (Server Default)',
   baseUrl: 'https://generativelanguage.googleapis.com',
   apiKey: 'BUILTIN', // handled server side with GEMINI_API_KEY
-  model: 'gemini-3.6-flash',
-  models: ['gemini-3.6-flash'],
+  model: GEMINI_DEFAULT_MODEL,
+  models: GEMINI_MODEL_LIST,
+  activeModel: GEMINI_DEFAULT_MODEL,
   isDefault: true,
   useBuiltInGemini: true,
   temperature: 0.7,
@@ -27,6 +65,7 @@ export const DEFAULT_BUILTIN_PROVIDER: ProviderConfig = {
 const memorySessions: Session[] = [];
 const memoryHistory: HistoryItem[] = [];
 const memoryProviders: ProviderConfig[] = [DEFAULT_BUILTIN_PROVIDER];
+const memoryCustomPresets: CustomPresetEntry[] = [];
 let memoryActiveProviderId: string = DEFAULT_BUILTIN_PROVIDER.id;
 const memoryActiveModels: Record<string, string> = {};
 
@@ -67,7 +106,7 @@ function convertHistoryItemToSession(item: HistoryItem): Session {
         createdAt: timestamp,
         content: item.output || '',
         providerName: item.providerName || 'Default Provider',
-        modelUsed: item.modelUsed || 'gemini-3.6-flash',
+        modelUsed: item.modelUsed || GEMINI_DEFAULT_MODEL,
         stats,
       },
     ],
@@ -79,7 +118,7 @@ function convertHistoryItemToSession(item: HistoryItem): Session {
   };
 }
 
-function openDB(): Promise<IDBDatabase> {
+export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
       return reject(new Error('IndexedDB not supported in this environment'));
@@ -110,6 +149,29 @@ function openDB(): Promise<IDBDatabase> {
           const sessionsStore = db.createObjectStore(STORE_SESSIONS, { keyPath: 'id' });
           sessionsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
           sessionsStore.createIndex('domainId', 'domainId', { unique: false });
+        }
+
+        // Schema v3: dedicated store for user-saved custom chip presets (kept
+        // separate from the arbitrary key-value STORE_SETTINGS so presets stay
+        // queryable/deletable per studio field independently).
+        if (!db.objectStoreNames.contains(STORE_CUSTOM_PRESETS)) {
+          db.createObjectStore(STORE_CUSTOM_PRESETS, { keyPath: 'id' });
+        }
+
+        // Schema v4: dedicated store for Video Prompt Studio projects. Kept
+        // separate from sessions so video projects stay queryable/deletable
+        // per project independently of the prompt-engineering session store.
+        if (!db.objectStoreNames.contains(STORE_VIDEO_PROJECTS)) {
+          db.createObjectStore(STORE_VIDEO_PROJECTS, { keyPath: 'id' });
+        }
+
+        // Schema v5: Story Bible character images (compressed WebP blobs). Kept
+        // separate from video projects because blobs are large and must be
+        // queryable per project + timestamp without loading whole projects.
+        if (!db.objectStoreNames.contains(STORE_STORY_BIBLE)) {
+          const storyBibleStore = db.createObjectStore(STORE_STORY_BIBLE, { keyPath: 'id' });
+          storyBibleStore.createIndex('projectId', 'projectId', { unique: false });
+          storyBibleStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
 
         // Schema migration v1 -> v2: read from `history` store and populate `sessions`
@@ -171,6 +233,251 @@ function setLocalSessions(sessions: Session[]): void {
     localStorage.setItem('promptcrafter_sessions', JSON.stringify(sessions));
   } catch (err) {
     console.warn('LocalStorage write skipped:', err);
+  }
+}
+
+// Fallback LocalStorage functions for custom presets (same shape as sessions)
+function getLocalCustomPresets(): CustomPresetEntry[] {
+  if (typeof window === 'undefined') return memoryCustomPresets;
+  try {
+    const raw = localStorage.getItem('promptcrafter_custom_presets');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : memoryCustomPresets;
+    }
+    return memoryCustomPresets;
+  } catch {
+    return memoryCustomPresets;
+  }
+}
+
+function setLocalCustomPresets(entries: CustomPresetEntry[]): void {
+  memoryCustomPresets.length = 0;
+  memoryCustomPresets.push(...entries);
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('promptcrafter_custom_presets', JSON.stringify(entries));
+  } catch (err) {
+    console.warn('LocalStorage write skipped:', err);
+  }
+}
+
+/**
+ * Filter a preset list to one studio field, honoring the requested mode scope:
+ * 'both' presets surface for every query; image/logo presets only for their own.
+ */
+function filterCustomPresets(
+  entries: CustomPresetEntry[],
+  field: string,
+  mode: CustomPresetMode
+): CustomPresetEntry[] {
+  return entries
+    .filter((e) => e.field === field && (mode === 'both' || e.mode === mode || e.mode === 'both'))
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+// --- Custom Preset Public Storage API (Image/Logo Prompt Studio) ---
+
+export async function getCustomPresets(field: string, mode: CustomPresetMode): Promise<CustomPresetEntry[]> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_CUSTOM_PRESETS, 'readonly');
+    const store = tx.objectStore(STORE_CUSTOM_PRESETS);
+    const all = await new Promise<CustomPresetEntry[]>((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    return filterCustomPresets(all, field, mode);
+  } catch {
+    return filterCustomPresets(getLocalCustomPresets(), field, mode);
+  }
+}
+
+export async function saveCustomPreset(
+  entry: Omit<CustomPresetEntry, 'id' | 'createdAt'>
+): Promise<CustomPresetEntry> {
+  const full: CustomPresetEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    createdAt: Date.now(),
+  };
+
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_CUSTOM_PRESETS, 'readwrite');
+    const store = tx.objectStore(STORE_CUSTOM_PRESETS);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.put(full);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const entries = getLocalCustomPresets();
+    entries.push(full);
+    setLocalCustomPresets(entries);
+  }
+
+  return full;
+}
+
+export async function deleteCustomPreset(id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_CUSTOM_PRESETS, 'readwrite');
+    const store = tx.objectStore(STORE_CUSTOM_PRESETS);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const entries = getLocalCustomPresets().filter((e) => e.id !== id);
+    setLocalCustomPresets(entries);
+  }
+}
+
+// --- Story Bible Character Image Storage API (Video Prompt Studio) ---
+// Persists compressed WebP blobs per project. IndexedDB stores Blobs natively
+// (structured clone); the LocalStorage fallback mirrors them as data URLs.
+
+const STORY_BIBLE_LS_KEY = 'promptcrafter_story_bible';
+
+function getLocalStoryBible(): StoryBibleCharacterImage[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORY_BIBLE_LS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLocalStoryBible(entries: StoryBibleCharacterImage[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORY_BIBLE_LS_KEY, JSON.stringify(entries));
+  } catch (err) {
+    console.warn('Story Bible LocalStorage write skipped:', err);
+  }
+}
+
+/** LocalStorage fallback — Blobs become data URLs before JSON serialization. */
+async function toSerializable(entry: StoryBibleCharacterImage): Promise<StoryBibleCharacterImage> {
+  if (entry.imageBlob && !entry.imageDataUrl) {
+    try {
+      return { ...entry, imageBlob: undefined, imageDataUrl: await blobToDataUrl(entry.imageBlob) };
+    } catch {
+      return { ...entry, imageBlob: undefined };
+    }
+  }
+  return entry;
+}
+
+/** Saves one compressed character reference image to the Story Bible store. */
+export async function saveStoryBibleCharacterImage(
+  input: Omit<StoryBibleCharacterImage, 'id' | 'timestamp'>
+): Promise<StoryBibleCharacterImage> {
+  const full: StoryBibleCharacterImage = {
+    ...input,
+    id: crypto.randomUUID(),
+    timestamp: Date.now(),
+  };
+
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_STORY_BIBLE, 'readwrite');
+    const store = tx.objectStore(STORE_STORY_BIBLE);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.put(full);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const entries = getLocalStoryBible();
+    entries.unshift(await toSerializable(full));
+    setLocalStoryBible(entries);
+  }
+
+  return full;
+}
+
+/** Loads every Story Bible character image for a project (newest first). */
+export async function getStoryBibleCharacterImages(
+  projectId: string
+): Promise<StoryBibleCharacterImage[]> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_STORY_BIBLE, 'readonly');
+      const store = tx.objectStore(STORE_STORY_BIBLE);
+      const index = store.index('projectId');
+      const request = index.openCursor(IDBKeyRange.only(projectId), 'prev');
+      const items: StoryBibleCharacterImage[] = [];
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          items.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(items);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    return getLocalStoryBible()
+      .filter((e) => e.projectId === projectId)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }
+}
+
+/**
+ * Marks one Story Bible image as the character's primary reference, clearing
+ * the flag on the project's other entries. Falls back to LocalStorage.
+ */
+export async function setStoryBibleCharacterImagePrimary(projectId: string, id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_STORY_BIBLE, 'readwrite');
+    const store = tx.objectStore(STORE_STORY_BIBLE);
+    const index = store.index('projectId');
+    const entries = await new Promise<StoryBibleCharacterImage[]>((resolve, reject) => {
+      const req = index.getAll(IDBKeyRange.only(projectId));
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    for (const entry of entries) {
+      if (entry.isPrimary === (entry.id === id)) continue;
+      await new Promise<void>((resolve, reject) => {
+        const req = store.put({ ...entry, isPrimary: entry.id === id });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+  } catch {
+    setLocalStoryBible(
+      getLocalStoryBible().map((e) =>
+        e.projectId === projectId ? { ...e, isPrimary: e.id === id } : e
+      )
+    );
+  }
+}
+
+/** Removes one Story Bible character image. */
+export async function deleteStoryBibleCharacterImage(id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_STORY_BIBLE, 'readwrite');
+    const store = tx.objectStore(STORE_STORY_BIBLE);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    setLocalStoryBible(getLocalStoryBible().filter((e) => e.id !== id));
   }
 }
 
@@ -311,9 +618,17 @@ export async function setVersionQuality(sessionId: string, versionId: string, qu
     throw new Error(`Session ${sessionId} not found`);
   }
 
-  const updatedVersions = session.versions.map((v) =>
-    v.id === versionId ? { ...v, quality } : v
-  );
+  // Append to the version's score history instead of overwriting, so drift
+  // detection keeps its baseline. Seed history from the existing `quality` for
+  // sessions saved before qualityHistory existed (backward compatible).
+  const updatedVersions = session.versions.map((v) => {
+    if (v.id !== versionId) return v;
+    const seeded = v.qualityHistory?.length ? v.qualityHistory : v.quality ? [v.quality] : [];
+    const last = seeded[seeded.length - 1];
+    const history =
+      last && last.evaluatedAt === quality.evaluatedAt ? seeded : [...seeded, quality];
+    return { ...v, quality, qualityHistory: history };
+  });
 
   const updatedSession: Session = {
     ...session,

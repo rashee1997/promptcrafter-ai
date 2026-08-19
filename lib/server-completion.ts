@@ -1,10 +1,28 @@
 import { GoogleGenAI } from '@google/genai';
 import { ProviderConfig } from '@/types';
 import { createOpenAIClient } from './openai-provider';
+import { withModelFallback } from './model-fallback';
 
 export interface CompletionMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+}
+
+/**
+ * Resolves the provider used to JUDGE an output, which should differ from the
+ * model that produced the output so a model can't grade its own work. Prefers
+ * the first configured model different from the executor; falls back to the
+ * executor when only one model is available.
+ */
+export function resolveJudgeProvider(provider: ProviderConfig): ProviderConfig {
+  const models = Array.isArray(provider.models)
+    ? provider.models.map((m) => m?.trim()).filter((m): m is string => !!m)
+    : [];
+  const unique = [...new Set(models)].filter((m) => m !== provider.model);
+  if (unique.length > 0) {
+    return { ...provider, model: unique[0], activeModel: unique[0] };
+  }
+  return provider;
 }
 
 /**
@@ -35,7 +53,6 @@ export async function runNonStreamingCompletion(
       },
     });
 
-    const modelName = provider?.model || 'gemini-3.6-flash';
     const systemInstruction = messages
       .filter((m) => m.role === 'system')
       .map((m) => m.content)
@@ -48,28 +65,30 @@ export async function runNonStreamingCompletion(
         parts: [{ text: m.content }],
       }));
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents,
-      config: {
-        systemInstruction: systemInstruction || undefined,
-        temperature: options?.temperature ?? provider?.temperature ?? 0.7,
-        maxOutputTokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
-      },
+    return await withModelFallback(provider, async (model) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents,
+        config: {
+          systemInstruction: systemInstruction || undefined,
+          temperature: options?.temperature ?? provider?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
+        },
+      });
+      return response.text || '';
     });
-
-    return response.text || '';
   }
 
   // OpenAI-compatible provider
   const client = createOpenAIClient(provider);
-  const completion = await client.chat.completions.create({
-    model: provider.model || 'gpt-4o-mini',
-    messages,
-    temperature: options?.temperature ?? provider?.temperature ?? 0.7,
-    max_tokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
-    stream: false,
+  return await withModelFallback(provider, async (model) => {
+    const completion = await client.chat.completions.create({
+      model,
+      messages,
+      temperature: options?.temperature ?? provider?.temperature ?? 0.7,
+      max_tokens: options?.maxTokens ?? provider?.maxTokens ?? 3000,
+      stream: false,
+    });
+    return completion.choices?.[0]?.message?.content || '';
   });
-
-  return completion.choices?.[0]?.message?.content || '';
 }

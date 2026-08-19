@@ -6,6 +6,7 @@ export function SiteFooter() {
     <footer className="border-t border-border py-6 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-text-muted">
         <span>© {new Date().getFullYear()} PROMPTCRAFTER AI</span>
+        <span className="hidden sm:inline">PRIVATE &amp; LOCAL · NO ACCOUNT NEEDED</span>
         <div className="flex items-center gap-4">
           <Link href="/blog" className="hover:text-text-primary transition-colors">
             BLOG
