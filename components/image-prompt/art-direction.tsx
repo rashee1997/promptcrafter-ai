@@ -7,6 +7,18 @@ import { cn } from '@/lib/utils';
 import { suggestNegativePrompt } from '@/lib/ai-client';
 import { CAMERA_PRESETS, COLOR_GRADE_PRESETS, COMPOSITION_PRESETS, LIGHTING_PRESETS, MOOD_PRESETS, RESOLUTION_OPTIONS } from '@/lib/image-prompts';
 import { LOGO_BOLDNESS_PRESETS, LOGO_HIDDEN_MEANING_PRESETS, LOGO_LOCKUP_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_SHAPE_PRESETS, LOGO_STYLE_PRESETS, LOGO_TYPOGRAPHY_PRESETS, LOGO_USAGE_PRESETS } from '@/lib/logo-prompts';
+
+/** Font-family preview strings per typography preset id — renders an actual type sample. */
+const TYPOGRAPHY_FONT_MAP: Record<string, string> = {
+  'geometric-sans': 'Futura, Poppins, sans-serif',
+  'humanist-sans': 'Inter, Source Sans 3, sans-serif',
+  'modern-serif': 'Playfair Display, Didot, serif',
+  'slab-serif': 'Rockwell, Archer, slab-serif',
+  'script': 'Pacifico, Dancing Script, cursive',
+  'monospace': 'JetBrains Mono, SF Mono, monospace',
+  'display-custom': 'Bebas Neue, Impact, sans-serif',
+  'no-text': '',
+};
 import { ImagePromptInput } from '@/types';
 import { ChipRow, MultiChipRow } from './chip-row';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
@@ -148,6 +160,28 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             field="typography"
             mode="logo"
           />
+        )}
+        {/* Typography live sample — renders "Aa" in the selected typeface's font-family */}
+        {isLogo && state.typography && TYPOGRAPHY_FONT_MAP[state.typography] && (
+          <div className="rounded-xl border border-border bg-surface-code px-4 py-3 flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted mb-1">Type sample</p>
+              <p
+                className="text-2xl font-bold text-text-primary leading-none tracking-tight truncate"
+                style={{ fontFamily: TYPOGRAPHY_FONT_MAP[state.typography] }}
+              >
+                Aa
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-[9px] font-medium text-text-muted">
+                {LOGO_TYPOGRAPHY_PRESETS.find((t) => t.id === state.typography)?.label}
+              </p>
+              <p className="text-[8px] text-text-muted/70 font-mono truncate max-w-[120px]">
+                {TYPOGRAPHY_FONT_MAP[state.typography]}
+              </p>
+            </div>
+          </div>
         )}
         {isLogo && (
           <ChipRow
@@ -297,6 +331,15 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             placeholder={isLogo ? 'e.g. clip art, gradients, shadows, photorealistic background, watermark' : 'e.g. distorted hands, extra fingers, watermark, oversaturated'}
             className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
           />
+          <p className="text-[10px] text-text-muted leading-relaxed">
+            3–5 short terms, most-damaging artifact first
+            {negativePrompt && (
+              <span className="ml-1 font-semibold tabular-nums">
+                · {negativePrompt.split(',').map((t) => t.trim()).filter(Boolean).length} term{' '}
+                {negativePrompt.split(',').map((t) => t.trim()).filter(Boolean).length === 1 ? '' : 's'}
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Additional notes */}

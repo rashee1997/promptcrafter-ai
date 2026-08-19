@@ -369,7 +369,7 @@ export interface ImagePromptReferenceImage {
   /** Base-64 data URL kept client-side only. */
   dataUrl: string;
   /** Purpose tag — changes how the system prompt describes the image per platform. */
-  purpose: 'subject' | 'style' | 'brand-consistency';
+  purpose: 'subject' | 'style' | 'brand-consistency' | 'redesign-reference';
 }
 
 export interface ImagePromptInput {

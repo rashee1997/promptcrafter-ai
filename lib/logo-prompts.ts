@@ -94,6 +94,37 @@ export const LOGO_PALETTE_PRESETS: LogoPaletteOption[] = [
 ];
 
 /**
+ * Cliché detection — keywords from Rule 1 of the system prompt's banned list.
+ * Checked client-side before generation so the director sees a warning instead
+ * of a wasted generation.
+ */
+const CLICHE_PATTERNS: { pattern: RegExp; label: string; reason: string }[] = [
+  { pattern: /\bglobe\b/i, label: 'Globe', reason: 'Globes are one of the most overused logo concepts. Consider a more ownable shape that encodes your brand\'s specific meaning.' },
+  { pattern: /\bswoosh\b/i, label: 'Swoosh', reason: 'Swooshes are a generic movement cliché. A custom curve with meaning will feel far more designed.' },
+  { pattern: /\b(chat\s*bubble|speech\s*bubble|chat\s*icon)\b/i, label: 'Chat bubble', reason: 'Chat bubbles are the default tech logo cliché. Try a concept that signals connection without the generic icon.' },
+  { pattern: /\b(gradient\s*sphere|glowing\s*orb|orb\s*glow)\b/i, label: 'Gradient sphere', reason: 'Gradient spheres are an AI-image default. A flat vector mark with one clear shape will be more ownable and scalable.' },
+  { pattern: /\b(stock\s*leaf|stock\s*coffee|coffee\s*cup|stock\s*cup)\b/i, label: 'Stock imagery', reason: 'Stock coffee cups and leaves are category clichés. A specific, meaningful symbol tied to your brand story will stand out.' },
+  { pattern: /\b(tech\s*sparkle|sparkle|sparkles)\b/i, label: 'Sparkle', reason: 'Generic sparkles and tech sparkles signal nothing specific. Replace with a symbol that encodes your brand\'s actual meaning.' },
+];
+
+/**
+ * Check the director's subject/concept text for cliché keywords.
+ * Returns an array of { label, reason } for each match — empty if clear.
+ */
+export function checkLogoCliches(text: string): { label: string; reason: string }[] {
+  if (!text.trim()) return [];
+  const matches: { label: string; reason: string }[] = [];
+  const seen = new Set<string>();
+  for (const { pattern, label, reason } of CLICHE_PATTERNS) {
+    if (pattern.test(text) && !seen.has(label)) {
+      matches.push({ label, reason });
+      seen.add(label);
+    }
+  }
+  return matches;
+}
+
+/**
  * Industry presets — inject the category's expected audience and design
  * direction so the mark reads as *appropriate* (design principle #4), plus a
  * per-industry cliché ban list so it never reads as generic stock.
@@ -257,6 +288,8 @@ export function buildLogoPromptSystemPrompt(input: ImagePromptInput): string {
   const palette = LOGO_PALETTE_PRESETS.find((p) => p.id === input.palette);
   const mood = input.mood;
   const platformList = PLATFORM_IDS.filter((p) => input.platforms.includes(p));
+  const hasRefImages = !!input.referenceImages && input.referenceImages.length > 0;
+  const refImages = input.referenceImages ?? [];
   // Logos with text are majority-text artifacts — wordmark/lettermark/emblem/
   // combination mark types always carry legible text, as does an explicit
   // brandName or inImageText entry.
@@ -345,7 +378,15 @@ ${input.boldness ? `- Concept boldness: ${hintOf(LOGO_BOLDNESS_PRESETS, input.bo
 ${input.inImageText ? `- Extra text inside the mark: ${input.inImageText}` : ''}
 - Platform dialects to emit: ${platformList.map((id) => id.toUpperCase()).join(', ') || 'master only'}
 ${input.negativePrompt ? `- Negative guidance: ${input.negativePrompt}` : ''}
+${hasRefImages ? `- Reference images: ${refImages.length} attached (${refImages.map((r) => r.purpose).join(', ')}). ${refImages.some((r) => r.purpose === 'redesign-reference') ? 'The attached image(s) ARE THE CURRENT LOGO — evolve them.' : 'Describe the reference\'s key visual traits in words.'}` : ''}
 ${input.additionalNotes ? `- Additional notes: ${input.additionalNotes}` : ''}
+${hasRefImages ? `
+REFERENCE IMAGE RULES
+The director attached ${refImages.length} reference image(s) for this brief. ${refImages.some((r) => r.purpose === 'redesign-reference') ? 'At least one image is tagged as redesign-reference: the attached image IS THE CURRENT LOGO. Evolve it — do not ignore it. Describe the current logo\'s key visual traits (mark shape, typeface, color palette, layout, texture, any hidden meaning) in words so every platform section captures what it looks like today before proposing the evolution. Keep whatever the director says to keep; modernize what they say to change.' : 'Describe the reference image\'s key visual traits (mark shape, typeface, color palette, layout) in words so the text prompt captures the brand\'s identity.'}
+- Gemini / Nano Banana: describe the current logo\'s key visual traits from the attached reference (shape, typeface, color palette, layout, hidden meaning) and explicitly instruct to evolve it.
+- Midjourney: use --cref <image_url> for character/brand reference with --cw 80 for high fidelity; describe the current logo in words.
+- Ideogram: describe the current logo\'s exact form; use Character Reference feature for brand consistency.
+- DALL·E / SD / Flux: describe the reference\'s key visual traits in words since these platforms don\'t accept a separate reference-image parameter.` : ''}
 
 Now write the prompts. Start directly with "## MASTER PROMPT".`;
 }

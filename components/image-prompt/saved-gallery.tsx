@@ -125,16 +125,25 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
                   </p>
                 </div>
 
-                {/* Platform chips */}
+                {/* Platform chips — colored dot + label for quick scanning */}
                 <div className="flex flex-wrap gap-1">
-                  {item.platforms.slice(0, 5).map((p) => (
-                    <span
-                      key={p}
-                      className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-brand/10 text-brand border border-brand/20"
-                    >
-                      {PLATFORM_OPTIONS.find((o) => o.id === p)?.label ?? p}
+                  {item.platforms.slice(0, 6).map((p) => {
+                    const opt = PLATFORM_OPTIONS.find((o) => o.id === p);
+                    return (
+                      <span
+                        key={p}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-brand/10 text-brand border border-brand/20"
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${opt?.color ?? 'bg-brand/50'}`} />
+                        {opt?.label ?? p}
+                      </span>
+                    );
+                  })}
+                  {item.platforms.length > 6 && (
+                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-surface-muted text-text-muted border border-border">
+                      +{item.platforms.length - 5} more
                     </span>
-                  ))}
+                  )}
                 </div>
 
                 {/* Preview */}

@@ -11,6 +11,7 @@ const PURPOSE_OPTIONS: { value: ImagePromptReferenceImage['purpose']; label: str
   { value: 'subject', label: 'Subject / Product', color: 'bg-brand/15 border-brand text-brand' },
   { value: 'style', label: 'Style reference', color: 'bg-[#8ab4f8]/15 border-[#8ab4f8] text-[#8ab4f8]' },
   { value: 'brand-consistency', label: 'Brand / Character consistency', color: 'bg-warning/15 border-warning text-warning' },
+  { value: 'redesign-reference', label: 'Current logo to evolve', color: 'bg-[#c084fc]/15 border-[#c084fc] text-[#c084fc]' },
 ];
 
 interface ReferenceImageUploadProps {
@@ -158,7 +159,9 @@ export function ReferenceImageUpload({
                 ? 'Gemini/Nano Banana will describe this subject from the image.'
                 : img.purpose === 'style'
                   ? 'Platform sections will reference the visual style of this image.'
-                  : 'Midjourney --cref / Ideogram Character Reference will use this.'}
+                  : img.purpose === 'redesign-reference'
+                    ? 'The AI will treat this as the current logo to evolve — describe what to keep and modernize.'
+                    : 'Midjourney --cref / Ideogram Character Reference will use this.'}
             </p>
           </div>
 

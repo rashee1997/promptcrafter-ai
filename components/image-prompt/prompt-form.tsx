@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Bookmark, Building2, Check, ChevronDown, Cpu, FolderOpen, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Plus, RefreshCw, Route, Save, Shapes, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
 import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, PURPOSE_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
-import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
+import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS, checkLogoCliches } from '@/lib/logo-prompts';
 import { ImagePlatform, ProviderConfig } from '@/types';
 import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
@@ -64,6 +64,11 @@ export function PromptForm({
 
   const isLogo = state.mode === 'logo';
   const exampleTopics = isLogo ? LOGO_EXAMPLE_TOPICS : EXAMPLE_TOPICS;
+  // Pre-flight cliché check — client-side keyword scan before generation
+  const clicheWarnings = useMemo(
+    () => (isLogo ? checkLogoCliches(state.subject) : []),
+    [isLogo, state.subject]
+  );
   // Hybrid demo prompts: static chips render instantly, then quietly upgrade to
   // AI-refreshed suggestions matched to the current mode/settings.
   const { examples: dynamicExamples, isRefreshing: examplesRefreshing, refresh: refreshExamples } =
@@ -282,6 +287,24 @@ export function PromptForm({
               {examplesRefreshing ? 'Refreshing' : 'New ideas'}
             </button>
           </div>
+
+          {/* Pre-flight cliché warning — logo mode only */}
+          {isLogo && clicheWarnings.length > 0 && (
+            <div className="mt-2 p-3 rounded-xl bg-warning/10 border border-warning/30 space-y-1.5">
+              <p className="text-[10px] font-bold text-warning flex items-center gap-1.5">
+                <span className="text-sm">⚠</span>
+                Pre-flight cliché check
+              </p>
+              {clicheWarnings.map((w) => (
+                <p key={w.label} className="text-[10px] text-warning/80 leading-relaxed">
+                  <span className="font-semibold">{w.label}</span> — {w.reason}
+                </p>
+              ))}
+              <p className="text-[9px] text-text-muted leading-relaxed">
+                These are flagged, not blocked. A well-directed cliché can work — but a more ownable concept will make the mark feel designed.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Brand / Subject Kit — load or save reusable brief presets */}
@@ -447,24 +470,59 @@ export function PromptForm({
         </div>
 
         {/* Aspect ratio */}
-        <ChipRow
-          label="Aspect ratio"
-          icon={<LayoutGrid className="w-3.5 h-3.5 text-brand" />}
-          options={ASPECT_RATIOS}
-          value={state.aspectRatio}
-          onChange={handlers.setAspectRatio}
-          field="aspectRatio"
-          mode="both"
-        />
+        <div className="space-y-2">
+          <ChipRow
+            label="Aspect ratio"
+            icon={<LayoutGrid className="w-3.5 h-3.5 text-brand" />}
+            options={ASPECT_RATIOS}
+            value={state.aspectRatio}
+            onChange={handlers.setAspectRatio}
+            field="aspectRatio"
+            mode="both"
+          />
+          {/* Live aspect ratio preview frame */}
+          {(() => {
+            const [w, h] = state.aspectRatio.split(':').map(Number);
+            if (!w || !h) return null;
+            const maxW = 120;
+            const maxH = 80;
+            let frameW = maxW;
+            let frameH = (h / w) * maxW;
+            if (frameH > maxH) {
+              frameH = maxH;
+              frameW = (w / h) * maxH;
+            }
+            return (
+              <div className="flex items-center gap-3">
+                <div
+                  className="border-2 border-dashed border-brand/40 rounded-md bg-surface-code flex items-center justify-center"
+                  style={{ width: frameW, height: frameH }}
+                >
+                  <span className="text-[8px] text-text-muted font-mono">
+                    {state.aspectRatio}
+                  </span>
+                </div>
+                <span className="text-[10px] text-text-muted leading-tight">
+                  {ASPECT_RATIOS.find((r) => r.id === state.aspectRatio)?.hint ?? ''}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
 
-        {/* Reference images — quick upload zone in Tier 1 (image mode only) */}
-        {!isLogo && state.referenceImages.length >= 0 && (
+        {/* Reference images — quick upload zone in Tier 1 */}
+        {state.referenceImages.length >= 0 && (
           <div className="space-y-2">
             <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
               <ImageIcon className="w-3.5 h-3.5 text-brand" />
-              Reference images
+              {isLogo ? 'Redesigning an existing logo?' : 'Reference images'}
               <span className="text-text-muted font-normal normal-case">— optional, session-only</span>
             </span>
+            {isLogo && (
+              <p className="text-[10px] text-text-muted leading-relaxed">
+                Upload your current logo — the AI will treat it as the brand to evolve, not ignore.
+              </p>
+            )}
             <ReferenceImageUpload
               images={state.referenceImages}
               onAdd={handlers.addReferenceImage}

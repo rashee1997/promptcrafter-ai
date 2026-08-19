@@ -13,6 +13,7 @@ import {
   parseImagePromptOutput,
   saveImagePrompt,
   SavedImagePrompt,
+  PURPOSE_OPTIONS,
   STYLE_PRESETS,
 } from '@/lib/image-prompts';
 import { generateImagePromptStream, redoImagePromptStream } from '@/lib/ai-client';
@@ -248,7 +249,11 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           parsed = { ...parsed, master: completedText.trim() };
         }
         setSections(parsed);
-        setActiveTab('master');
+        // Default to the purpose-matched platform tab when a purpose was selected
+        const purposeOpt = purpose ? PURPOSE_OPTIONS.find((o) => o.id === purpose) : undefined;
+        const purposePlatform = purposeOpt?.suggestPlatforms[0];
+        const purposeTab = purposePlatform && tabs.some((t) => t.key === purposePlatform) ? purposePlatform : 'master';
+        setActiveTab(purposeTab as keyof ImagePromptSections | 'raw');
         toast.success('Image prompts ready', 'Master + platform prompts are ready to copy.');
       },
       (error) => {
