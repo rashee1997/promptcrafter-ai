@@ -17,7 +17,21 @@ import { DomainSelector } from './domain-selector';
 import { GlassCard } from './glass-card';
 import { DEFAULT_OUTPUT_CHAR_LIMIT, DOMAIN_PRESETS, FRAMEWORK_OPTIONS, TONE_OPTIONS } from '@/lib/domains';
 import { getProviderModelList } from '@/lib/storage';
-import { DomainPreset, FrameworkType, PromptInput, ProviderConfig, ToneType } from '@/types';
+import {
+  TOASTMASTERS_ASSET_CATALOG,
+  TOASTMASTERS_COLORS,
+  getAssetEntry,
+} from '@/lib/toastmasters-prompts';
+import {
+  DomainPreset,
+  FrameworkType,
+  PromptInput,
+  ProviderConfig,
+  StudioMode,
+  ToastmastersAssetId,
+  ToastmastersInput,
+  ToneType,
+} from '@/types';
 
 interface PromptFormProps {
   onGenerate: (input: PromptInput) => void;
@@ -26,6 +40,12 @@ interface PromptFormProps {
   activeProvider?: ProviderConfig;
   /** Called when the user switches the active model of the active provider. */
   onSelectActiveModel?: (model: string) => void;
+  /** Current studio mode (prompt | toastmasters). */
+  studioMode?: StudioMode;
+  /** Called when the user switches studio mode. */
+  onStudioModeChange?: (mode: StudioMode) => void;
+  /** Called when the user submits a Toastmasters request. */
+  onToastmastersGenerate?: (input: ToastmastersInput) => void;
 }
 
 export function PromptForm({
@@ -33,6 +53,9 @@ export function PromptForm({
   isGenerating,
   activeProvider,
   onSelectActiveModel,
+  studioMode = 'prompt',
+  onStudioModeChange,
+  onToastmastersGenerate,
 }: PromptFormProps) {
   const providerModels = activeProvider ? getProviderModelList(activeProvider) : [];
   const [topic, setTopic] = useState('');
@@ -51,6 +74,23 @@ export function PromptForm({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedFrameworkCategory, setSelectedFrameworkCategory] = useState<string>('All');
   const [selectedToneCategory, setSelectedToneCategory] = useState<string>('All');
+
+  // ── Toastmasters mode state ──
+  const tmDefaultAsset = TOASTMASTERS_ASSET_CATALOG[0];
+  const [tmAssetTypes, setTmAssetTypes] = useState<ToastmastersAssetId[]>(['event-flyer']);
+  const [tmDominantColor, setTmDominantColor] = useState<'loyal-blue' | 'true-maroon'>('loyal-blue');
+  const [tmOutputMode, setTmOutputMode] = useState<'full' | 'white-removable'>('full');
+  const [tmTextMode, setTmTextMode] = useState<'with-text' | 'text-free'>('with-text');
+  const [tmLanguage, setTmLanguage] = useState<'english' | 'tamil' | 'bilingual'>('english');
+  const [tmIncludeLogo, setTmIncludeLogo] = useState(true);
+  const [tmIncludeSpeakers, setTmIncludeSpeakers] = useState(false);
+  const [tmSpeakerCount, setTmSpeakerCount] = useState(2);
+  const [tmClubName, setTmClubName] = useState('');
+  const [tmEventTitle, setTmEventTitle] = useState('');
+  const [tmEventDate, setTmEventDate] = useState('');
+  const [tmEventTime, setTmEventTime] = useState('');
+  const [tmEventVenue, setTmEventVenue] = useState('');
+  const [tmTamilText, setTmTamilText] = useState('');
 
   const topicRef = useRef<HTMLTextAreaElement>(null);
 
@@ -100,6 +140,52 @@ export function PromptForm({
   const selectedFrameworkLabel = FRAMEWORK_OPTIONS.find((f) => f.value === framework)?.label ?? framework;
   const selectedToneLabel = TONE_OPTIONS.find((t) => t.value === tone)?.label ?? tone;
 
+  // ── Toastmasters submit ──
+  const handleToastmastersSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (tmAssetTypes.length === 0 || !onToastmastersGenerate) return;
+
+    const tmInput: ToastmastersInput = {
+      assetTypes: tmAssetTypes,
+      dominantColor: tmDominantColor,
+      outputMode: tmOutputMode,
+      textMode: tmTextMode,
+      language: tmLanguage,
+      includeLogoPlaceholder: tmIncludeLogo,
+      includeSpeakerPlaceholders: tmIncludeSpeakers,
+      speakerCount: tmSpeakerCount,
+      clubName: tmClubName,
+      eventTitle: tmEventTitle,
+      eventDate: tmEventDate,
+      eventTime: tmEventTime,
+      eventVenue: tmEventVenue,
+      tamilText: tmTamilText,
+    };
+
+    onToastmastersGenerate(tmInput);
+  };
+
+  // Auto-toggle placeholder defaults when asset selection or text mode changes
+  useEffect(() => {
+    const anySpeakerEligible = tmAssetTypes.some((id) => getAssetEntry(id).speakerEligible);
+    const isBackgroundOnly = tmAssetTypes.length === 1 && tmAssetTypes[0] === 'background-theme';
+    if (isBackgroundOnly) {
+      setTmIncludeLogo(false);
+      setTmIncludeSpeakers(false);
+    } else {
+      const first = getAssetEntry(tmAssetTypes[0] ?? 'event-flyer');
+      setTmIncludeLogo(first.defaultLogoPlaceholder);
+      setTmIncludeSpeakers(anySpeakerEligible ? first.defaultSpeakerPlaceholder : false);
+    }
+  }, [tmAssetTypes]);
+
+  useEffect(() => {
+    if (tmTextMode === 'text-free') {
+      setTmIncludeLogo(false);
+      setTmIncludeSpeakers(false);
+    }
+  }, [tmTextMode]);
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!topic.trim()) return;
@@ -129,12 +215,369 @@ export function PromptForm({
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
-      handleSubmit();
+      if (isToastmasters) {
+        handleToastmastersSubmit();
+      } else {
+        handleSubmit();
+      }
     }
   };
 
+  const isToastmasters = studioMode === 'toastmasters';
+
   return (
     <GlassCard variant="default" className="p-5 sm:p-6 space-y-6">
+      {/* ── Studio Mode Tabs ── */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-muted border border-border">
+        {([
+          { id: 'prompt' as StudioMode, label: 'Prompt', icon: '⚡' },
+          { id: 'toastmasters' as StudioMode, label: 'Toastmasters', icon: '🎤' },
+        ]).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onStudioModeChange?.(tab.id)}
+            aria-pressed={studioMode === tab.id}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+              studioMode === tab.id
+                ? 'bg-brand text-white shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Toastmasters Mode ── */}
+      {isToastmasters && (
+        <form onSubmit={handleToastmastersSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
+          {/* Asset Type Multi-Select */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              🎨 Asset Type
+              <span className="text-[10px] font-normal text-text-muted normal-case tracking-normal">— select one or more</span>
+            </label>
+            {(['Social', 'Print / Flyer', 'Magazine', 'Background / Theme'] as const).map((cat) => {
+              const catAssets = TOASTMASTERS_ASSET_CATALOG.filter((a) => a.category === cat);
+              if (catAssets.length === 0) return null;
+              return (
+                <div key={cat} className="space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted pl-1">{cat}</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {catAssets.map((asset) => {
+                      const selected = tmAssetTypes.includes(asset.id);
+                      return (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          onClick={() => {
+                            setTmAssetTypes((prev) =>
+                              selected ? prev.filter((id) => id !== asset.id) : [...prev, asset.id]
+                            );
+                          }}
+                          aria-pressed={selected}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${
+                            selected
+                              ? 'bg-brand text-white border-brand shadow-sm'
+                              : 'bg-surface-card/60 border-border text-text-secondary hover:bg-surface-hover'
+                          }`}
+                        >
+                          {asset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Dominant Colour */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Dominant Colour</label>
+            <div className="flex gap-2">
+              {(['loyal-blue', 'true-maroon'] as const).map((color) => {
+                const c = TOASTMASTERS_COLORS[color];
+                const selected = tmDominantColor === color;
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setTmDominantColor(color)}
+                    aria-pressed={selected}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                      selected
+                        ? 'border-brand ring-2 ring-brand/30 shadow-md shadow-brand/10'
+                        : 'border-border hover:border-brand/40'
+                    }`}
+                  >
+                    <span
+                      className="w-5 h-5 rounded-full border border-black/10 shrink-0"
+                      style={{ backgroundColor: c.hex }}
+                    />
+                    <span className="text-text-primary">{c.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Output Mode */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Output Mode</label>
+            <div className="flex gap-2">
+              {([
+                { id: 'full' as const, label: 'Full Asset', desc: 'Complete visual with gradient/texture' },
+                { id: 'white-removable' as const, label: 'White Removable', desc: 'Flat background for easy removal' },
+              ]).map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setTmOutputMode(mode.id)}
+                  aria-pressed={tmOutputMode === mode.id}
+                  className={`flex-1 p-2.5 rounded-xl text-xs font-semibold border text-left transition-all ${
+                    tmOutputMode === mode.id
+                      ? 'bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30'
+                      : 'bg-surface-card/40 border-border text-text-secondary hover:border-brand/40'
+                  }`}
+                >
+                  <span className="block font-bold">{mode.label}</span>
+                  <span className="block text-[10px] text-text-muted font-normal mt-0.5">{mode.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Text Mode */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Text Mode</label>
+            <div className="flex gap-2">
+              {([
+                { id: 'with-text' as const, label: 'With Text', desc: 'Render event text in the image' },
+                { id: 'text-free' as const, label: 'Text-Free Template', desc: 'No text — overlay in post-production' },
+              ]).map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setTmTextMode(mode.id)}
+                  aria-pressed={tmTextMode === mode.id}
+                  className={`flex-1 p-2.5 rounded-xl text-xs font-semibold border text-left transition-all ${
+                    tmTextMode === mode.id
+                      ? 'bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30'
+                      : 'bg-surface-card/40 border-border text-text-secondary hover:border-brand/40'
+                  }`}
+                >
+                  <span className="block font-bold">{mode.label}</span>
+                  <span className="block text-[10px] text-text-muted font-normal mt-0.5">{mode.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Language */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Language</label>
+            <div className="flex gap-1.5">
+              {([
+                { id: 'english' as const, label: 'English' },
+                { id: 'tamil' as const, label: 'Tamil' },
+                { id: 'bilingual' as const, label: 'Bilingual (EN + TA)' },
+              ]).map((lang) => (
+                <button
+                  key={lang.id}
+                  type="button"
+                  onClick={() => setTmLanguage(lang.id)}
+                  aria-pressed={tmLanguage === lang.id}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+                    tmLanguage === lang.id
+                      ? 'bg-brand text-white border-brand shadow-sm'
+                      : 'bg-surface-card/60 border-border text-text-secondary hover:bg-surface-hover'
+                  }`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+            {(tmLanguage === 'tamil' || tmLanguage === 'bilingual') && (
+              <div className="p-3 rounded-xl bg-warning/5 border border-warning/30">
+                <p className="text-[11px] text-warning font-semibold flex items-center gap-1.5 mb-2">
+                  ⚠️ Verify before publishing
+                </p>
+                <p className="text-[10px] text-text-muted leading-relaxed mb-2">
+                  Tamil rendering quality depends on the image model's script support. Always verify the Tamil text is correctly rendered before sharing publicly.
+                </p>
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Tamil text (verbatim — do not translate)</label>
+                <textarea
+                  value={tmTamilText}
+                  onChange={(e) => setTmTamilText(e.target.value)}
+                  placeholder="Type or paste the Tamil text exactly as it should appear"
+                  rows={3}
+                  className="w-full p-2.5 text-sm rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Placeholder Toggles */}
+          <div className="space-y-3 p-3 rounded-xl bg-surface-muted border border-border">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Placeholders</span>
+
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-text-secondary">
+              <input
+                type="checkbox"
+                checked={tmIncludeLogo}
+                onChange={(e) => setTmIncludeLogo(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-brand focus:ring-brand"
+              />
+              <span>Include logo placeholder frame</span>
+            </label>
+
+            {tmAssetTypes.some((id) => getAssetEntry(id).speakerEligible) && (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-text-secondary">
+                  <input
+                    type="checkbox"
+                    checked={tmIncludeSpeakers}
+                    onChange={(e) => setTmIncludeSpeakers(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-brand focus:ring-brand"
+                  />
+                  <span>Include speaker placeholders</span>
+                </label>
+                {tmIncludeSpeakers && (
+                  <div className="pl-6">
+                    <label className="text-[10px] font-semibold text-text-secondary block mb-1">Number of speakers</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={tmSpeakerCount}
+                      onChange={(e) => setTmSpeakerCount(Math.max(1, Math.min(12, Number(e.target.value) || 1)))}
+                      className="w-20 p-1.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Event Text Fields */}
+          <div className={`space-y-3 p-3 rounded-xl bg-surface-muted border border-border ${tmTextMode === 'text-free' ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Event Details</span>
+              {tmTextMode === 'text-free' && (
+                <span className="text-[10px] font-semibold text-warning">Disabled — text-free mode</span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Club Name</label>
+                <input
+                  type="text"
+                  value={tmClubName}
+                  onChange={(e) => setTmClubName(e.target.value)}
+                  placeholder="e.g., Chennai Speakers Club"
+                  className="w-full p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  disabled={tmTextMode === 'text-free'}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Event Title</label>
+                <input
+                  type="text"
+                  value={tmEventTitle}
+                  onChange={(e) => setTmEventTitle(e.target.value)}
+                  placeholder="e.g., Monthly Meeting — The Art of Public Speaking"
+                  className="w-full p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  disabled={tmTextMode === 'text-free'}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Date</label>
+                <input
+                  type="text"
+                  value={tmEventDate}
+                  onChange={(e) => setTmEventDate(e.target.value)}
+                  placeholder="e.g., Saturday, August 23, 2026"
+                  className="w-full p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  disabled={tmTextMode === 'text-free'}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Time</label>
+                <input
+                  type="text"
+                  value={tmEventTime}
+                  onChange={(e) => setTmEventTime(e.target.value)}
+                  placeholder="e.g., 6:00 PM IST"
+                  className="w-full p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  disabled={tmTextMode === 'text-free'}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Venue / Link</label>
+                <input
+                  type="text"
+                  value={tmEventVenue}
+                  onChange={(e) => setTmEventVenue(e.target.value)}
+                  placeholder="e.g., Online via Zoom / Community Hall, 2nd Floor"
+                  className="w-full p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  disabled={tmTextMode === 'text-free'}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Toastmasters Action Bar */}
+          <div className="sticky bottom-3 z-20">
+            <div className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface-card/90 backdrop-blur-md p-3 shadow-xl shadow-black/15">
+              {/* Selection summary */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-text-secondary">
+                <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border">
+                  🎤 {tmAssetTypes.length} asset{tmAssetTypes.length === 1 ? '' : 's'}
+                </span>
+                <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+                  {TOASTMASTERS_COLORS[tmDominantColor].name}
+                </span>
+                <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+                  {tmOutputMode === 'full' ? 'Full Asset' : 'White Removable'}
+                </span>
+                <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+                  {tmTextMode === 'with-text' ? 'With Text' : 'Text-Free'}
+                </span>
+                <span className="px-2 py-1 rounded-md bg-surface-muted border border-border capitalize">
+                  {tmLanguage}
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isGenerating || tmAssetTypes.length === 0}
+                className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:via-indigo-400 hover:to-cyan-400 text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.99]"
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Creating…</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    <span>Create Toastmasters Prompt{tmAssetTypes.length > 1 ? ' Kit' : ''}</span>
+                    <kbd className="ml-1 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-80">
+                      ⌘⏎
+                    </kbd>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* ── Standard Prompt Mode ── */}
+      {!isToastmasters && (
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
         {/* Topic Input Area */}
         <div className="space-y-2">
@@ -533,6 +976,7 @@ export function PromptForm({
           </div>
         </div>
       </form>
+      )}
     </GlassCard>
   );
 }

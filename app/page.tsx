@@ -19,7 +19,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { PromptInput, ProviderConfig, PromptVersion, Session, ThreadMessage } from '@/types';
+import { PromptInput, ProviderConfig, PromptVersion, Session, StudioMode, ToastmastersInput, ThreadMessage } from '@/types';
 import {
   clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
@@ -42,10 +42,12 @@ import {
 } from '@/lib/storage';
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { generatePromptStream, refinePromptStream } from '@/lib/ai-client';
+import { buildToastmastersPrompt, getAssetEntry } from '@/lib/toastmasters-prompts';
 import { computePromptStats, generateVersionName } from '@/lib/prompt-stats';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'generator' | 'history' | 'settings'>('generator');
+  const [studioMode, setStudioMode] = useState<StudioMode>('prompt');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -475,6 +477,78 @@ export default function HomePage() {
 
   const displayOutput = isGenerating ? streamingText : activeVersion?.content || '';
 
+  // Toastmasters prompt generation — builds the prompt client-side, then streams to save as a session
+  const handleToastmastersGenerate = async (tmInput: ToastmastersInput) => {
+    handleCancelGeneration();
+
+    const promptText = buildToastmastersPrompt(tmInput);
+    const assetLabels = tmInput.assetTypes.map((id) => getAssetEntry(id).label).join(', ');
+
+    setIsGenerating(true);
+    setStreamingText(promptText);
+    setIsGenerating(false);
+
+    const timestamp = Date.now();
+    const rand = Math.random().toString(36).slice(2, 7);
+    const sessId = `sess-${timestamp}-${rand}`;
+    const v1Id = `v-${timestamp}-1`;
+    const stats = computePromptStats(promptText);
+
+    const initialVersion: PromptVersion = {
+      id: v1Id,
+      versionNumber: 1,
+      name: 'Original',
+      sourceType: 'initial',
+      createdAt: timestamp,
+      content: promptText,
+      providerName: activeProvider.name,
+      modelUsed: activeProvider.model,
+      stats,
+    };
+
+    const newSession: Session = {
+      id: sessId,
+      title: `Toastmasters: ${assetLabels}`,
+      domainId: 'toastmasters',
+      domainName: 'Toastmasters Asset Studio',
+      originalInput: {
+        topic: `Toastmasters ${assetLabels}`,
+        domainId: 'toastmasters',
+        tone: 'professional',
+        framework: 'rtf',
+        includeConstraints: true,
+        includeExamples: false,
+        studioMode: 'toastmasters',
+        toastmasters: tmInput,
+      },
+      messages: [
+        {
+          id: `msg-${timestamp}-1`,
+          role: 'user',
+          content: `Create Toastmasters ${assetLabels} prompts`,
+          createdAt: timestamp,
+        },
+        {
+          id: `msg-${timestamp}-2`,
+          role: 'assistant',
+          content: promptText,
+          createdAt: timestamp,
+          resultingVersionId: v1Id,
+        },
+      ],
+      versions: [initialVersion],
+      activeVersionId: v1Id,
+      favorite: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    await saveSession(newSession);
+    setCurrentSession(newSession);
+    const updatedSessions = await getSessions();
+    setSessions(updatedSessions);
+  };
+
   const paletteActions: PaletteAction[] = [
     {
       id: 'new-prompt',
@@ -600,6 +674,9 @@ export default function HomePage() {
                   isGenerating={isGenerating}
                   activeProvider={activeProvider}
                   onSelectActiveModel={handleSelectActiveModel}
+                  studioMode={studioMode}
+                  onStudioModeChange={setStudioMode}
+                  onToastmastersGenerate={handleToastmastersGenerate}
                 />
               </div>
 

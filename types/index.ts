@@ -1,3 +1,5 @@
+export type StudioMode = 'prompt' | 'toastmasters';
+
 export type ToneType = 
   | 'professional'
   | 'concise'
@@ -102,6 +104,44 @@ export interface PromptInput {
    * Leave undefined for no limit.
    */
   outputCharLimit?: number;
+  /** When set, switches the form into Toastmasters asset-prompt mode. */
+  studioMode?: StudioMode;
+  /** Toastmasters-specific input fields. Only used when studioMode === 'toastmasters'. */
+  toastmasters?: ToastmastersInput;
+}
+
+export type ToastmastersAssetId =
+  | 'event-flyer'
+  | 'speaker-lineup'
+  | 'social-square'
+  | 'social-landscape'
+  | 'social-story'
+  | 'social-reel'
+  | 'magazine-cover'
+  | 'magazine-spread'
+  | 'newsletter-header'
+  | 'background-theme';
+
+export type ToastmastersOutputMode = 'full' | 'white-removable';
+export type ToastmastersTextMode = 'with-text' | 'text-free';
+export type ToastmastersLanguage = 'english' | 'tamil' | 'bilingual';
+
+export interface ToastmastersInput {
+  assetTypes: ToastmastersAssetId[];
+  dominantColor: 'loyal-blue' | 'true-maroon';
+  outputMode: ToastmastersOutputMode;
+  textMode: ToastmastersTextMode;
+  language: ToastmastersLanguage;
+  includeLogoPlaceholder: boolean;
+  includeSpeakerPlaceholders: boolean;
+  speakerCount: number;
+  clubName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventTime: string;
+  eventVenue: string;
+  tamilText: string;
+  sampleReferenceNote?: string;
 }
 
 /**
