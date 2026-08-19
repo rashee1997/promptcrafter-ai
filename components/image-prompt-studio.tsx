@@ -15,9 +15,10 @@ import {
   SavedImagePrompt,
   STYLE_PRESETS,
 } from '@/lib/image-prompts';
-import { generateImagePromptStream } from '@/lib/ai-client';
+import { generateImagePromptStream, redoImagePromptStream } from '@/lib/ai-client';
 import { getProviderModelList } from '@/lib/storage';
 import { DEFAULT_LOGO_INPUT, LOGO_EXAMPLE_TOPICS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
+import { getKits, saveKit, deleteKit, PromptKit } from '@/lib/image-prompt-kits';
 import { ImagePlatform, ImagePromptInput, ImagePromptReferenceImage, ProviderConfig } from '@/types';
 import { OutputPanel } from './image-prompt/output-panel';
 import { PromptForm } from './image-prompt/prompt-form';
@@ -82,8 +83,18 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   // ── Saved gallery ──
   const [savedPrompts, setSavedPrompts] = useState<SavedImagePrompt[]>([]);
 
+  // ── Version history (last N sections snapshots for comparison) ──
+  const [previousSections, setPreviousSections] = useState<ImagePromptSections | null>(null);
+  const [isRedoing, setIsRedoing] = useState(false);
+  const redoAbortRef = useRef<AbortController | null>(null);
+
+  // ── Brand / Subject Kits ──
+  const [kits, setKits] = useState<PromptKit[]>([]);
+  const [showKitDropdown, setShowKitDropdown] = useState(false);
+
   useEffect(() => {
     setSavedPrompts(getSavedImagePrompts());
+    setKits(getKits());
   }, []);
 
   /** Switching modes swaps the brief anatomy; logos are square-first artifacts. */
@@ -205,6 +216,12 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
 
     setIsGenerating(true);
     setStreamingText('');
+    // Snapshot current sections for version history comparison
+    if (sections) {
+      setPreviousSections(sections);
+    } else {
+      setPreviousSections(null);
+    }
     setSections(null);
     setActiveTab('raw');
 
@@ -337,6 +354,119 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     });
   };
 
+  /** Per-section redo: regenerate only one platform's prompt. */
+  const handleRedoPlatform = async (platformKey: string) => {
+    if (!sections || isRedoing) return;
+
+    redoAbortRef.current?.abort();
+    const controller = new AbortController();
+    redoAbortRef.current = controller;
+
+    setIsRedoing(true);
+    // Save current as previous for comparison
+    setPreviousSections(sections);
+    setActiveTab(platformKey as keyof ImagePromptSections);
+
+    // Strip 'raw' and build a clean sections record
+    const { raw: _raw, ...cleanSections } = sections;
+    const existingSections: Record<string, string> = {};
+    for (const [k, v] of Object.entries(cleanSections)) {
+      if (v && typeof v === 'string') existingSections[k] = v;
+    }
+
+    const input = buildInput();
+    let fullText = '';
+
+    await redoImagePromptStream(
+      {
+        provider: activeProvider,
+        input,
+        targetPlatform: platformKey,
+        existingSections,
+      },
+      (chunk) => {
+        fullText += chunk;
+      },
+      (completedText) => {
+        setIsRedoing(false);
+        const trimmed = completedText.trim();
+        if (trimmed) {
+          setSections((prev) => prev ? { ...prev, [platformKey]: trimmed } : prev);
+          toast.success(`${platformKey} prompt regenerated`, 'Only this section was updated.');
+        } else {
+          toast.error('Redo returned empty', 'The model did not produce output for this section.');
+        }
+      },
+      (error) => {
+        setIsRedoing(false);
+        toast.error('Redo failed', error.message);
+      },
+      controller.signal
+    );
+  };
+
+  /** Save the current form state as a reusable Brand/Subject Kit. */
+  const handleSaveKit = () => {
+    if (!subject.trim()) return;
+    const kit: PromptKit = {
+      id: `kit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: subject.trim().slice(0, 40),
+      subjectDescription: subject.trim(),
+      stylePreset: mode === 'logo' ? logoStyle : style,
+      palette: mode === 'logo' ? palette : undefined,
+      industry: mode === 'logo' ? industry : undefined,
+      mode,
+      brandName: mode === 'logo' ? brandName.trim() || undefined : undefined,
+      logoType: mode === 'logo' ? logoType : undefined,
+      concept: mode === 'logo' ? concept : undefined,
+      lighting,
+      mood,
+      composition,
+      camera,
+      colorGrade,
+      aspectRatio,
+      platforms: [...platforms],
+      negativePrompt: negativePrompt.trim() || undefined,
+      additionalNotes: additionalNotes.trim() || undefined,
+      createdAt: Date.now(),
+    };
+    setKits(saveKit(kit));
+    toast.success('Kit saved', `"${kit.name}" can be loaded into any new brief.`);
+  };
+
+  /** Load a saved kit into the current form. */
+  const handleLoadKit = (kit: PromptKit) => {
+    setSubject(kit.subjectDescription);
+    if (kit.mode) handleSetMode(kit.mode);
+    if (kit.stylePreset) {
+      if (kit.mode === 'logo') setLogoStyle(kit.stylePreset);
+      else setStyle(kit.stylePreset);
+    }
+    if (kit.palette) setPalette(kit.palette);
+    if (kit.industry) setIndustry(kit.industry);
+    if (kit.brandName) setBrandName(kit.brandName);
+    if (kit.logoType) setLogoType(kit.logoType);
+    if (kit.concept) setConcept(kit.concept);
+    if (kit.lighting) setLighting(kit.lighting);
+    if (kit.mood) setMood(kit.mood);
+    if (kit.composition) setComposition(kit.composition);
+    if (kit.camera) setCamera(kit.camera);
+    if (kit.colorGrade) setColorGrade(kit.colorGrade);
+    if (kit.aspectRatio) setAspectRatio(kit.aspectRatio);
+    if (kit.platforms) setPlatforms(kit.platforms);
+    if (kit.negativePrompt) setNegativePrompt(kit.negativePrompt);
+    if (kit.additionalNotes) setAdditionalNotes(kit.additionalNotes);
+    setShowKitDropdown(false);
+    toast.success('Kit loaded', `"${kit.name}" pre-filled into the form.`);
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch { /* ignore */ }
+  };
+
+  const handleDeleteKit = (id: string) => {
+    setKits(deleteKit(id));
+  };
+
   const handleDeleteSaved = (id: string) => {
     setSavedPrompts(deleteSavedImagePrompt(id));
   };
@@ -355,6 +485,12 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           providerModels={providerModels}
           onSelectActiveModel={onSelectActiveModel}
           onSubmit={handleGenerate}
+          kits={kits}
+          onSaveKit={handleSaveKit}
+          onLoadKit={handleLoadKit}
+          onDeleteKit={handleDeleteKit}
+          showKitDropdown={showKitDropdown}
+          onToggleKitDropdown={() => setShowKitDropdown(!showKitDropdown)}
         />
 
         {/* ── Right: Output & brief viewer ── */}
@@ -370,6 +506,9 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onSave={handleSave}
           onNew={handleNew}
           onRefineSuggestion={handleRefineSuggestion}
+          onRedoPlatform={handleRedoPlatform}
+          previousSections={previousSections}
+          isRedoing={isRedoing}
         />
       </div>
 

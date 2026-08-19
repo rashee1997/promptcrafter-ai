@@ -473,6 +473,18 @@ export interface ImagePromptGenerationRequest {
   input: ImagePromptInput;
 }
 
+/** Request contract for per-section (single platform) regeneration. */
+export interface ImagePromptRedoRequest {
+  provider: ProviderConfig;
+  input: ImagePromptInput;
+  /** The section key to regenerate (e.g. 'midjourney', 'ideogram', 'gemini'). */
+  targetPlatform: string;
+  /** The existing full parsed sections for context. */
+  existingSections: Record<string, string>;
+  /** Optional short text describing what to change (e.g. 'make the lighting warmer'). */
+  revisionNote?: string;
+}
+
 export interface GenerationRequest {
   provider: ProviderConfig;
   input: PromptInput;

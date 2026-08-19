@@ -22,6 +22,12 @@ interface OutputPanelProps {
   onNew: () => void;
   /** Remix suggestions re-run generation with a tweak applied. */
   onRefineSuggestion?: (suggestion: string) => void;
+  /** Per-section redo: regenerate just one platform prompt. */
+  onRedoPlatform?: (platformKey: string) => void;
+  /** Previous sections snapshot for version comparison. */
+  previousSections?: ImagePromptSections | null;
+  /** Whether a per-section redo is in progress. */
+  isRedoing?: boolean;
 }
 
 /** Right card: status header, empty state, streaming well, and parsed brief viewer. */
@@ -37,6 +43,9 @@ export function OutputPanel({
   onSave,
   onNew,
   onRefineSuggestion,
+  onRedoPlatform,
+  previousSections,
+  isRedoing,
 }: OutputPanelProps) {
   const streamWellRef = useRef<HTMLDivElement>(null);
 
@@ -139,6 +148,9 @@ export function OutputPanel({
             mode={mode}
             onRefineSuggestion={onRefineSuggestion}
             isGenerating={isGenerating}
+            onRedoPlatform={onRedoPlatform}
+            previousSections={previousSections}
+            isRedoing={isRedoing}
           />
         )}
 

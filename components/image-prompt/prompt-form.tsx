@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bookmark, Building2, Check, ChevronDown, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Plus, RefreshCw, Route, Shapes, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { Bookmark, Building2, Check, ChevronDown, Cpu, FolderOpen, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Plus, RefreshCw, Route, Save, Shapes, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import { CHIP_DOTS, ChipRow } from './chip-row';
 import { ReferenceImageUpload } from './reference-image-upload';
 import { StudioFormHandlers, StudioFormState, StudioMode } from './studio-types';
 import { CustomChipEditor, useCustomChipEntry } from './use-custom-chip-entry';
+import { PromptKit } from '@/lib/image-prompt-kits';
 
 interface PromptFormProps {
   state: StudioFormState;
@@ -24,6 +25,13 @@ interface PromptFormProps {
   providerModels: string[];
   onSelectActiveModel?: (model: string) => void;
   onSubmit: () => void;
+  /** Brand / Subject Kit props */
+  kits?: PromptKit[];
+  onSaveKit?: () => void;
+  onLoadKit?: (kit: PromptKit) => void;
+  onDeleteKit?: (id: string) => void;
+  showKitDropdown?: boolean;
+  onToggleKitDropdown?: () => void;
 }
 
 /**
@@ -40,6 +48,12 @@ export function PromptForm({
   providerModels,
   onSelectActiveModel,
   onSubmit,
+  kits = [],
+  onSaveKit,
+  onLoadKit,
+  onDeleteKit,
+  showKitDropdown = false,
+  onToggleKitDropdown,
 }: PromptFormProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -268,6 +282,67 @@ export function PromptForm({
               {examplesRefreshing ? 'Refreshing' : 'New ideas'}
             </button>
           </div>
+        </div>
+
+        {/* Brand / Subject Kit — load or save reusable brief presets */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+              <FolderOpen className="w-3.5 h-3.5 text-brand" />
+              Brand / Subject Kit
+            </span>
+            {state.subject.trim() && onSaveKit && (
+              <button
+                type="button"
+                onClick={onSaveKit}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-brand/10 text-brand border border-brand/25 hover:bg-brand/15 transition-colors"
+              >
+                <Save className="w-3 h-3" />
+                Save as Kit
+              </button>
+            )}
+          </div>
+          {kits.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={onToggleKitDropdown}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-xl border border-border bg-surface-input text-xs text-text-secondary hover:border-brand/40 transition-colors"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-brand shrink-0" />
+                <span className="truncate">Load from Kit ({kits.length} saved)</span>
+                <ChevronDown className={cn('w-3.5 h-3.5 ml-auto shrink-0 transition-transform', showKitDropdown && 'rotate-180')} />
+              </button>
+              {showKitDropdown && (
+                <div className="absolute inset-x-0 top-full mt-1 z-30 rounded-xl border border-border bg-surface-card shadow-xl shadow-black/20 max-h-[240px] overflow-y-auto scrollbar-thin">
+                  {kits.map((kit) => (
+                    <div key={kit.id} className="flex items-center gap-2 px-3 py-2 hover:bg-surface-hover transition-colors group">
+                      <button
+                        type="button"
+                        onClick={() => onLoadKit?.(kit)}
+                        className="flex-1 text-left min-w-0"
+                      >
+                        <span className="text-xs font-semibold text-text-primary truncate block">{kit.name}</span>
+                        <span className="text-[10px] text-text-muted truncate block">
+                          {kit.subjectDescription.slice(0, 50)}{kit.subjectDescription.length > 50 ? '…' : ''}
+                        </span>
+                      </button>
+                      {onDeleteKit && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onDeleteKit(kit.id); }}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded text-text-muted hover:text-danger transition-all"
+                          aria-label={`Delete kit ${kit.name}`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Style presets (image styles or logo styles) */}

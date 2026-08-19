@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Check, Copy, LayoutGrid, PanelTop, RefreshCw, Save, Wand2 } from 'lucide-react';
+import { Check, Copy, GitCompareArrows, LayoutGrid, PanelTop, RefreshCw, Save, Wand2 } from 'lucide-react';
 import { Tooltip } from '../tooltip';
 import { cn } from '@/lib/utils';
 import { buildOutputTabs, ImagePromptSections, PLATFORM_OPTIONS } from '@/lib/image-prompts';
@@ -20,6 +20,12 @@ interface BriefViewerProps {
   /** Remix suggestions (Related-Prompts pattern) re-run generation with a tweak applied. */
   onRefineSuggestion?: (suggestion: string) => void;
   isGenerating: boolean;
+  /** Per-section redo: regenerate just one platform prompt. */
+  onRedoPlatform?: (platformKey: string) => void;
+  /** Version history: previous sections snapshot for comparison. */
+  previousSections?: ImagePromptSections | null;
+  /** Whether a per-section redo is in progress. */
+  isRedoing?: boolean;
 }
 
 type BriefView = 'tab' | 'all';
@@ -71,6 +77,9 @@ export function BriefViewer({
   mode,
   onRefineSuggestion,
   isGenerating,
+  onRedoPlatform,
+  previousSections,
+  isRedoing,
 }: BriefViewerProps) {
   const tabs = buildOutputTabs(sections);
   const refineSuggestions = mode === 'logo' ? LOGO_REFINE_SUGGESTIONS : IMAGE_REFINE_SUGGESTIONS;
@@ -102,10 +111,17 @@ export function BriefViewer({
     [tabs, sections]
   );
 
+  const [compareKey, setCompareKey] = useState<string | null>(null);
+  const showCompare = compareKey !== null && previousSections;
+
   const renderCard = (key: keyof ImagePromptSections, label: string) => {
     const content = sections[key] ?? '';
+    const prevContent = previousSections?.[key] ?? '';
     const copied = copiedKey === key;
     const color = platformColor(String(key));
+    const isCompareTarget = compareKey === key && showCompare;
+    const hasPrev = !!prevContent && prevContent !== content;
+    const isPlatform = ['midjourney', 'dalle', 'stable-diffusion', 'flux', 'ideogram', 'gemini'].includes(String(key));
     return (
       <div key={key} className="rounded-xl border border-border bg-surface-code overflow-hidden">
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/60 bg-surface-muted/50">
@@ -113,7 +129,33 @@ export function BriefViewer({
             <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', color ?? 'bg-brand')} />
             <span className="truncate">{label}</span>
           </span>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {hasPrev && (
+              <button
+                type="button"
+                onClick={() => setCompareKey(isCompareTarget ? null : key)}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all',
+                  isCompareTarget
+                    ? 'bg-warning/10 border-warning/40 text-warning'
+                    : 'bg-surface-card border-border text-text-secondary hover:text-warning hover:border-warning/40'
+                )}
+              >
+                <GitCompareArrows className="w-3 h-3" />
+                Compare
+              </button>
+            )}
+            {isPlatform && onRedoPlatform && (
+              <button
+                type="button"
+                disabled={isGenerating || isRedoing}
+                onClick={() => onRedoPlatform(String(key))}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-surface-card border border-border text-text-secondary hover:text-brand hover:border-brand/40 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={cn('w-3 h-3', isRedoing && 'animate-spin')} />
+                Redo
+              </button>
+            )}
             <span className="text-[10px] font-mono text-text-muted tabular-nums">
               {content.length.toLocaleString()} chars
             </span>
@@ -133,9 +175,24 @@ export function BriefViewer({
             </button>
           </div>
         </div>
-        <div className="p-4 max-h-[380px] overflow-y-auto scrollbar-thin">
-          <p className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-text-primary">{content}</p>
-        </div>
+        {isCompareTarget && showCompare ? (
+          <div className="p-4 max-h-[380px] overflow-y-auto scrollbar-thin">
+            <div className="space-y-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-warning">Previous</span>
+                <p className="mt-1 whitespace-pre-wrap font-mono text-xs leading-relaxed text-text-muted opacity-70">{prevContent || '(empty)'}</p>
+              </div>
+              <div className="border-t border-border/60 pt-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand">Current</span>
+                <p className="mt-1 whitespace-pre-wrap font-mono text-xs leading-relaxed text-text-primary">{content || '(empty)'}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 max-h-[380px] overflow-y-auto scrollbar-thin">
+            <p className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-text-primary">{content}</p>
+          </div>
+        )}
       </div>
     );
   };

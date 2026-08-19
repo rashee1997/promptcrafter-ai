@@ -1,11 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildImagePromptSystemPrompt, buildImagePromptUserMessage } from '@/lib/image-prompts';
-import { buildLogoPromptSystemPrompt, buildLogoPromptUserMessage } from '@/lib/logo-prompts';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
 import { withModelFallback } from '@/lib/model-fallback';
 import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
-import { ImagePromptGenerationRequest } from '@/types';
+import { ImagePromptRedoRequest } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -18,45 +17,39 @@ const STREAM_HEADERS = {
 };
 
 /**
- * Streams an image-ready prompt set: a universal full-anatomy master prompt
- * plus a tuned prompt per requested platform dialect (Midjourney, DALL·E,
- * SD/Flux, Ideogram, Gemini / Nano Banana). When the input is in logo mode,
- * a brand-identity brief (mark type, style, palette, wordmark) is used
- * instead. No web research — the model writes directly from its knowledge
- * and the USER BRIEF.
+ * Regenerates a single platform section from an existing brief. The model
+ * receives the full system prompt for context, the existing sections so it
+ * understands what the other platforms look like, and a focused instruction
+ * to rewrite ONLY the target platform — preserving consistency across the set.
  */
 export async function POST(req: NextRequest) {
   try {
-    const body: ImagePromptGenerationRequest = await req.json();
-    const { provider, input } = body;
+    const body: ImagePromptRedoRequest = await req.json();
+    const { provider, input, targetPlatform, existingSections, revisionNote } = body;
 
     if (!input || !input.subject?.trim()) {
       return NextResponse.json({ error: 'Subject is required.' }, { status: 400 });
     }
+    if (!targetPlatform) {
+      return NextResponse.json({ error: 'Target platform is required.' }, { status: 400 });
+    }
 
+    // Build the full system prompt for creative-director context
     const isLogo = input.mode === 'logo';
     const systemInstruction = isLogo
-      ? buildLogoPromptSystemPrompt(input)
+      ? (await import('@/lib/logo-prompts')).buildLogoPromptSystemPrompt(input)
       : buildImagePromptSystemPrompt(input);
-    const userMessage = isLogo
-      ? buildLogoPromptUserMessage(input)
-      : buildImagePromptUserMessage(input);
 
-    // Build multimodal content if reference images are attached
-    const hasRefImages = !!input.referenceImages && input.referenceImages.length > 0;
-    const refImageParts = hasRefImages
-      ? input.referenceImages!.map((img) => {
-          // Extract MIME type and base64 data from data URL
-          const match = img.dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
-          if (!match) return null;
-          return {
-            inlineData: {
-              mimeType: match[1],
-              data: match[2],
-            },
-          };
-        }).filter((p): p is { inlineData: { mimeType: string; data: string } } => p !== null)
-      : [];
+    // Assemble existing sections for context so the model keeps the brief coherent
+    const sectionContext = Object.entries(existingSections)
+      .map(([key, text]) => `## ${key.toUpperCase()}\n${text}`)
+      .join('\n\n');
+
+    const revisionClause = revisionNote
+      ? `\n\nREVISION FOCUS: "${revisionNote}" — apply this change specifically to the ${targetPlatform.toUpperCase()} section.`
+      : '';
+
+    const userMessage = `You are rewriting a SINGLE section of an image prompt set. Below is the full brief context and the existing sections for reference. Your ONLY job is to produce a NEW, REPLACEMENT prompt for the ${targetPlatform.toUpperCase()} section.\n\nRULES:\n1. Output ONLY the replacement prompt text — no markdown headers, no section labels, no commentary, no code fences.\n2. Preserve the subject, style, lighting, camera, composition, mood, and color grade from the brief.\n3. Match the quality and density of the other platform sections.\n4. Follow the platform-specific dialect rules from the system prompt.\n5. The replacement must be a complete, copy-paste-ready block — not a partial edit.${revisionClause}\n\nEXISTING SECTIONS (for context):\n${sectionContext}\n\nNow write ONLY the replacement ${targetPlatform.toUpperCase()} prompt. Start directly with the prompt text.`;
 
     const isGemini =
       provider?.useBuiltInGemini || !provider?.baseUrl || provider?.baseUrl.includes('googleapis.com');
@@ -73,26 +66,18 @@ export async function POST(req: NextRequest) {
       const ai = new GoogleGenAI({
         apiKey,
         httpOptions: {
-          headers: {
-            'User-Agent': 'promptcrafter-ai/1.1.0',
-          },
+          headers: { 'User-Agent': 'promptcrafter-ai/1.1.0' },
         },
       });
 
       const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
-
-      // When reference images are present, pass them as inline parts so
-      // Gemini can see the references while writing platform-specific prompts.
-      const multimodalContents = refImageParts.length > 0
-        ? [{ role: 'user' as const, parts: [{ text: userMessage }, ...refImageParts] }]
-        : userMessage;
 
       const responseStream = await withModelFallback(
         { ...provider, model: modelName },
         (model) =>
           ai.models.generateContentStream({
             model,
-            contents: multimodalContents,
+            contents: userMessage,
             config: {
               systemInstruction,
               temperature: provider?.temperature ?? 0.7,
@@ -121,13 +106,12 @@ export async function POST(req: NextRequest) {
       return new Response(customStream, { headers: STREAM_HEADERS });
     }
 
-    // Custom OpenAI-compatible provider.
     return await handleOpenAIProviderRequest(provider, [
       { role: 'system', content: systemInstruction },
       { role: 'user', content: userMessage },
     ]);
   } catch (error: any) {
-    console.error('API /api/image-prompt Error:', error);
+    console.error('API /api/image-prompt-redo Error:', error);
     return formatOpenAIError(error);
   }
 }
