@@ -42,6 +42,22 @@ export async function POST(req: NextRequest) {
       ? buildLogoPromptUserMessage(input)
       : buildImagePromptUserMessage(input);
 
+    // Build multimodal content if reference images are attached
+    const hasRefImages = !!input.referenceImages && input.referenceImages.length > 0;
+    const refImageParts = hasRefImages
+      ? input.referenceImages!.map((img) => {
+          // Extract MIME type and base64 data from data URL
+          const match = img.dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+          if (!match) return null;
+          return {
+            inlineData: {
+              mimeType: match[1],
+              data: match[2],
+            },
+          };
+        }).filter(Boolean)
+      : [];
+
     const isGemini =
       provider?.useBuiltInGemini || !provider?.baseUrl || provider?.baseUrl.includes('googleapis.com');
 
@@ -65,12 +81,18 @@ export async function POST(req: NextRequest) {
 
       const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
 
+      // When reference images are present, pass them as inline parts so
+      // Gemini can see the references while writing platform-specific prompts.
+      const multimodalContents = refImageParts.length > 0
+        ? [{ role: 'user' as const, parts: [{ text: userMessage }, ...refImageParts] }]
+        : userMessage;
+
       const responseStream = await withModelFallback(
         { ...provider, model: modelName },
         (model) =>
           ai.models.generateContentStream({
             model,
-            contents: userMessage,
+            contents: multimodalContents,
             config: {
               systemInstruction,
               temperature: provider?.temperature ?? 0.7,

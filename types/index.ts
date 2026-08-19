@@ -360,6 +360,18 @@ export type ImagePlatform =
  * Input for the Image Prompt Studio — a multi-platform image generation
  * prompt built from a short description.
  */
+/**
+ * A reference image uploaded for the Image Prompt Studio. Kept client-side
+ * only (session scope) — not persisted to the gallery by default.
+ */
+export interface ImagePromptReferenceImage {
+  id: string;
+  /** Base-64 data URL kept client-side only. */
+  dataUrl: string;
+  /** Purpose tag — changes how the system prompt describes the image per platform. */
+  purpose: 'subject' | 'style' | 'brand-consistency';
+}
+
 export interface ImagePromptInput {
   /** What the image is actually of (the subject slot). */
   subject: string;
@@ -386,6 +398,13 @@ export interface ImagePromptInput {
   /** Exact in-image text to render, with typography guidance if desired. */
   inImageText?: string;
   additionalNotes?: string;
+  /**
+   * Reference images uploaded for the brief. Each carries a purpose tag that
+   * changes how the platform-specific prompt sections reference the image.
+   * Max 3 — too many dilute the brief. Session-only by default; opt-in to
+   * persist with a saved prompt.
+   */
+  referenceImages?: ImagePromptReferenceImage[];
   /**
    * Studio mode. 'logo' drives a brand-identity brief (mark type, logo style,
    * color palette, wordmark) instead of a photographic one. Absent = 'image'

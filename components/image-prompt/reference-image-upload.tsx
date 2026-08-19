@@ -1,0 +1,190 @@
+'use client';
+
+import React, { useCallback, useRef, useState } from 'react';
+import { ImagePlus, X, Tag } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ImagePromptReferenceImage } from '@/types';
+
+const MAX_IMAGES = 3;
+
+const PURPOSE_OPTIONS: { value: ImagePromptReferenceImage['purpose']; label: string; color: string }[] = [
+  { value: 'subject', label: 'Subject / Product', color: 'bg-brand/15 border-brand text-brand' },
+  { value: 'style', label: 'Style reference', color: 'bg-[#8ab4f8]/15 border-[#8ab4f8] text-[#8ab4f8]' },
+  { value: 'brand-consistency', label: 'Brand / Character consistency', color: 'bg-warning/15 border-warning text-warning' },
+];
+
+interface ReferenceImageUploadProps {
+  images: ImagePromptReferenceImage[];
+  onAdd: (img: ImagePromptReferenceImage) => void;
+  onRemove: (id: string) => void;
+  onUpdatePurpose: (id: string, purpose: ImagePromptReferenceImage['purpose']) => void;
+}
+
+export function ReferenceImageUpload({
+  images,
+  onAdd,
+  onRemove,
+  onUpdatePurpose,
+}: ReferenceImageUploadProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const atCapacity = images.length >= MAX_IMAGES;
+
+  const processFile = useCallback(
+    (file: File) => {
+      if (!file.type.startsWith('image/')) return;
+      if (images.length >= MAX_IMAGES) return;
+
+      // Cap individual images at 5 MB to avoid localStorage blowups
+      if (file.size > 5 * 1024 * 1024) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        onAdd({
+          id: crypto.randomUUID(),
+          dataUrl,
+          purpose: 'subject',
+        });
+      };
+      reader.readAsDataURL(file);
+    },
+    [images.length, onAdd]
+  );
+
+  const handleFiles = useCallback(
+    (files: FileList | null) => {
+      if (!files) return;
+      const remaining = MAX_IMAGES - images.length;
+      const toProcess = Array.from(files).slice(0, remaining);
+      toProcess.forEach(processFile);
+    },
+    [images.length, processFile]
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      handleFiles(e.dataTransfer.files);
+    },
+    [handleFiles]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  return (
+    <div className="space-y-2">
+      {/* Upload zone */}
+      <button
+        type="button"
+        onClick={() => !atCapacity && fileInputRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        disabled={atCapacity}
+        className={cn(
+          'w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-xs font-medium transition-all',
+          atCapacity
+            ? 'border-border/50 text-text-muted cursor-not-allowed opacity-50'
+            : isDragging
+              ? 'border-brand bg-brand/5 text-brand'
+              : 'border-border text-text-muted hover:border-brand/40 hover:text-brand hover:bg-brand/5 cursor-pointer'
+        )}
+      >
+        <ImagePlus className="w-4 h-4" />
+        {atCapacity
+          ? `Max ${MAX_IMAGES} reference images`
+          : images.length === 0
+            ? 'Add reference images (drag or click)'
+            : `Add another (${images.length}/${MAX_IMAGES})`}
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          if (e.target) e.target.value = '';
+        }}
+        className="hidden"
+        aria-label="Upload reference images"
+      />
+
+      {/* Uploaded images list */}
+      {images.map((img) => (
+        <div
+          key={img.id}
+          className="flex items-start gap-2.5 p-2 rounded-lg bg-surface-muted/60 border border-border"
+        >
+          {/* Thumbnail */}
+          <div className="shrink-0 w-12 h-12 rounded-md overflow-hidden border border-border/60 bg-surface-card">
+            <img
+              src={img.dataUrl}
+              alt="Reference"
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {/* Purpose selector */}
+            <div className="flex flex-wrap gap-1">
+              {PURPOSE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onUpdatePurpose(img.id, opt.value)}
+                  className={cn(
+                    'px-1.5 py-0.5 rounded text-[9px] font-semibold border transition-all',
+                    img.purpose === opt.value
+                      ? opt.color
+                      : 'border-border text-text-muted hover:text-text-secondary'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-text-muted leading-tight">
+              {img.purpose === 'subject'
+                ? 'Gemini/Nano Banana will describe this subject from the image.'
+                : img.purpose === 'style'
+                  ? 'Platform sections will reference the visual style of this image.'
+                  : 'Midjourney --cref / Ideogram Character Reference will use this.'}
+            </p>
+          </div>
+
+          {/* Remove button */}
+          <button
+            type="button"
+            onClick={() => onRemove(img.id)}
+            className="shrink-0 p-1 rounded text-text-muted hover:text-danger transition-colors"
+            title="Remove reference image"
+            aria-label="Remove reference image"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+
+      {images.length > 0 && images.length < MAX_IMAGES && (
+        <p className="text-[9px] text-text-muted leading-relaxed">
+          Each image gets a purpose tag that changes how platform sections reference it. Too many references dilute the brief.
+        </p>
+      )}
+      {images.length >= MAX_IMAGES && (
+        <p className="text-[9px] text-warning/80 leading-relaxed">
+          {MAX_IMAGES} images — the maximum for a focused brief. Remove one to add another.
+        </p>
+      )}
+    </div>
+  );
+}

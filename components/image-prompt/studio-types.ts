@@ -1,4 +1,4 @@
-import { ImagePlatform } from '@/types';
+import { ImagePlatform, ImagePromptReferenceImage } from '@/types';
 
 /** Studio mode — image prompts or brand-identity logo prompts. */
 export type StudioMode = 'image' | 'logo';
@@ -55,6 +55,10 @@ export interface StudioFormState {
    * Absent/undefined on older persisted state — defaults to collapsed.
    */
   showRefine: boolean;
+  /** Reference images uploaded for the brief (max 3, session-only by default). */
+  referenceImages: ImagePromptReferenceImage[];
+  /** When true, reference images are persisted with the saved prompt. */
+  keepRefImages: boolean;
 }
 
 /** Setter callbacks for the form state — mirrors the useState setters in the studio. */
@@ -88,4 +92,8 @@ export interface StudioFormHandlers {
   setAdditionalNotes: (value: string) => void;
   setShowArtDirection: (value: boolean) => void;
   setShowRefine: (value: boolean) => void;
+  addReferenceImage: (img: ImagePromptReferenceImage) => void;
+  removeReferenceImage: (id: string) => void;
+  updateReferenceImagePurpose: (id: string, purpose: ImagePromptReferenceImage['purpose']) => void;
+  setKeepRefImages: (value: boolean) => void;
 }

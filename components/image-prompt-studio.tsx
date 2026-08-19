@@ -18,7 +18,7 @@ import {
 import { generateImagePromptStream } from '@/lib/ai-client';
 import { getProviderModelList } from '@/lib/storage';
 import { DEFAULT_LOGO_INPUT, LOGO_EXAMPLE_TOPICS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
-import { ImagePlatform, ImagePromptInput, ProviderConfig } from '@/types';
+import { ImagePlatform, ImagePromptInput, ImagePromptReferenceImage, ProviderConfig } from '@/types';
 import { OutputPanel } from './image-prompt/output-panel';
 import { PromptForm } from './image-prompt/prompt-form';
 import { SavedGallery } from './image-prompt/saved-gallery';
@@ -69,6 +69,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [showArtDirection, setShowArtDirection] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
+  const [referenceImages, setReferenceImages] = useState<ImagePromptReferenceImage[]>([]);
+  const [keepRefImages, setKeepRefImages] = useState(false);
 
   // ── Output state ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -121,6 +123,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     additionalNotes,
     showArtDirection,
     showRefine,
+    referenceImages,
+    keepRefImages,
   };
 
   const formHandlers: StudioFormHandlers = {
@@ -156,6 +160,10 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setAdditionalNotes,
     setShowArtDirection,
     setShowRefine,
+    addReferenceImage: (img) => setReferenceImages((prev) => [...prev, img]),
+    removeReferenceImage: (id) => setReferenceImages((prev) => prev.filter((r) => r.id !== id)),
+    updateReferenceImagePurpose: (id, purpose) => setReferenceImages((prev) => prev.map((r) => r.id === id ? { ...r, purpose } : r)),
+    setKeepRefImages,
   };
 
   const buildInput = (): ImagePromptInput => ({
@@ -185,6 +193,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     negativePrompt: negativePrompt.trim() || undefined,
     inImageText: inImageText.trim() || undefined,
     additionalNotes: additionalNotes.trim() || undefined,
+    referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
   });
 
   const handleGenerate = async (notesOverride?: string) => {
@@ -268,6 +277,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       mode,
       sections: sectionsCopy,
       input: buildInput(),
+      referenceImages: keepRefImages && referenceImages.length > 0 ? referenceImages : undefined,
       createdAt: Date.now(),
     };
     setSavedPrompts(saveImagePrompt(item));
@@ -307,6 +317,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setNegativePrompt(inp?.negativePrompt ?? '');
     setInImageText(inp?.inImageText ?? '');
     setAdditionalNotes(inp?.additionalNotes ?? '');
+    setReferenceImages(inp?.referenceImages ?? []);
+    setKeepRefImages(false);
     try {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {

@@ -1,4 +1,4 @@
-import { ImagePlatform, ImagePromptInput } from '@/types';
+import { ImagePlatform, ImagePromptInput, ImagePromptReferenceImage } from '@/types';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Image Prompt Studio — presets, meta-prompt builders, output parser, gallery
@@ -232,6 +232,27 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
   const colorGrade = COLOR_GRADE_PRESETS.find((c) => c.id === input.colorGrade);
   const platformList = PLATFORM_OPTIONS.filter((p) => input.platforms.includes(p.id));
   const hasInImageText = !!input.inImageText?.trim();
+  const hasRefImages = !!input.referenceImages && input.referenceImages.length > 0;
+  const refImages = input.referenceImages ?? [];
+
+  // Build per-platform reference image dialect additions
+  const refDialectGuide = hasRefImages
+    ? platformList.map((p) => {
+        switch (p.id) {
+          case 'gemini':
+            return `GEMINI REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. Using the attached reference image(s) of [purpose], generate the image prompt. Describe the subject's key visual traits from the attached reference — its shape, color, texture, logo placement, proportions, and any distinguishing details — in words, so the image prompt captures the reference with precision. If the reference is a Subject/Product, describe its exact form and features. If the reference is a Style image, describe the mood, palette, and visual texture. If the reference is for Brand/Character consistency, describe the character's key visual identity markers (hair, outfit, expression, pose).`;          case 'midjourney':
+            return `MIDJOURNEY REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. Midjourney accepts character and style references via URL parameters. Instruct the user to use --cref <image_url> for character reference and --sref <image_url> for style reference. Use --cw 100 for maximum character fidelity, --cw 50 for moderate similarity, --cw 0 for style only. If the reference purpose is 'subject', use --cref; if 'style', use --sref; if 'brand-consistency', use --cref with --cw 80. Describe the subject's key traits in words for the text portion, so the prompt works even if the user pastes it without the image.`;
+          case 'ideogram':
+            return `IDEOGRAM REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. Ideogram's Character Reference feature maintains visual identity across multiple generations. Reference the character's key visual identity markers by name (hair color/style, outfit, distinguishing marks) and instruct the user to upload the reference image when using Ideogram's Character Reference feature. Describe the subject's exact appearance in words so the text prompt stands alone.`;
+          case 'dalle':
+            return `DALL-E REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. DALL·E does not have a first-class reference-image parameter. Describe the reference image's key visual traits explicitly in words — shape, color, texture, proportions, logo placement — so the text prompt alone captures the subject. Note in the section: "For DALL·E, describe the reference image's key visual traits explicitly in words, since this platform doesn't accept a separate reference-image parameter."`;
+          case 'stable-diffusion':
+            return `STABLE DIFFUSION / FLUX REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. SD and Flux do not have a first-class reference-image prompt convention. Describe the reference's key visual traits (shape, color, texture, proportions) explicitly in weighted tokens and key phrases. Note: "For SD/Flux, describe the reference image's key visual traits explicitly in words, since these platforms don't accept a separate reference-image parameter."`;
+          default:
+            return '';
+        }
+      }).filter(Boolean).join('\n\n')
+    : '';
 
   const dialectGuide = platformList
     .map((p) => {
@@ -253,6 +274,8 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
     .filter(Boolean)
     .join('\n\n');
 
+  const fullDialectGuide = dialectGuide + (refDialectGuide ? '\n\nREFERENCE IMAGE DIALECT RULES\n' + refDialectGuide : '');
+
   return `You are PromptCrafter's Image Direction Studio: a world-class creative director, art buyer, and image-prompt engineer who has written prompts for Midjourney, DALL-E, Stable Diffusion, Flux, Ideogram, and Google's Nano Banana image models (Gemini Flash/Pro Image).
 
 YOUR MISSION
@@ -267,6 +290,7 @@ PROMPT WRITING RULES (apply to every prompt you output)
 6. In-image text: when text must appear in the image, wrap the exact wording in quotes and describe the typography ("bold, white, sans-serif", "hand-lettered script"). Never invent in-image text the user didn't request.
 7. One visual direction: never stack conflicting styles (no "photorealistic anime oil painting"); commit to a single coherent idiom.
 8. Respect purpose: when additional notes give context (audience, brand, use case), let it shape composition, mood, and color.
+8a. Reference images: when the director attaches reference images, use the platform-specific reference-image conventions above. Describe the reference's key visual traits in words so the text prompt captures specificity even when the image isn't attached. Never copy the reference image verbatim — use it to make the subject, style, or character description concrete and precise.
 9. Every prompt must be a single copy-paste-ready block — no commentary around it.
 10. No cross-section duplication: every section must be a DIFFERENT prompt. The MASTER PROMPT is the compact universal version; each platform section re-expresses the same brief in its own dialect (keyword phrases, weighted tokens, parameters, or full prose). Never repeat the same text in two sections — in particular, the GEMINI / NANO BANANA section carries the full prose creative brief while the MASTER PROMPT stays short and distinct from it.
 
@@ -277,7 +301,7 @@ OUTPUT FORMAT — obey EXACTLY. Every section MUST start with a markdown "## " h
 ${platformList.map((p) => `## ${PLATFORM_HEADERS[p.id]}\n(Tuned ${p.label} prompt.)`).join('\n\n')}
 
 ${input.negativePrompt ? `## NEGATIVE PROMPT\n(Comma-separated exclusions derived from the user's request: ${input.negativePrompt}.)\n\n` : ''}PLATFORM DIALECT RULES
-${dialectGuide}
+${fullDialectGuide}
 
 USER BRIEF
 - Subject: "${input.subject}"
@@ -292,6 +316,7 @@ USER BRIEF
 ${input.inImageText ? `- In-image text: ${input.inImageText}` : ''}
 - Platform dialects to emit: ${platformList.map((p) => p.label).join(', ') || 'master only'}
 ${input.negativePrompt ? `- Negative guidance: ${input.negativePrompt}` : ''}
+${hasRefImages ? `- Reference images: ${refImages.length} attached (${refImages.map((r) => r.purpose).join(', ')}). Use platform-specific reference conventions.` : ''}
 ${input.additionalNotes ? `- Additional notes: ${input.additionalNotes}` : ''}
 
 Now write the prompts. Start directly with "## MASTER PROMPT".`;
@@ -303,6 +328,9 @@ export function buildImagePromptUserMessage(input: ImagePromptInput): string {
     input.colorGrade && `Color grade: ${COLOR_GRADE_PRESETS.find((c) => c.id === input.colorGrade)?.label ?? input.colorGrade}`,
     input.resolution && `Resolution: ${input.resolution}`,
     input.inImageText && `In-image text: ${input.inImageText}`,
+    ...(input.referenceImages && input.referenceImages.length > 0
+      ? [`Reference images: ${input.referenceImages.length} attached (${input.referenceImages.map((r) => r.purpose).join(', ')})`]
+      : []),
   ].filter(Boolean);
   const extrasLine = extras.length > 0 ? `\n${extras.join('\n')}` : '';
   return `Subject: "${input.subject}"\n\nGenerate the master prompt and ${input.platforms.length} platform-tuned prompts as specified. Start with "## MASTER PROMPT".${extrasLine}`;
@@ -462,6 +490,12 @@ export interface SavedImagePrompt {
    * backward compatibility with previously saved briefs.
    */
   input?: ImagePromptInput;
+  /**
+   * Reference images the user explicitly chose to keep with this saved prompt.
+   * Absent or empty = session-only (the default). Image data blows past
+   * localStorage limits fast, so opt-in only.
+   */
+  referenceImages?: ImagePromptReferenceImage[];
 }
 
 const GALLERY_KEY = 'pc:image-prompts';

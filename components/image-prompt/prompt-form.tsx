@@ -12,6 +12,7 @@ import { ImagePlatform, ProviderConfig } from '@/types';
 import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
 import { CHIP_DOTS, ChipRow } from './chip-row';
+import { ReferenceImageUpload } from './reference-image-upload';
 import { StudioFormHandlers, StudioFormState, StudioMode } from './studio-types';
 import { CustomChipEditor, useCustomChipEntry } from './use-custom-chip-entry';
 
@@ -380,6 +381,36 @@ export function PromptForm({
           field="aspectRatio"
           mode="both"
         />
+
+        {/* Reference images — quick upload zone in Tier 1 (image mode only) */}
+        {!isLogo && state.referenceImages.length >= 0 && (
+          <div className="space-y-2">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+              <ImageIcon className="w-3.5 h-3.5 text-brand" />
+              Reference images
+              <span className="text-text-muted font-normal normal-case">— optional, session-only</span>
+            </span>
+            <ReferenceImageUpload
+              images={state.referenceImages}
+              onAdd={handlers.addReferenceImage}
+              onRemove={handlers.removeReferenceImage}
+              onUpdatePurpose={handlers.updateReferenceImagePurpose}
+            />
+            {state.referenceImages.length > 0 && (
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={state.keepRefImages}
+                  onChange={(e) => handlers.setKeepRefImages(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-border text-brand focus:ring-brand/50"
+                />
+                <span className="text-[10px] text-text-muted leading-tight">
+                  Keep reference images with saved prompt (default: session-only)
+                </span>
+              </label>
+            )}
+          </div>
+        )}
 
         {/* ── TIER 2 · REFINE — single accordion, collapsed by default ── */}
         <div className="border-t border-border pt-4">
