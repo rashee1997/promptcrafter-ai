@@ -1,7 +1,7 @@
 import { ImagePlatform, ImagePromptReferenceImage } from '@/types';
 
-/** Studio mode — image prompts or brand-identity logo prompts. */
-export type StudioMode = 'image' | 'logo';
+/** Studio mode — image prompts, brand-identity logo prompts, or Toastmasters asset prompts. */
+export type StudioMode = 'image' | 'logo' | 'toastmasters';
 
 /** Form state owned by ImagePromptStudio and shared with its sub-components. */
 export interface StudioFormState {
