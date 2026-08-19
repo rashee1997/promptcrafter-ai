@@ -386,7 +386,7 @@ function buildSingleAssetPrompt(
  * all sharing the same event text, colour, and language settings.
  */
 export function buildToastmastersPrompt(input: ToastmastersInput): string {
-  const assets = input.assetTypes.length > 0 ? input.assetTypes : ['event-flyer'];
+  const assets: ToastmastersAssetId[] = input.assetTypes.length > 0 ? input.assetTypes : ['event-flyer'];
 
   if (assets.length === 1) {
     return buildSingleAssetPrompt(assets[0], input);
