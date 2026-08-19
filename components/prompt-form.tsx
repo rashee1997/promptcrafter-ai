@@ -224,9 +224,18 @@ export function PromptForm({
     if (v !== null) setTone(v);
   };
 
+  const [customDomainError, setCustomDomainError] = useState('');
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!topic.trim()) return;
+
+    // Validate custom domain text is provided when Custom domain is selected
+    if (selectedDomain.id === 'custom-domain' && !customDomainText.trim()) {
+      setCustomDomainError('Please describe your domain before generating.');
+      return;
+    }
+    setCustomDomainError('');
 
     const parsedLimit = Number(outputCharLimit);
     const hasLimit = outputCharLimit.trim() !== '' && Number.isFinite(parsedLimit) && parsedLimit > 0;
@@ -672,15 +681,22 @@ export function PromptForm({
           <div className="space-y-1.5 p-3 rounded-xl bg-brand/5 border border-brand/20">
             <label htmlFor="custom-domain-input" className="text-xs font-semibold text-text-primary">
               Add your own context
-            </label>
-            <input
+            </label>              <input
               id="custom-domain-input"
               type="text"
               value={customDomainText}
-              onChange={(e) => setCustomDomainText(e.target.value)}
+              onChange={(e) => {
+                setCustomDomainText(e.target.value);
+                if (customDomainError) setCustomDomainError('');
+              }}
               placeholder="e.g. Healthcare clinical trials or game design"
-              className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+              className={`w-full p-2.5 text-xs rounded-lg border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand ${
+                customDomainError ? 'border-danger focus:ring-danger' : 'border-border'
+              }`}
             />
+            {customDomainError && (
+              <p className="text-[11px] text-danger mt-1" role="alert">{customDomainError}</p>
+            )}
           </div>
         )}
 

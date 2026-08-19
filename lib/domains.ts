@@ -415,13 +415,14 @@ YOUR MISSION:
 Engineer a single, production-ready, top-tier AI prompt based on the user's requirements.
 
 STRICT GENERATION DIRECTIVES:
-1. OUTPUT ONLY THE ENGINEERED PROMPT: Return ONLY the single, complete, production-ready prompt itself. Do NOT include conversational intros (e.g., "Here is your prompt:"), extra meta-explanations, section wrappers (like "## Master System Prompt" or "## Architecture"), example sections, or Mermaid diagrams.
-2. NO FEW-SHOT EXAMPLES OR MERMAID DIAGRAMS: Do NOT output example conversation blocks or Mermaid charts. Keep the output 100% clean and copy-paste ready.
-3. ADHERE TO USER-SELECTED OUTPUT FORMAT:
+1. OUTPUT ONLY THE ENGINEERED PROMPT: Return ONLY the single, complete, production-ready prompt itself. Do NOT include conversational intros (e.g., "Here is your prompt:"), extra meta-explanations, section wrappers (like "## Master System Prompt" or "## Architecture"), or Mermaid diagrams.
+2. NO MERMAID DIAGRAMS: Do NOT output Mermaid charts. Never include Mermaid in the output. Keep the output 100% clean and copy-paste ready.
+3. ILLUSTRATIVE EXAMPLE: ${input.includeExamples ? 'Include ONE short, concrete input/output example block that shows the expected behavior. Place it after the core instructions. Keep it brief (under 150 words) and clearly labeled.' : 'Do NOT include example blocks.'}
+4. ADHERE TO USER-SELECTED OUTPUT FORMAT:
    ${formatGuide}
-4. DYNAMIC BRACKETED PLACEHOLDERS: Whenever specific variables (like tech stack, API key, domain database, product name) are contextually variable, use bracketed uppercase placeholders (e.g., [INSERT_TECH_STACK_HERE], [INSERT_PRODUCT_NAME_HERE], [INSERT_TARGET_METRIC]).
-5. HIGH-SIGNAL INSTRUCTIONS: Ensure the prompt contains an expert persona, explicit goal, step-by-step logic, edge-case handling, and strict negative constraints ("What NOT to do").
-${input.outputCharLimit ? `6. OUTPUT LENGTH CONSTRAINT: The complete engineered prompt you return MUST NOT exceed ${input.outputCharLimit} characters total (count every character, including headers and formatting). If a draft is longer than the limit, tighten wording and cut redundancy until it fits while preserving every required section and directive.` : ''}
+5. DYNAMIC BRACKETED PLACEHOLDERS: Whenever specific variables (like tech stack, API key, domain database, product name) are contextually variable, use bracketed uppercase placeholders (e.g., [INSERT_TECH_STACK_HERE], [INSERT_PRODUCT_NAME_HERE], [INSERT_TARGET_METRIC]).
+6. HIGH-SIGNAL INSTRUCTIONS: Ensure the prompt contains an expert persona, explicit goal, step-by-step logic, edge-case handling, and strict negative constraints ("What NOT to do").
+${input.outputCharLimit ? `7. OUTPUT LENGTH CONSTRAINT: The complete engineered prompt you return MUST NOT exceed ${input.outputCharLimit} characters total (count every character, including headers and formatting). If a draft is longer than the limit, tighten wording and cut redundancy until it fits while preserving every required section and directive.` : ''}
 
 Target Domain Context:
 - Domain Name: ${domain.name}

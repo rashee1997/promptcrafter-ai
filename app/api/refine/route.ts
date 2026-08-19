@@ -22,7 +22,9 @@ function buildRefineSystemPrompt(session: RefineRequest['session'], domain: Doma
 TASK CONTEXT (why this prompt exists):
 - Domain: ${domain.name}
 - Original request: ${input.topic}
-- Tone: ${input.tone}${input.targetAudience ? `\n- Target audience: ${input.targetAudience}` : ''}${input.additionalNotes ? `\n- Additional notes: ${input.additionalNotes}` : ''}${domain.domainGuidance ? `\n- Domain requirements the prompt must keep satisfying:\n${domain.domainGuidance.slice(0, 2000)}` : ''}
+- Framework: ${input.framework.toUpperCase()}
+- Output format: ${input.outputFormat || 'markdown'}
+- Tone: ${input.tone}${input.targetAudience ? `\n- Target audience: ${input.targetAudience}` : ''}${input.additionalNotes ? `\n- Additional notes: ${input.additionalNotes}` : ''}${input.outputCharLimit ? `\n- Character limit: the FULL revised prompt must stay under ${input.outputCharLimit} characters — tighten wording if the edit would push it over.` : ''}${input.includeConstraints ? `\n- The prompt currently includes explicit negative constraints/guardrails — keep them unless the change request specifically asks to remove them.` : ''}${domain.domainGuidance ? `\n- Domain requirements the prompt must keep satisfying:\n${domain.domainGuidance.slice(0, 2000)}` : ''}
 
 EDITING RULES:
 1. The user message contains a BASE PROMPT TO EDIT and a CHANGE REQUEST. The BASE PROMPT is the ONLY text you may modify; conversation history is context only.
