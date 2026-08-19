@@ -215,6 +215,7 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
                 onAddCharacterRef={handleAddCharacterRef}
                 onRemoveCharacterRef={handleRemoveCharacterRef}
                 onChange={(patch) => persistShotPatch(shot.id, patch)}
+                targetPlatform={project.targetPlatform}
               />
             </Fragment>
           ))}

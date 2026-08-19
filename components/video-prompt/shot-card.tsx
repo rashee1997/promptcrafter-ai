@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, ChevronUp, Copy, SquarePlay, Timer, Trash2, X } from 'lucide-react';
-import type { VideoCharacter, VideoShot } from '@/types/video';
+import type { VideoCharacter, VideoShot, VideoTargetPlatform } from '@/types/video';
 import {
   formatShotForDialect,
   type VideoDialect,
@@ -15,6 +15,14 @@ import { DialectTabs } from './dialect-tabs';
 import { ShotDialogueCard } from './shot-dialogue-card';
 import { NegativePromptField } from './negative-prompt-field';
 import { CHARACTER_DRAG_TYPE } from './sidebar-characters-panel';
+
+/** IDs that map a target platform to a matching dialect. */
+const PLATFORM_TO_DIALECT: Record<string, VideoDialect['id'] | undefined> = {
+  veo: 'veo',
+  kling: 'kling',
+  seedance: 'seedance',
+  higgsfield: 'higgsfield',
+};
 
 interface ShotCardProps {
   shot: VideoShot;
@@ -31,6 +39,8 @@ interface ShotCardProps {
   onRemoveCharacterRef: (shotId: string, characterId: string) => void;
   /** Persist a field edit (e.g. negativePrompt) back through the timeline. */
   onChange?: (patch: Partial<VideoShot>) => void;
+  /** The project's target platform — used to default the dialect tab. */
+  targetPlatform?: VideoTargetPlatform | null;
 }
 
 /**
@@ -55,8 +65,11 @@ export function ShotCard({
   onAddCharacterRef,
   onRemoveCharacterRef,
   onChange,
+  targetPlatform,
 }: ShotCardProps) {
-  const [dialectId, setDialectId] = useState<VideoDialect['id']>('universal');
+  const [dialectId, setDialectId] = useState<VideoDialect['id']>(
+    targetPlatform ? (PLATFORM_TO_DIALECT[targetPlatform] ?? 'universal') : 'universal'
+  );
   const { copiedKey, copy } = useInlineCopy(1200);
   const { entries } = useStoryBible();
   const [dragOver, setDragOver] = useState(false);
@@ -259,7 +272,7 @@ export function ShotCard({
 
       {/* Dialect selector + live preview */}
       <div className="space-y-1.5">
-        <DialectTabs value={dialectId} onChange={setDialectId} groupId={groupId} />
+        <DialectTabs value={dialectId} onChange={setDialectId} groupId={groupId} targetPlatform={targetPlatform} />
         <div
           id={`dialect-preview-${groupId}`}
           role="tabpanel"

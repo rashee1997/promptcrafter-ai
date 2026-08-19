@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import { Check } from 'lucide-react';
 import { VIDEO_DIALECTS, type VideoDialect } from '@/lib/video/model-dialects';
+import type { VideoTargetPlatform } from '@/types/video';
 import { cn } from '@/lib/utils';
 
 /**
@@ -11,12 +12,25 @@ import { cn } from '@/lib/utils';
  */
 const CHIP_ORDER: VideoDialect['id'][] = ['veo', 'higgsfield', 'kling', 'seedance', 'universal'];
 
+/** IDs that directly map to a video target platform. */
+const PLATFORM_TO_DIALECT: Record<string, VideoDialect['id'] | undefined> = {
+  veo: 'veo',
+  kling: 'kling',
+  seedance: 'seedance',
+  higgsfield: 'higgsfield',
+};
+
 interface DialectTabsProps {
   value: VideoDialect['id'];
   onChange: (id: VideoDialect['id']) => void;
   disabled?: boolean;
   /** Unique per-card suffix so tab ids don't collide across storyboard cards. */
   groupId?: string;
+  /**
+   * The project's target platform. When set, that dialect is shown first in
+   * the chip row and any non-target tab is marked as secondary / unverified.
+   */
+  targetPlatform?: VideoTargetPlatform | null;
 }
 
 /**
@@ -24,10 +38,16 @@ interface DialectTabsProps {
  * role="tablist" group with arrow-key navigation (mirrors the app's domain
  * selector pattern): Left/Right cycle, Home/End jump, Enter/Space activate.
  */
-export function DialectTabs({ value, onChange, disabled, groupId = 'dialect' }: DialectTabsProps) {
+export function DialectTabs({ value, onChange, disabled, groupId = 'dialect', targetPlatform }: DialectTabsProps) {
   const tabPrefix = `dialect-tab-${groupId}`;
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const chips = CHIP_ORDER.map((id) => VIDEO_DIALECTS.find((d) => d.id === id)).filter(
+
+  /** When a target platform is active, reorder chips so its dialect comes first. */
+  const targetDialectId = targetPlatform ? PLATFORM_TO_DIALECT[targetPlatform] : undefined;
+  const orderedIds = targetDialectId
+    ? [targetDialectId, ...CHIP_ORDER.filter((id) => id !== targetDialectId)]
+    : CHIP_ORDER;
+  const chips = orderedIds.map((id) => VIDEO_DIALECTS.find((d) => d.id === id)).filter(
     (d): d is VideoDialect => Boolean(d)
   );
 
@@ -57,6 +77,7 @@ export function DialectTabs({ value, onChange, disabled, groupId = 'dialect' }: 
       >
       {chips.map((dialect, i) => {
         const selected = dialect.id === value;
+        const isSecondary = !!targetDialectId && dialect.id !== targetDialectId && !selected;
         return (
           <button
             key={dialect.id}
@@ -69,7 +90,7 @@ export function DialectTabs({ value, onChange, disabled, groupId = 'dialect' }: 
             aria-selected={selected}
             aria-controls={`dialect-preview-${groupId}`}
             tabIndex={selected ? 0 : -1}
-            title={dialect.hint}
+            title={isSecondary ? `${dialect.hint} — secondary, not verified against this platform` : dialect.hint}
             disabled={disabled}
             onClick={() => onChange(dialect.id)}
             onKeyDown={(e) => handleKeyDown(e, i)}
@@ -78,12 +99,17 @@ export function DialectTabs({ value, onChange, disabled, groupId = 'dialect' }: 
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60',
               selected
                 ? 'bg-brand/10 text-brand border-brand/40'
-                : 'bg-surface-muted text-text-secondary border-border hover:border-brand/40 hover:text-brand',
+                : isSecondary
+                  ? 'bg-surface-muted/60 text-text-muted border-border/60 hover:border-brand/40 hover:text-brand'
+                  : 'bg-surface-muted text-text-secondary border-border hover:border-brand/40 hover:text-brand',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
           >
             {selected && <Check className="w-3 h-3 shrink-0" aria-hidden="true" />}
             {dialect.label}
+            {isSecondary && (
+              <span className="text-[8px] font-medium text-text-muted/70 ml-0.5">secondary</span>
+            )}
           </button>
         );
       })}

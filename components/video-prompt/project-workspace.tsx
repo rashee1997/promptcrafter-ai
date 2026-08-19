@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle2, Clapperboard } from 'lucide-react';
+import { CheckCircle2, Clapperboard, Target } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
 import type { VideoProject } from '@/types/video';
 import { StoryBibleProvider } from '@/lib/video/story-bible-context';
+import { getPlatformSpec } from '@/lib/video/platforms';
 import { StatusBadge } from './project-card';
 import { BootstrapFlow } from './bootstrap-flow';
 import { Sidebar } from './sidebar';
@@ -42,6 +43,12 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {project.targetPlatform && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-brand/10 text-brand border border-brand/25">
+              <Target className="w-3 h-3" aria-hidden="true" />
+              Drafting for: {getPlatformSpec(project.targetPlatform)?.label ?? project.targetPlatform}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border tabular-nums">
             <Clapperboard className="w-3 h-3 text-brand" aria-hidden="true" />
             {project.shots.length} shot{project.shots.length === 1 ? '' : 's'}
