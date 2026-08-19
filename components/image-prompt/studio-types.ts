@@ -8,6 +8,12 @@ export interface StudioFormState {
   subject: string;
   style: string;
   mode: StudioMode;
+  /**
+   * Purpose routing — "What matters most for this image?" When set, drives
+   * auto-suggested platforms and a one-line reason in the platform picker.
+   * Absent = no purpose selected; undefined for backward compat.
+   */
+  purpose: string | undefined;
   /** Logo mode — mark type id (see LOGO_MARK_TYPES in lib/logo-prompts.ts). */
   logoType: string;
   /** Logo mode — style preset id (see LOGO_STYLE_PRESETS in lib/logo-prompts.ts). */
@@ -56,6 +62,7 @@ export interface StudioFormHandlers {
   setSubject: (value: string) => void;
   setStyle: (value: string) => void;
   setMode: (mode: StudioMode) => void;
+  setPurpose: (value: string | undefined) => void;
   setLogoType: (value: string) => void;
   setLogoStyle: (value: string) => void;
   setPalette: (value: string) => void;

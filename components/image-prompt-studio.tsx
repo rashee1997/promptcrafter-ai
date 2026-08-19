@@ -43,6 +43,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [subject, setSubject] = useState('');
   const [style, setStyle] = useState(DEFAULT_IMAGE_INPUT.style);
   const [mode, setMode] = useState<StudioMode>('image');
+  const [purpose, setPurpose] = useState<string | undefined>(undefined);
   const [logoType, setLogoType] = useState(DEFAULT_LOGO_INPUT.logoType);
   const [logoStyle, setLogoStyle] = useState(DEFAULT_LOGO_INPUT.logoStyle);
   const [palette, setPalette] = useState(DEFAULT_LOGO_INPUT.palette);
@@ -94,6 +95,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     subject,
     style,
     mode,
+    purpose,
     logoType,
     logoStyle,
     palette,
@@ -125,6 +127,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setSubject,
     setStyle,
     setMode: handleSetMode,
+    setPurpose,
     setLogoType,
     setLogoStyle,
     setPalette,
@@ -278,6 +281,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setSubject(inp?.subject ?? item.subject);
     setStyle(inp?.style ?? DEFAULT_IMAGE_INPUT.style);
     setMode(restoredMode);
+    setPurpose(undefined); // purpose is transient, not persisted
     setLogoType(inp?.logoType ?? DEFAULT_LOGO_INPUT.logoType);
     setLogoStyle(inp?.logoStyle ?? DEFAULT_LOGO_INPUT.logoStyle);
     setPalette(inp?.palette ?? DEFAULT_LOGO_INPUT.palette);

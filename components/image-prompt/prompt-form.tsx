@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Bookmark, Building2, Check, ChevronDown, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Plus, RefreshCw, Shapes, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { Bookmark, Building2, Check, ChevronDown, Cpu, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Plus, RefreshCw, Route, Shapes, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
 import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
-import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
+import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, PURPOSE_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
 import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { ImagePlatform, ProviderConfig } from '@/types';
 import { ActionBar } from './action-bar';
@@ -154,6 +154,54 @@ export function PromptForm({
           className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-sunken border border-border"
         >
           {(['image', 'logo'] as const).map(renderModeButton)}
+        </div>
+
+        {/* Purpose routing — "What matters most?" */}
+        <div className="space-y-2">
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+            <Route className="w-3.5 h-3.5 text-brand" />
+            What matters most for this {isLogo ? 'logo' : 'image'}?
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {PURPOSE_OPTIONS.map((opt) => {
+              const selected = state.purpose === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    if (selected) {
+                      handlers.setPurpose(undefined);
+                    } else {
+                      handlers.setPurpose(opt.id);
+                      // Auto-suggest: merge suggested platforms into current selection
+                      for (const pid of opt.suggestPlatforms) {
+                        if (!state.platforms.includes(pid)) {
+                          handlers.togglePlatform(pid);
+                        }
+                      }
+                    }
+                  }}
+                  aria-pressed={selected}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
+                    selected
+                      ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
+                      : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                  )}
+                >
+                  {opt.label}
+                  {selected && <Check className="w-3 h-3 text-brand ml-1 inline-block" />}
+                </button>
+              );
+            })}
+          </div>
+          {/* One-line reason when a purpose is selected */}
+          {state.purpose && (
+            <p className="text-[10px] text-brand font-medium leading-relaxed">
+              {PURPOSE_OPTIONS.find((o) => o.id === state.purpose)?.reason}
+            </p>
+          )}
         </div>
 
         {/* Subject hero input */}
@@ -388,6 +436,23 @@ export function PromptForm({
                   <p className="text-[10px] text-text-muted leading-relaxed">
                     Rendered best by Ideogram and Gemini / Nano Banana. Keep it short — long names get garbled by most models.
                   </p>
+                  {/* Text accuracy suggestion — surface when wordmark text exists but text-accurate platforms are missing */}
+                  {(() => {
+                    const hasText = !!state.brandName.trim();
+                    const textMarkTypes = ['wordmark', 'lettermark', 'emblem', 'combination'];
+                    const markHasText = textMarkTypes.includes(state.logoType);
+                    const needsTextAccurate = hasText || markHasText;
+                    const hasTextAccurate = state.platforms.includes('ideogram') || state.platforms.includes('gemini');
+                    const hasWeakPlatforms = state.platforms.includes('midjourney') || state.platforms.includes('dalle');
+                    if (needsTextAccurate && hasWeakPlatforms && !hasTextAccurate) {
+                      return (
+                        <div className="mt-2 p-2.5 rounded-lg bg-warning/10 border border-warning/30 text-[10px] text-warning font-medium leading-relaxed">
+                          ⚠️ Ideogram and Gemini are most reliable for wordmark text — consider adding one for a text-accurate version.
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <ChipRow
@@ -534,14 +599,17 @@ export function PromptForm({
                       title={p.hint}
                       aria-pressed={selected}
                       className={cn(
-                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
+                        'group flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
                         selected
                           ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
                           : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
                       )}
                     >
                       <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', p.color)} />
-                      {p.label}
+                      <span className="flex flex-col">
+                        <span>{p.label}</span>
+                        <span className="text-[9px] text-text-muted font-normal normal-case leading-tight hidden group-hover:inline">{p.bestFor}</span>
+                      </span>
                       {selected && <Check className="w-3 h-3 text-brand shrink-0" />}
                     </button>
                   );

@@ -257,6 +257,13 @@ export function buildLogoPromptSystemPrompt(input: ImagePromptInput): string {
   const palette = LOGO_PALETTE_PRESETS.find((p) => p.id === input.palette);
   const mood = input.mood;
   const platformList = PLATFORM_IDS.filter((p) => input.platforms.includes(p));
+  // Logos with text are majority-text artifacts — wordmark/lettermark/emblem/
+  // combination mark types always carry legible text, as does an explicit
+  // brandName or inImageText entry.
+  const hasWordmarkText =
+    !!input.brandName?.trim() ||
+    !!input.inImageText?.trim() ||
+    ['wordmark', 'lettermark', 'emblem', 'combination'].includes(input.logoType ?? '');
 
   const paletteLine = palette
     ? `${palette.label}${input.palette === 'monochrome' ? ' (pure black & white, high-contrast silhouette, no gradients — designed for single-color print)' : ''} — ${palette.hint}${palette.colors ? `; reference colors ${palette.colors.join(', ')}` : ''}`
@@ -268,9 +275,9 @@ export function buildLogoPromptSystemPrompt(input: ImagePromptInput): string {
     .map((id) => {
       switch (id) {
         case 'midjourney':
-          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, parameters appended at the end: --ar ${input.aspectRatio}; use --style raw for flat/minimal marks; when the brief is a symbol-only concept (no wordmark), add --no text so the model does not garble letters; always add --no watermark, clip art, photorealistic background; if a negative prompt is provided, fold its key exclusions into --no. Put any wordmark in quotes at the end and keep it to short labels — Midjourney mangles long text.`;
+          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, parameters appended at the end: --ar ${input.aspectRatio}; use --style raw for flat/minimal marks; when the brief is a symbol-only concept (no wordmark), add --no text so the model does not garble letters; always add --no watermark, clip art, photorealistic background; if a negative prompt is provided, fold its key exclusions into --no. Put any wordmark in quotes at the end and keep it to short labels — Midjourney mangles long text.${hasWordmarkText ? ` WARNING — Midjourney is not reliable for wordmark text. Keep any text extremely short (1–2 words) or omit it entirely and recommend Ideogram or Gemini instead for text-accurate logo rendering.` : ''}`;
         case 'dalle':
-          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a brand-design brief; state the mark type, lockup layout, concept meaning, and exact wordmark text in quotes; say "flat vector logo on a white background, ${input.aspectRatio} aspect ratio" and "scales cleanly to a 16px favicon"; no parameter flags, no negative-prompt syntax — exclusions are phrased as "without X" (without gradients, without shadows).`;
+          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a brand-design brief; state the mark type, lockup layout, concept meaning, and exact wordmark text in quotes; say "flat vector logo on a white background, ${input.aspectRatio} aspect ratio" and "scales cleanly to a 16px favicon"; no parameter flags, no negative-prompt syntax — exclusions are phrased as "without X" (without gradients, without shadows).${hasWordmarkText ? ` WARNING — DALL·E is not reliable for wordmark text beyond very short words (1–2 words). For longer or typographically precise wordmarks, recommend Ideogram or Gemini instead.` : ''}`;
         case 'stable-diffusion':
           return `STABLE DIFFUSION / FLUX dialect: dense keyword tokens with weighting syntax like (flat vector:1.2), (minimal:1.1) and restrained quality tags; put the negative prompt on its own line starting with "Negative prompt:" and always include text artifacts, garbled letters, watermark, clip art, photorealistic background (drop gradients/shadows if the style is flat); add a final sampler line "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras"; keep any in-image text to short labels.`;
         case 'ideogram':

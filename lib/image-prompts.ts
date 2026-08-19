@@ -154,18 +154,45 @@ export const PLATFORM_OPTIONS: {
   id: ImagePlatform;
   label: string;
   hint: string;
+  bestFor: string;
   color: string;
 }[] = [
-  { id: 'midjourney', label: 'Midjourney', hint: 'Parameters: --ar --style --stylize --no', color: 'text-[#8f8feb]' },
-  { id: 'dalle', label: 'DALL·E', hint: 'Conversational natural-language description', color: 'text-[#7ec699]' },
-  { id: 'stable-diffusion', label: 'SD / Flux', hint: 'Weighted tokens + negative prompt', color: 'text-[#e0a458]' },
-  { id: 'ideogram', label: 'Ideogram', hint: 'Text-in-image specialist', color: 'text-[#6fc3df]' },
+  { id: 'midjourney', label: 'Midjourney', hint: 'Parameters: --ar --style --stylize --no', bestFor: 'Best for mood, composition, and visual beauty — even weak prompts land in a strong place', color: 'text-[#8f8feb]' },
+  { id: 'dalle', label: 'DALL·E', hint: 'Conversational natural-language description', bestFor: 'Fast conversational iteration — quick drafts and creative exploration', color: 'text-[#7ec699]' },
+  { id: 'stable-diffusion', label: 'SD / Flux', hint: 'Weighted tokens + negative prompt', bestFor: 'Best for photorealism and large-batch generation — strong prompt adherence', color: 'text-[#e0a458]' },
+  { id: 'ideogram', label: 'Ideogram', hint: 'Text-in-image specialist', bestFor: 'Best when the image needs real, readable text — packaging, posters, signage, taglines', color: 'text-[#6fc3df]' },
   {
     id: 'gemini',
     label: 'Gemini / Nano Banana',
     hint: 'Natural-language creative brief · 2K/4K · sharp text',
+    bestFor: 'Best for complex scenes, diagrams, infographics, and reliable text rendering',
     color: 'text-[#8ab4f8]',
   },
+];
+
+// ────────────────────────────────────────────────────────────────────────────
+// Purpose routing — "What matters most for this image?"
+//
+// A lightweight question at the top of the form that auto-suggests (not
+// forces) the matching platform(s). Each option maps to one or more
+// platforms and a one-line reason shown in the picker.
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface PurposeOption {
+  id: string;
+  label: string;
+  /** Platforms to pre-suggest when this purpose is selected. */
+  suggestPlatforms: ImagePlatform[];
+  /** One-line reason shown in the picker after selection. */
+  reason: string;
+}
+
+export const PURPOSE_OPTIONS: PurposeOption[] = [
+  { id: 'mood-aesthetic', label: 'Mood & aesthetic', suggestPlatforms: ['midjourney'], reason: 'Midjourney — unmatched composition, lighting, and mood' },
+  { id: 'photorealism', label: 'Photorealism', suggestPlatforms: ['stable-diffusion'], reason: 'SD / Flux — strongest photorealism and prompt adherence' },
+  { id: 'text-readable', label: 'Text must be readable', suggestPlatforms: ['ideogram', 'gemini'], reason: 'Ideogram + Gemini — most reliable text rendering (90–95% accuracy)' },
+  { id: 'complex-scene', label: 'Complex scene or diagram', suggestPlatforms: ['gemini'], reason: 'Gemini / Nano Banana — reasons through logic, physics, and composition' },
+  { id: 'fast-iteration', label: 'Fast iteration', suggestPlatforms: ['dalle'], reason: 'DALL·E — fastest conversational creative loop' },
 ];
 
 export const DEFAULT_IMAGE_INPUT: ImagePromptInput = {
@@ -204,14 +231,15 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
   const camera = CAMERA_PRESETS.find((c) => c.id === input.camera);
   const colorGrade = COLOR_GRADE_PRESETS.find((c) => c.id === input.colorGrade);
   const platformList = PLATFORM_OPTIONS.filter((p) => input.platforms.includes(p.id));
+  const hasInImageText = !!input.inImageText?.trim();
 
   const dialectGuide = platformList
     .map((p) => {
       switch (p.id) {
         case 'midjourney':
-          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, and parameters appended at the very end with double dashes: --ar ${input.aspectRatio}; use --style raw for photorealistic or photographic styles; add --stylize 100-250 for a bit of house style or --stylize 0 for raw adherence; if a negative prompt is provided, express it as --no with the key exclusions; never wrap the prompt in quotes. Fold in the camera/lens and film-stock vocabulary from the brief as high-signal phrases (e.g. "35mm", "Kodak Portra", "anamorphic"); keep any in-image text to short labels — Midjourney mangles long text.`;
+          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, and parameters appended at the very end with double dashes: --ar ${input.aspectRatio}; use --style raw for photorealistic or photographic styles; add --stylize 100-250 for a bit of house style or --stylize 0 for raw adherence; if a negative prompt is provided, express it as --no with the key exclusions; never wrap the prompt in quotes. Fold in the camera/lens and film-stock vocabulary from the brief as high-signal phrases (e.g. "35mm", "Kodak Portra", "anamorphic"); keep any in-image text to short labels — Midjourney mangles long text.${hasInImageText ? ` WARNING — Midjourney is not reliable for in-image text. Keep any text extremely short (1–2 words) or omit it entirely and recommend Ideogram or Gemini instead for text-accurate rendering.` : ''}`;
         case 'dalle':
-          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a creative brief; explicitly state the aspect ratio in words (e.g. "wide 16:9 cinematic frame"); no parameter flags, no comma-stacking, no negative-prompt syntax — exclusions are phrased as "without X" or "avoiding X". If in-image text is requested, put the exact wording in quotes and describe the typography; DALL·E handles short text well.`;
+          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a creative brief; explicitly state the aspect ratio in words (e.g. "wide 16:9 cinematic frame"); no parameter flags, no comma-stacking, no negative-prompt syntax — exclusions are phrased as "without X" or "avoiding X". If in-image text is requested, put the exact wording in quotes and describe the typography; DALL·E handles short text well.${hasInImageText ? ` WARNING — DALL·E is not reliable for in-image text beyond very short words (1–2 words). For longer or typographically precise text, recommend Ideogram or Gemini instead.` : ''}`;
         case 'stable-diffusion':
           return `STABLE DIFFUSION / FLUX dialect: dense keyword tokens with emoji-free weighting syntax like (golden hour:1.2), (volumetric fog:1.1), and quality tags; put the negative prompt on its own line starting with "Negative prompt:" and list exclusions as comma-separated tokens (blurry, deformed hands, watermark, oversaturated); include sampler guidance only as a final line: "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras". Map the requested output resolution to restrained quality tags (e.g. "4k", "ultra-detailed" at most one or two); avoid rendering long in-image text — short labels only.`;
         case 'ideogram':
