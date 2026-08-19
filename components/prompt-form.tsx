@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  Bookmark,
   Sparkles,
   SlidersHorizontal,
   ChevronDown,
@@ -12,8 +13,10 @@ import {
   Sliders,
   Check,
   Cpu,
+  Plus,
 } from 'lucide-react';
 import { DomainSelector } from './domain-selector';
+import { Expandable } from './expandable';
 import { GlassCard } from './glass-card';
 import { DEFAULT_OUTPUT_CHAR_LIMIT, DOMAIN_PRESETS, FRAMEWORK_OPTIONS, TONE_OPTIONS } from '@/lib/domains';
 import { getProviderModelList } from '@/lib/storage';
@@ -32,6 +35,7 @@ import {
   ToastmastersInput,
   ToneType,
 } from '@/types';
+import { CustomChipEditor, useCustomChipEntry } from './image-prompt/use-custom-chip-entry';
 
 interface PromptFormProps {
   onGenerate: (input: PromptInput) => void;
@@ -61,8 +65,10 @@ export function PromptForm({
   const [topic, setTopic] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<DomainPreset>(DOMAIN_PRESETS[0]);
   const [customDomainText, setCustomDomainText] = useState('');
-  const [tone, setTone] = useState<ToneType>('professional');
-  const [framework, setFramework] = useState<FrameworkType>('rtf');
+  // Widen to string so custom typed values (not in the preset lists) can be
+  // selected; they're cast to the closed unions when submitted.
+  const [tone, setTone] = useState<string>('professional');
+  const [framework, setFramework] = useState<string>('rtf');
   const [targetAudience, setTargetAudience] = useState('');
   const [outputFormat, setOutputFormat] = useState<'markdown' | 'json' | 'bullet-points' | 'xml' | 'structured-text'>('markdown');
   const [includeConstraints, setIncludeConstraints] = useState(true);
@@ -186,6 +192,38 @@ export function PromptForm({
     }
   }, [tmTextMode]);
 
+  // Custom value entry + saved presets for the text studio's two chip rows
+  // (Structure / Tone of voice) — same shared hook the Image/Logo studio uses.
+  const frameworkCustom = useCustomChipEntry({ field: 'framework', mode: 'text' });
+  const toneCustom = useCustomChipEntry({ field: 'tone', mode: 'text' });
+
+  // A value that matches no built-in preset renders as a selected custom chip.
+  const frameworkIsCustom =
+    !!framework &&
+    !FRAMEWORK_OPTIONS.some((f) => f.value === framework) &&
+    !frameworkCustom.saved.some((e) => e.value === framework);
+  const toneIsCustom =
+    !!tone &&
+    !TONE_OPTIONS.some((t) => t.value === tone) &&
+    !toneCustom.saved.some((e) => e.value === tone);
+
+  const handleFrameworkConfirm = () => {
+    const v = frameworkCustom.confirmDraft();
+    if (v !== null) setFramework(v);
+  };
+  const handleFrameworkSave = async () => {
+    const v = await frameworkCustom.saveDraft();
+    if (v !== null) setFramework(v);
+  };
+  const handleToneConfirm = () => {
+    const v = toneCustom.confirmDraft();
+    if (v !== null) setTone(v);
+  };
+  const handleToneSave = async () => {
+    const v = await toneCustom.saveDraft();
+    if (v !== null) setTone(v);
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!topic.trim()) return;
@@ -197,8 +235,8 @@ export function PromptForm({
       topic: topic.trim(),
       domainId: selectedDomain.id,
       customDomain: selectedDomain.id === 'custom-domain' ? customDomainText : undefined,
-      tone,
-      framework,
+      tone: tone as ToneType,
+      framework: framework as FrameworkType,
       targetAudience: targetAudience.trim() || undefined,
       outputFormat,
       includeConstraints,
@@ -616,11 +654,17 @@ export function PromptForm({
           </div>
         </div>
 
-        {/* Domain Selector Component */}
+        {/* Domain Selector Component — current selections feed the dynamic example chips */}
         <DomainSelector
           selectedDomainId={selectedDomain.id}
           onSelectDomain={setSelectedDomain}
           onPickExampleTopic={(example) => setTopic(example)}
+          currentInput={{
+            domainId: selectedDomain.id,
+            tone: tone as ToneType,
+            framework: framework as FrameworkType,
+            targetAudience: targetAudience.trim() || undefined,
+          }}
         />
 
         {/* Custom Domain Context if Custom Selected */}
@@ -659,8 +703,7 @@ export function PromptForm({
             {showStyle ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
-          {showStyle && (
-            <div id="style-panel" className="mt-4 space-y-6">
+          <Expandable open={showStyle} id="style-panel" className="mt-4 space-y-6">
               {/* Prompt Framework Selector */}
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -724,6 +767,74 @@ export function PromptForm({
                       </button>
                     );
                   })}
+
+                  {/* Saved custom frameworks — bookmarked cards, deletable on hover. */}
+                  {frameworkCustom.saved.map((entry) => {
+                    const isSelected = framework === entry.value;
+                    return (
+                      <div key={entry.id} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => setFramework(entry.value)}
+                          title={`Saved: ${entry.label}`}
+                          aria-pressed={isSelected}
+                          className={`p-3 rounded-xl border text-left transition-all text-xs flex items-center gap-2 w-full ${
+                            isSelected
+                              ? 'bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30 shadow-md shadow-brand/10'
+                              : 'bg-surface-card/40 border-border text-text-secondary hover:border-brand/40'
+                          }`}
+                        >
+                          <Bookmark className="w-3.5 h-3.5 shrink-0 text-warning" />
+                          <span className="truncate font-bold text-text-primary">{entry.label}</span>
+                          {isSelected && <Check className="w-4 h-4 text-brand shrink-0 ml-auto" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => frameworkCustom.remove(entry.id)}
+                          title="Delete saved value"
+                          aria-label={`Delete saved value ${entry.label}`}
+                          className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-surface-elevated border border-border text-text-muted hover:text-danger shadow-sm transition-colors"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Trailing cell: selected custom value, the inline editor, or the trigger. */}
+                  {frameworkIsCustom ? (
+                    <button
+                      type="button"
+                      onClick={() => setFramework(framework)}
+                      title="Custom value"
+                      aria-pressed
+                      className="p-3 rounded-xl border text-left transition-all text-xs flex items-center gap-2 bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30 shadow-md shadow-brand/10"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-brand shrink-0" />
+                      <span className="truncate font-bold">{framework}</span>
+                      <Check className="w-4 h-4 text-brand shrink-0 ml-auto" />
+                    </button>
+                  ) : frameworkCustom.entering ? (
+                    <div className="sm:col-span-2">
+                      <CustomChipEditor
+                        draft={frameworkCustom.draft}
+                        onDraftChange={frameworkCustom.changeDraft}
+                        onConfirm={handleFrameworkConfirm}
+                        onSave={handleFrameworkSave}
+                        onCancel={frameworkCustom.cancel}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={frameworkCustom.begin}
+                      aria-label="Add a custom structure value"
+                      className="p-3 rounded-xl border border-dashed text-left transition-all text-xs flex items-center gap-2 border-border text-text-muted hover:text-brand hover:border-brand/40"
+                    >
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
+                      Custom
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -776,6 +887,74 @@ export function PromptForm({
                       </button>
                     );
                   })}
+
+                  {/* Saved custom tones — bookmarked pills, deletable on hover. */}
+                  {toneCustom.saved.map((entry) => {
+                    const isSelected = tone === entry.value;
+                    return (
+                      <div key={entry.id} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => setTone(entry.value)}
+                          title={`Saved: ${entry.label}`}
+                          aria-pressed={isSelected}
+                          className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30'
+                              : 'bg-surface-card/60 border-border text-text-secondary hover:bg-surface-hover'
+                          }`}
+                        >
+                          <Bookmark className="w-3 h-3 shrink-0 text-warning" />
+                          <span className="max-w-[160px] truncate">{entry.label}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-brand shrink-0" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toneCustom.remove(entry.id)}
+                          title="Delete saved value"
+                          aria-label={`Delete saved value ${entry.label}`}
+                          className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-surface-elevated border border-border text-text-muted hover:text-danger shadow-sm transition-colors"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Confirmed custom tone — selected pill that reads like any other. */}
+                  {toneIsCustom && (
+                    <button
+                      type="button"
+                      onClick={() => setTone(tone)}
+                      title="Custom value"
+                      aria-pressed
+                      className="px-3 py-2 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-1.5 bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30"
+                    >
+                      <Plus className="w-3 h-3 text-brand shrink-0" />
+                      <span className="max-w-[160px] truncate">{tone}</span>
+                      <Check className="w-3.5 h-3.5 text-brand shrink-0" />
+                    </button>
+                  )}
+
+                  {toneCustom.entering ? (
+                    <CustomChipEditor
+                      draft={toneCustom.draft}
+                      onDraftChange={toneCustom.changeDraft}
+                      onConfirm={handleToneConfirm}
+                      onSave={handleToneSave}
+                      onCancel={toneCustom.cancel}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={toneCustom.begin}
+                      aria-label="Add a custom tone value"
+                      className="px-3 py-2 rounded-xl text-xs font-medium border border-dashed transition-all text-left flex items-center gap-1.5 border-border text-text-muted hover:text-brand hover:border-brand/40"
+                    >
+                      <Plus className="w-3 h-3 shrink-0" />
+                      Custom
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -795,8 +974,7 @@ export function PromptForm({
                   {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
 
-                {showAdvanced && (
-                  <div id="advanced-panel" className="mt-4 space-y-4 p-4 rounded-xl bg-surface-muted border border-border">
+                <Expandable open={showAdvanced} id="advanced-panel" className="mt-4 space-y-4 p-4 rounded-xl bg-surface-muted border border-border">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Target Audience */}
                       <div>
@@ -898,11 +1076,9 @@ export function PromptForm({
                         className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand resize-none"
                       />
                     </div>
-                  </div>
-                )}
+                  </Expandable>
               </div>
-            </div>
-          )}
+            </Expandable>
         </div>
 
         {/* Sticky Action Bar: Generate is always visible */}
@@ -956,7 +1132,7 @@ export function PromptForm({
             <button
               type="submit"
               disabled={isGenerating || !topic.trim()}
-              className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:via-indigo-400 hover:to-cyan-400 text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.99]"
+              className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.985]"
             >
               {isGenerating ? (
                 <>

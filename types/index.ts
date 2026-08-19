@@ -85,6 +85,15 @@ export interface ProviderConfig {
   maxTokens?: number;
   topP?: number;
   disableStreaming?: boolean;
+  /**
+   * Fallback behavior when the active model fails (model not found, rate
+   * limit, or provider server error). 'manual' retries with `fallbackModel`;
+   * 'auto' rotates through every configured model in order. Absent = 'none'
+   * (backward compatible with existing persisted configs).
+   */
+  fallbackMode?: 'none' | 'manual' | 'auto';
+  /** Manual fallback model id used when `fallbackMode === 'manual'`. */
+  fallbackModel?: string;
 }
 
 export interface PromptInput {
@@ -145,6 +154,34 @@ export interface ToastmastersInput {
 }
 
 /**
+ * Fixed keys of the quality rubric. Used to tag improvement suggestions with
+ * the dimension they belong to so fixes can be applied back through refine.
+ */
+export type QualityDimensionKey =
+  | 'clarity'
+  | 'structure'
+  | 'outputSpec'
+  | 'context'
+  | 'errorHandling'
+  | 'tokenEfficiency';
+
+export type ImprovementSeverity = 'low' | 'medium' | 'high';
+
+/**
+ * Session context passed to the LLM judge so scoring is task-aware instead of
+ * generic. Mirrors the relevant fields of PromptInput + the session's domain.
+ */
+export interface EvaluationContext {
+  domainId?: string;
+  domainName?: string;
+  topic?: string;
+  tone?: string;
+  framework?: string;
+  targetAudience?: string;
+  additionalNotes?: string;
+}
+
+/**
  * F1 — Prompt Quality Scorecard.
  * A 0-100 production-readiness assessment across a fixed rubric,
  * produced by an LLM judge (with a client-side heuristic fallback).
@@ -165,11 +202,19 @@ export interface PromptQuality {
     tokenEfficiency: QualityDimension; // Leanness vs bloat
   };
   strengths: string[];
-  improvements: { issue: string; fix: string }[];
+  improvements: { issue: string; fix: string; dimension?: QualityDimensionKey; severity?: ImprovementSeverity }[];
   modelUsed: string;
   providerName: string;
   evaluatedAt: number;
   source: 'llm-judge' | 'heuristic';
+  /** Which model actually produced this score (fixed judge identity for comparability). */
+  judgeModel?: string;
+  /** Which provider actually produced this score. */
+  judgeProvider?: string;
+  /** Rubric/schema version this score was produced against. */
+  judgeVersion?: string;
+  /** Set when the LLM judge failed and this is a heuristic estimate instead. */
+  fallbackReason?: string;
 }
 
 export type VersionSourceType = 'initial' | 'refinement' | 'manual-edit';
@@ -190,6 +235,9 @@ export interface PromptVersion {
   stats: { wordCount: number; charCount: number; estTokens: number };
   // F1 — cached prompt-quality assessment for this version (optional)
   quality?: PromptQuality;
+  // F1 — chronological score history for this version (newest last). `quality`
+  // mirrors the last entry so older persisted sessions stay fully readable.
+  qualityHistory?: PromptQuality[];
 }
 
 export interface ThreadMessage {
@@ -217,6 +265,8 @@ export interface TestRun {
   ranAt: number;
   providerName: string;
   modelUsed: string;
+  /** Model that judged the outputs of this run (may differ from the executor). */
+  judgeModel?: string;
   cases: TestCaseResult[];
 }
 
@@ -242,6 +292,40 @@ export interface Session {
 export interface EvaluateRequest {
   provider: ProviderConfig;
   prompt: string;
+  /** Session context so the judge scores against the task, not in a vacuum. */
+  context?: EvaluationContext;
+}
+
+// A1 — AI-refreshed example-topic suggestions (hybrid demo prompts).
+// The static per-domain/module arrays are the instant fallback; this request
+// asks a low-latency model to suggest context-aware replacements.
+export interface SuggestExamplesRequest {
+  module: 'text' | 'image' | 'logo';
+  /** Text module only — the selected domain preset id. */
+  domainId?: string;
+  /** Text module only — the selected domain name, for the prompt. */
+  domainName?: string;
+  /** Whatever the user has already picked, so suggestions make sense with it. */
+  currentInput?: Partial<ImagePromptInput> | Partial<PromptInput>;
+  /** Number of suggestions wanted. Default 4. */
+  count?: number;
+}
+
+export interface SuggestExamplesResponse {
+  examples: string[];
+  /** True when the request failed and the client should keep its static array. */
+  fallback: boolean;
+}
+
+// B1 — AI-suggested negative-prompt line for Image / Logo modes.
+export interface SuggestNegativePromptRequest {
+  mode: 'image' | 'logo';
+  input: ImagePromptInput;
+}
+
+export interface SuggestNegativePromptResponse {
+  /** Null on any failure — the client just hides the suggestion. */
+  suggestion: string | null;
 }
 
 // F2 — run the same prompt + test input across multiple providers
@@ -278,6 +362,9 @@ export interface CaseEvaluationResult {
   passed: boolean;
   notes?: string;
   error?: string;
+  /** Model that judged the output (may differ from the executing model). */
+  judgeModel?: string;
+  judgeProvider?: string;
 }
 
 /**
@@ -296,6 +383,148 @@ export interface HistoryItem {
   tags?: string[];
 }
 
+/**
+ * Image-generation dialects the Image Studio can emit a tuned prompt for.
+ * `gemini` targets Google's Nano Banana image models (Gemini Flash/Pro Image),
+ * which are prompted as a natural-language creative brief rather than a tag soup.
+ */
+export type ImagePlatform =
+  | 'midjourney'
+  | 'dalle'
+  | 'stable-diffusion'
+  | 'flux'
+  | 'ideogram'
+  | 'gemini';
+
+/**
+ * Input for the Image Prompt Studio — a multi-platform image generation
+ * prompt built from a short description.
+ */
+/**
+ * A reference image uploaded for the Image Prompt Studio. Kept client-side
+ * only (session scope) — not persisted to the gallery by default.
+ */
+export interface ImagePromptReferenceImage {
+  id: string;
+  /** Base-64 data URL kept client-side only. */
+  dataUrl: string;
+  /** Purpose tag — changes how the system prompt describes the image per platform. */
+  purpose: 'subject' | 'style' | 'brand-consistency' | 'redesign-reference';
+}
+
+export interface ImagePromptInput {
+  /** What the image is actually of (the subject slot). */
+  subject: string;
+  /** Style preset id (see STYLE_PRESETS in lib/image-prompts.ts). */
+  style: string;
+  /** Lighting preset id, optional. */
+  lighting?: string;
+  /** Mood preset id, optional. */
+  mood?: string;
+  /** Composition / camera preset id, optional. */
+  composition?: string;
+  /** Aspect ratio, e.g. '1:1' | '16:9' | '9:16' | '4:3' | '3:2'. */
+  aspectRatio: string;
+  /** Which platform dialects to generate a tuned prompt for. */
+  platforms: ImagePlatform[];
+  /** Custom negative-prompt guidance (things to avoid in the image). */
+  negativePrompt?: string;
+  /** Camera / lens preset id (see CAMERA_PRESETS in lib/image-prompts.ts). */
+  camera?: string;
+  /** Color grading / film-stock preset id (see COLOR_GRADE_PRESETS). */
+  colorGrade?: string;
+  /** Output resolution: '1K' | '2K' | '4K' (Gemini-native; quality tags elsewhere). */
+  resolution?: string;
+  /** Exact in-image text to render, with typography guidance if desired. */
+  inImageText?: string;
+  additionalNotes?: string;
+  /**
+   * Reference images uploaded for the brief. Each carries a purpose tag that
+   * changes how the platform-specific prompt sections reference the image.
+   * Max 3 — too many dilute the brief. Session-only by default; opt-in to
+   * persist with a saved prompt.
+   */
+  referenceImages?: ImagePromptReferenceImage[];
+  /**
+   * Studio mode. 'logo' drives a brand-identity brief (mark type, logo style,
+   * color palette, wordmark) instead of a photographic one. Absent = 'image'
+   * so persisted briefs and requests stay backward compatible.
+   */
+  mode?: 'image' | 'logo';
+  /** Logo mode — mark type id (see LOGO_MARK_TYPES in lib/logo-prompts.ts). */
+  logoType?: string;
+  /** Logo mode — style preset id (see LOGO_STYLE_PRESETS in lib/logo-prompts.ts). */
+  logoStyle?: string;
+  /** Logo mode — color palette id (see LOGO_PALETTE_PRESETS in lib/logo-prompts.ts). */
+  palette?: string;
+  /** Logo mode — exact brand name / wordmark text to render in the mark. */
+  brandName?: string;
+  /**
+   * Logo mode — industry preset id (see LOGO_INDUSTRY_PRESETS in
+   * lib/logo-prompts.ts). Injects the category's expected audience and
+   * design direction so the mark reads as appropriate, not generic.
+   */
+  industry?: string;
+  /**
+   * Logo mode — ownable symbol concept id (see LOGO_CONCEPT_PRESETS). The
+   * mark is built around this concept AND its meaning, which is what makes
+   * logos feel designed rather than stock.
+   */
+  concept?: string;
+  /** Logo mode — shape-language id (see LOGO_SHAPE_PRESETS). */
+  shapeLanguage?: string;
+  /** Logo mode — typography direction id (see LOGO_TYPOGRAPHY_PRESETS). */
+  typography?: string;
+  /** Logo mode — lockup layout id (see LOGO_LOCKUP_PRESETS). */
+  lockup?: string;
+  /** Logo mode — hidden-meaning / negative-space treatment id (see LOGO_HIDDEN_MEANING_PRESETS). */
+  hiddenMeaning?: string;
+  /** Logo mode — versatility targets (see LOGO_USAGE_PRESETS); drives small-size + one-color constraints. */
+  usage?: string[];
+  /** Logo mode — concept boldness calibration id (see LOGO_BOLDNESS_PRESETS). */
+  boldness?: string;
+}
+
+/**
+ * Persistence scope of a saved custom chip preset — image-only rows
+ * (lighting, composition…), logo-only rows (mark type, palette…), shared
+ * rows (style, mood, resolution…) that appear in both studio modes, or the
+ * text studio's rows (tone, framework).
+ */
+export type CustomPresetMode = 'image' | 'logo' | 'text' | 'both';
+
+/**
+ * A user-saved custom chip value for the Image/Logo Prompt Studio. Custom
+ * values are field-scoped (one list per StudioFormState key) and mode-scoped
+ * so image-only, logo-only, and shared rows each keep their own presets.
+ */
+export interface CustomPresetEntry {
+  id: string; // uuid (crypto.randomUUID)
+  field: string; // StudioFormState key this belongs to, e.g. 'style', 'lighting', 'palette', 'usage'
+  mode: CustomPresetMode;
+  label: string; // what's shown on the chip
+  value: string; // the raw string used as the actual setting value
+  createdAt: number;
+}
+
+/** Request contract for the Image Prompt Studio API route. */
+export interface ImagePromptGenerationRequest {
+  provider: ProviderConfig;
+  input: ImagePromptInput;
+}
+
+/** Request contract for per-section (single platform) regeneration. */
+export interface ImagePromptRedoRequest {
+  provider: ProviderConfig;
+  input: ImagePromptInput;
+  /** The section key to regenerate (e.g. 'midjourney', 'ideogram', 'gemini'). */
+  targetPlatform: string;
+  /** The existing full parsed sections for context. */
+  existingSections: Record<string, string>;
+  /** Optional short text describing what to change (e.g. 'make the lighting warmer'). */
+  revisionNote?: string;
+}
+
 export interface GenerationRequest {
   provider: ProviderConfig;
   input: PromptInput;
@@ -307,6 +536,11 @@ export interface RefineRequest {
   // Full message history sent for context — NOT just the latest instruction
   priorMessages: { role: 'system' | 'user' | 'assistant'; content: string }[];
   instruction: string;         // the new user refinement instruction
+  /**
+   * The exact prompt text being refined (the session's active version). The
+   * model may ONLY modify this text — history is context, not the edit target.
+   */
+  basePrompt: string;
 }
 
 export interface TestPromptRequest {

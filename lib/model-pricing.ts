@@ -28,6 +28,13 @@ const PRICING_TABLE: PriceEntry[] = [
   { match: /gpt-4o/i, inputPerM: 2.5, outputPerM: 10.0 },
   { match: /o3-mini/i, inputPerM: 1.1, outputPerM: 4.4 },
   { match: /gpt-4/i, inputPerM: 2.5, outputPerM: 10.0 },
+  // Gemini family — specific entries first, generic /gemini/i catch-all last.
+  { match: /gemini-2\.5-pro/i, inputPerM: 1.25, outputPerM: 10.0 },
+  { match: /gemini-2\.5-flash-lite/i, inputPerM: 0.1, outputPerM: 0.4 },
+  { match: /gemini-2\.5-flash/i, inputPerM: 0.3, outputPerM: 2.5 },
+  { match: /gemini-3\.1-pro/i, inputPerM: 1.25, outputPerM: 10.0 },
+  { match: /gemini-3\.(5|6|7)-flash-lite|gemini-3\.1-flash-lite/i, inputPerM: 0.2, outputPerM: 0.6 },
+  { match: /gemini-3-flash-preview|gemini-3\.(5|6|7)-flash/i, inputPerM: 0.5, outputPerM: 3.0 },
   { match: /gemini/i, inputPerM: 0.35, outputPerM: 1.75 },
   { match: /claude-3-5-haiku/i, inputPerM: 0.8, outputPerM: 4.0 },
   { match: /claude/i, inputPerM: 3.0, outputPerM: 15.0 },

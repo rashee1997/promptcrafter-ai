@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { ProviderConfig } from '@/types';
+import { withModelFallback } from './model-fallback';
 
 /**
  * Normalizes user-provided Base URL:
@@ -51,7 +52,9 @@ export function createOpenAIClient(provider: ProviderConfig): OpenAI {
 
 /**
  * Executes a chat completion request using the official OpenAI client SDK.
- * Respects `provider.disableStreaming`. Returns a standard Web Response stream or text response.
+ * Respects `provider.disableStreaming` and the provider's model fallback
+ * config (manual fallback or auto-rotate through all configured models).
+ * Returns a standard Web Response stream or text response.
  */
 export async function handleOpenAIProviderRequest(
   provider: ProviderConfig,
@@ -59,21 +62,22 @@ export async function handleOpenAIProviderRequest(
   overrideOptions?: { temperature?: number; maxTokens?: number }
 ): Promise<Response> {
   const client = createOpenAIClient(provider);
-  const model = provider.model || 'gpt-4o-mini';
   const temperature = overrideOptions?.temperature ?? provider.temperature ?? 0.7;
   const max_tokens = overrideOptions?.maxTokens ?? provider.maxTokens ?? 3000;
 
   if (provider.disableStreaming) {
-    // Single complete non-streamed request
-    const completion = await client.chat.completions.create({
-      model,
-      messages,
-      temperature,
-      max_tokens,
-      stream: false,
+    // Single complete non-streamed request, retried per fallback config.
+    const content = await withModelFallback(provider, async (model) => {
+      const completion = await client.chat.completions.create({
+        model,
+        messages,
+        temperature,
+        max_tokens,
+        stream: false,
+      });
+      return completion.choices?.[0]?.message?.content || '';
     });
 
-    const content = completion.choices?.[0]?.message?.content || '';
     return new Response(content, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
@@ -82,14 +86,18 @@ export async function handleOpenAIProviderRequest(
     });
   }
 
-  // Streamed request using Official OpenAI client stream interface
-  const stream = await client.chat.completions.create({
-    model,
-    messages,
-    temperature,
-    max_tokens,
-    stream: true,
-  });
+  // Streamed request using the official OpenAI client stream interface. The
+  // stream is created per attempt so a failed model is retried before any
+  // content reaches the client; mid-stream failures surface as-is.
+  const stream = await withModelFallback(provider, (model) =>
+    client.chat.completions.create({
+      model,
+      messages,
+      temperature,
+      max_tokens,
+      stream: true,
+    })
+  );
 
   const encoder = new TextEncoder();
   const customStream = new ReadableStream({
