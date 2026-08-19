@@ -2,13 +2,20 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Navbar } from '@/components/navbar';
+import { AnimatePresence, motion } from 'motion/react';
+import { AppTab, Navbar } from '@/components/navbar';
+import { ImagePromptStudio } from '@/components/image-prompt-studio';
+import { ProjectDashboard } from '@/components/video-prompt/project-dashboard';
+import { StudioHeader } from '@/components/video-prompt/studio-header';
+import { NewProjectModal } from '@/components/video-prompt/new-project-modal';
+import { ProjectWorkspace } from '@/components/video-prompt/project-workspace';
 import { PromptForm } from '@/components/prompt-form';
 import { PromptOutput } from '@/components/prompt-output';
 import { HistoryPanel } from '@/components/history-panel';
 import { ProviderSettings } from '@/components/provider-settings';
 import { TestPromptModal } from '@/components/test-prompt-modal';
 import { CommandPalette, PaletteAction } from '@/components/command-palette';
+import { Toaster, toast } from '@/components/toast';
 import {
   Sparkles as SparklesIcon,
   Zap,
@@ -18,8 +25,11 @@ import {
   Settings as SettingsIcon,
   Sun,
   Moon,
+  ImagePlus,
+  Clapperboard,
 } from 'lucide-react';
 import { PromptInput, ProviderConfig, PromptVersion, Session, StudioMode, ToastmastersInput, ThreadMessage } from '@/types';
+import { ScriptTreatment, VideoProject } from '@/types/video';
 import {
   clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
@@ -43,10 +53,11 @@ import {
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { generatePromptStream, refinePromptStream } from '@/lib/ai-client';
 import { buildToastmastersPrompt, getAssetEntry } from '@/lib/toastmasters-prompts';
-import { computePromptStats, generateVersionName } from '@/lib/prompt-stats';
+import { deleteVideoProject, getVideoProjects, saveVideoProject } from '@/lib/video-storage';
+import { computePromptStats, generateVersionName, unwrapCodeBlock } from '@/lib/prompt-stats';
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'generator' | 'history' | 'settings'>('generator');
+  const [activeTab, setActiveTab] = useState<AppTab>('generator');
   const [studioMode, setStudioMode] = useState<StudioMode>('prompt');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -72,6 +83,32 @@ export default function HomePage() {
   // Command palette state
   const [paletteOpen, setPaletteOpen] = useState(false);
 
+  // Video Prompt Studio state (Phase 2 — production hub)
+  const [videoProjects, setVideoProjects] = useState<VideoProject[]>([]);
+  const [activeVideoProjectId, setActiveVideoProjectId] = useState<string | null>(null);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+
+  // Deep link from the workspace version picker into History's diff view
+  const [pendingHistoryDiff, setPendingHistoryDiff] = useState<{
+    sessionId: string;
+    versionAId: string;
+    versionBId: string;
+  } | null>(null);
+
+  // §8.2 — resizable two-pane splitter (generator view, persisted locally)
+  const [splitPct, setSplitPct] = useState(50);
+  const splitDragRef = useRef<{ startX: number; startPct: number } | null>(null);
+  const splitPctRef = useRef<number>(50);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('pc:split');
+    const n = stored ? Number(stored) : NaN;
+    if (!Number.isNaN(n) && n >= 24 && n <= 76) {
+      setSplitPct(n);
+      splitPctRef.current = n;
+    }
+  }, []);
+
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync dark mode
@@ -84,6 +121,18 @@ export default function HomePage() {
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
+
+  // "New prompt" event (used by History's empty state and elsewhere)
+  useEffect(() => {
+    const onNewPrompt = () => {
+      setCurrentSession(null);
+      setStreamingText('');
+      setActiveTab('generator');
+      window.dispatchEvent(new Event('pc:focus-topic'));
+    };
+    window.addEventListener('pc:new-prompt', onNewPrompt);
+    return () => window.removeEventListener('pc:new-prompt', onNewPrompt);
+  }, []);
 
   // ⌘K / Ctrl+K toggles the command palette
   useEffect(() => {
@@ -117,6 +166,11 @@ export default function HomePage() {
     };
 
     loadAppData();
+  }, []);
+
+  // Load the Video Prompt Studio production portfolio.
+  useEffect(() => {
+    getVideoProjects().then(setVideoProjects);
   }, []);
 
   const handleSelectActiveProvider = async (id: string) => {
@@ -171,6 +225,47 @@ export default function HomePage() {
     window.dispatchEvent(new Event('pc:focus-topic'));
   };
 
+  /** §8.2 — drag the splitter between the form and output panes (lg+). */
+  const handleSplitDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    const container = e.currentTarget.parentElement;
+    if (!container) return;
+    e.preventDefault();
+    const rect = container.getBoundingClientRect();
+    const startPct = ((e.clientX - rect.left) / rect.width) * 100;
+    splitDragRef.current = { startX: e.clientX, startPct };
+    document.body.classList.add('cursor-col-resize', 'select-none');
+
+    const onMove = (ev: PointerEvent) => {
+      const ref = splitDragRef.current;
+      if (!ref) return;
+      const r = container.getBoundingClientRect();
+      const delta = ((ev.clientX - ref.startX) / r.width) * 100;
+      const next = Math.min(76, Math.max(24, ref.startPct + delta));
+      splitPctRef.current = next;
+      setSplitPct(next);
+    };
+    const onUp = () => {
+      splitDragRef.current = null;
+      document.body.classList.remove('cursor-col-resize', 'select-none');
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      localStorage.setItem('pc:split', String(splitPctRef.current));
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  /** §9.6 — version picker "compare" jumps to the History diff for this session. */
+  const handleOpenHistoryDiff = (versionAId: string, versionBId: string) => {
+    if (!currentSession) return;
+    setPendingHistoryDiff({
+      sessionId: currentSession.id,
+      versionAId,
+      versionBId,
+    });
+    setActiveTab('history');
+  };
+
   const handleGeneratePrompt = async (input: PromptInput) => {
     handleCancelGeneration();
 
@@ -195,11 +290,20 @@ export default function HomePage() {
       async (completedText) => {
         setIsGenerating(false);
 
+        // Store the unwrapped, non-empty prompt so saved content, the copy
+        // button, and the test suite all operate on the same artifact.
+        const cleaned = unwrapCodeBlock(completedText).trim();
+        if (!cleaned) {
+          setStreamingText('');
+          toast.error("Couldn't create the prompt", 'The model returned an empty response. Try again.');
+          return;
+        }
+
         const timestamp = Date.now();
         const rand = Math.random().toString(36).slice(2, 7);
         const sessId = `sess-${timestamp}-${rand}`;
         const v1Id = `v-${timestamp}-1`;
-        const stats = computePromptStats(completedText);
+        const stats = computePromptStats(cleaned);
 
         const initialVersion: PromptVersion = {
           id: v1Id,
@@ -207,7 +311,7 @@ export default function HomePage() {
           name: 'Original',
           sourceType: 'initial',
           createdAt: timestamp,
-          content: completedText,
+          content: cleaned,
           providerName: activeProvider.name,
           modelUsed: activeProvider.model,
           stats,
@@ -229,7 +333,7 @@ export default function HomePage() {
             {
               id: `msg-${timestamp}-2`,
               role: 'assistant',
-              content: completedText,
+              content: cleaned,
               createdAt: timestamp,
               resultingVersionId: v1Id,
             },
@@ -249,6 +353,7 @@ export default function HomePage() {
       (error) => {
         setIsGenerating(false);
         setStreamingText(`⚠️ Couldn't create the prompt: ${error.message}`);
+        toast.error("Couldn't create the prompt", error.message);
       },
       controller.signal
     );
@@ -270,6 +375,11 @@ export default function HomePage() {
       content: m.content,
     }));
 
+    // The exact version being refined — the model may only edit this text.
+    const baseForRefine =
+      currentSession.versions.find((v) => v.id === currentSession.activeVersionId) ||
+      currentSession.versions[currentSession.versions.length - 1];
+
     let fullText = '';
 
     await refinePromptStream(
@@ -282,6 +392,7 @@ export default function HomePage() {
         },
         priorMessages,
         instruction,
+        basePrompt: baseForRefine?.content || '',
       },
       (chunk) => {
         fullText += chunk;
@@ -290,12 +401,18 @@ export default function HomePage() {
       async (completedText) => {
         setIsGenerating(false);
 
+        const cleaned = unwrapCodeBlock(completedText).trim();
+        if (!cleaned) {
+          toast.error("Couldn't update the prompt", 'The model returned an empty response. Your current version is unchanged.');
+          return;
+        }
+
         const timestamp = Date.now();
         const rand = Math.random().toString(36).slice(2, 7);
         const versionNumber = currentSession.versions.length + 1;
         const vId = `v-${timestamp}-${rand}`;
         const versionName = generateVersionName(instruction, versionNumber, 'refinement');
-        const stats = computePromptStats(completedText);
+        const stats = computePromptStats(cleaned);
 
         const newVersion: PromptVersion = {
           id: vId,
@@ -304,7 +421,7 @@ export default function HomePage() {
           sourceType: 'refinement',
           createdAt: timestamp,
           refinementInstruction: instruction,
-          content: completedText,
+          content: cleaned,
           providerName: activeProvider.name,
           modelUsed: activeProvider.model,
           stats,
@@ -320,7 +437,7 @@ export default function HomePage() {
         const assistantMsg: ThreadMessage = {
           id: `msg-${timestamp}-2`,
           role: 'assistant',
-          content: completedText,
+          content: cleaned,
           createdAt: timestamp,
           resultingVersionId: vId,
         };
@@ -339,6 +456,7 @@ export default function HomePage() {
       (error) => {
         setIsGenerating(false);
         setStreamingText(`⚠️ Couldn't update the prompt: ${error.message}`);
+        toast.error("Couldn't update the prompt", 'Your current version is unchanged.');
       },
       controller.signal
     );
@@ -347,12 +465,18 @@ export default function HomePage() {
   const handleSaveEditVersion = async (newContent: string) => {
     if (!currentSession) return;
 
+    const cleaned = unwrapCodeBlock(newContent).trim();
+    if (!cleaned) {
+      toast.error('Could not save edit', 'The prompt cannot be empty.');
+      return;
+    }
+
     const timestamp = Date.now();
     const rand = Math.random().toString(36).slice(2, 7);
     const versionNumber = currentSession.versions.length + 1;
     const vId = `v-${timestamp}-${rand}`;
     const versionName = generateVersionName(undefined, versionNumber, 'manual-edit');
-    const stats = computePromptStats(newContent);
+    const stats = computePromptStats(cleaned);
 
     const editVersion: PromptVersion = {
       id: vId,
@@ -360,7 +484,7 @@ export default function HomePage() {
       name: versionName,
       sourceType: 'manual-edit',
       createdAt: timestamp,
-      content: newContent,
+      content: cleaned,
       providerName: activeProvider.name,
       modelUsed: activeProvider.model,
       stats,
@@ -369,7 +493,7 @@ export default function HomePage() {
     const assistantMsg: ThreadMessage = {
       id: `msg-${timestamp}-edit`,
       role: 'assistant',
-      content: newContent,
+      content: cleaned,
       createdAt: timestamp,
       resultingVersionId: vId,
     };
@@ -419,7 +543,7 @@ export default function HomePage() {
       const updatedSessions = await getSessions();
       setSessions(updatedSessions);
     } catch (err: any) {
-      alert(err.message || 'Could not delete version');
+      toast.error('Could not delete version', err?.message || 'Please try again.');
     }
   };
 
@@ -468,6 +592,65 @@ export default function HomePage() {
   const handleOpenSandboxTest = (promptText: string) => {
     setPromptToTest(promptText);
     setTestModalOpen(true);
+  };
+
+  // ── Video Prompt Studio (Phase 2 — production hub) ──
+  const activeVideoProject =
+    videoProjects.find((p) => p.id === activeVideoProjectId) ?? null;
+
+  const handleCreateVideoProject = async (
+    title: string,
+    customInstructions: string,
+    confirmedScript?: ScriptTreatment | null
+  ) => {
+    const timestamp = Date.now();
+    const project: VideoProject = {
+      id: `video-${timestamp}-${Math.random().toString(36).slice(2, 7)}`,
+      name: title,
+      customInstructions,
+      status: 'draft',
+      storyBible: { characters: [], locations: [], continuityLog: [] },
+      shots: [],
+      chatHistory: [],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      // Part 3 — the AI overview confirmed before creation; BootstrapFlow seeds
+      // Stage 1 from it and opens on Stage 2 instead of regenerating.
+      draftScriptOverview: confirmedScript ?? null,
+    };
+    await saveVideoProject(project);
+    setVideoProjects(await getVideoProjects());
+    setVideoModalOpen(false);
+    setActiveVideoProjectId(project.id);
+    toast.success('Project created', `"${project.name}" is ready for production planning.`);
+  };
+
+  const handleSelectVideoProject = (id: string) => setActiveVideoProjectId(id);
+
+  const handleBackToVideoDashboard = () => setActiveVideoProjectId(null);
+
+  const handleDeleteVideoProject = async (id: string) => {
+    await deleteVideoProject(id);
+    setVideoProjects(await getVideoProjects());
+    setActiveVideoProjectId((prev) => (prev === id ? null : prev));
+    toast.success('Project deleted', 'Removed from your production portfolio.');
+  };
+
+  // Phase 3 + Phase 4 — called whenever the workspace persists an updated
+  // project (bootstrap activation, sidebar edits, shot approvals, chat sync).
+  // Refresh the portfolio from storage and surface the change neutrally.
+  const handleVideoProjectUpdate = async (project: VideoProject) => {
+    const wasActive = activeVideoProject?.status === 'active';
+    setVideoProjects(await getVideoProjects());
+    setActiveVideoProjectId(project.id);
+    if (wasActive) {
+      toast.success('Project saved', `"${project.name}" — storyboard and continuity updated.`);
+    } else {
+      toast.success(
+        'Production activated',
+        `"${project.name}" — story bible locked, ready for shot drafting.`
+      );
+    }
   };
 
   const activeVersion = currentSession
@@ -555,6 +738,8 @@ export default function HomePage() {
       label: 'New prompt',
       hint: 'Start fresh — clears the current prompt',
       icon: <SparklesIcon className="w-4 h-4" />,
+      group: 'Create',
+      shortcut: '/',
       run: () => {
         setCurrentSession(null);
         setStreamingText('');
@@ -565,8 +750,10 @@ export default function HomePage() {
     {
       id: 'generate',
       label: 'Create prompt',
-      hint: '⌘⏎ · Create with the current settings',
+      hint: 'Create with the current settings',
       icon: <Zap className="w-4 h-4" />,
+      group: 'Create',
+      shortcut: '⌘⏎',
       run: () => window.dispatchEvent(new Event('pc:generate')),
     },
     {
@@ -574,6 +761,7 @@ export default function HomePage() {
       label: 'Test current prompt',
       hint: activeVersion?.content ? 'Run the current prompt to see how it responds' : 'Create a prompt first',
       icon: <Play className="w-4 h-4" />,
+      group: 'Create',
       run: () => {
         if (activeVersion?.content) handleOpenSandboxTest(activeVersion.content);
       },
@@ -583,15 +771,33 @@ export default function HomePage() {
       label: 'Copy current prompt',
       hint: 'Copy the current prompt to the clipboard',
       icon: <Copy className="w-4 h-4" />,
+      group: 'Create',
       run: () => {
         if (activeVersion?.content) navigator.clipboard.writeText(activeVersion.content);
       },
+    },
+    {
+      id: 'image',
+      label: 'Open image studio',
+      hint: 'Research image briefs on the web and generate platform prompts',
+      icon: <ImagePlus className="w-4 h-4" />,
+      group: 'Navigate',
+      run: () => setActiveTab('image'),
+    },
+    {
+      id: 'video',
+      label: 'Open video studio',
+      hint: 'Plan video productions and manage shot-level prompts',
+      icon: <Clapperboard className="w-4 h-4" />,
+      group: 'Navigate',
+      run: () => setActiveTab('video'),
     },
     {
       id: 'history',
       label: 'Open history',
       hint: `${sessions.length} saved prompt${sessions.length === 1 ? '' : 's'}`,  
       icon: <HistoryIcon className="w-4 h-4" />,
+      group: 'Navigate',
       run: () => setActiveTab('history'),
     },
     {
@@ -599,6 +805,7 @@ export default function HomePage() {
       label: 'Open settings',
       hint: 'Manage AI connections and models',
       icon: <SettingsIcon className="w-4 h-4" />,
+      group: 'Navigate',
       run: () => setActiveTab('settings'),
     },
     {
@@ -606,6 +813,7 @@ export default function HomePage() {
       label: darkMode ? 'Switch to light theme' : 'Switch to dark theme',
       hint: 'Toggle appearance',
       icon: darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />,
+      group: 'Appearance',
       run: () => setDarkMode((mode) => !mode),
     },
   ];
@@ -614,9 +822,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-white flex flex-col justify-between">
       {/* Dynamic Atmospheric Light Glow Orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand/20 rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 right-[-10%] w-[45%] h-[45%] bg-brand/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-1/3 w-[50%] h-[50%] bg-brand/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand/15 rounded-full blur-[120px] dark:animate-orb-drift" />
+        <div className="absolute top-1/3 right-[-10%] w-[45%] h-[45%] bg-brand/10 rounded-full blur-[120px] dark:animate-orb-drift [animation-delay:-15s]" />
+        <div className="absolute bottom-[-10%] left-1/3 w-[50%] h-[50%] bg-brand/10 rounded-full blur-[120px] dark:animate-orb-drift [animation-delay:-30s]" />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -637,7 +845,7 @@ export default function HomePage() {
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8"
+          className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 md:pb-8"
         >
           {/* Static intro block — server-rendered into the initial HTML for SEO/AEO */}
           <section aria-labelledby="home-intro-heading" className="mb-6 lg:mb-8 max-w-3xl">
@@ -665,10 +873,21 @@ export default function HomePage() {
             </p>
           </section>
 
-          {activeTab === 'generator' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Generator Form Controls */}
-              <div className="lg:col-span-6 space-y-6">
+          <AnimatePresence mode="wait" initial={false}>
+            {activeTab === 'generator' && (
+              <motion.div
+                key="generator"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-0"
+              >
+              {/* Left Column: Generator Form Controls (§8.2 — resizable on lg+) */}
+              <div
+                className="w-full space-y-6 lg:shrink-0 lg:min-w-[340px] lg:w-[var(--split-w)]"
+                style={{ '--split-w': `${splitPct}%` } as React.CSSProperties}
+              >
                 <PromptForm
                   onGenerate={handleGeneratePrompt}
                   isGenerating={isGenerating}
@@ -680,8 +899,19 @@ export default function HomePage() {
                 />
               </div>
 
+              {/* Resize handle (§8.2) — lg+ only */}
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize panes"
+                onPointerDown={handleSplitDragStart}
+                className="hidden lg:flex group/handle items-center justify-center w-6 shrink-0 self-stretch cursor-col-resize touch-none select-none"
+              >
+                <div className="w-1 h-12 rounded-full bg-border transition-colors group-hover/handle:bg-brand/60 group-active/handle:bg-brand" />
+              </div>
+
               {/* Right Column: Live Output & Refinement Display */}
-              <div className="lg:col-span-6 space-y-6 lg:sticky lg:top-20">
+              <div className="w-full space-y-6 lg:sticky lg:top-20 lg:flex-1 lg:min-w-[340px]">
                 <PromptOutput
                   output={displayOutput}
                   isGenerating={isGenerating}
@@ -698,13 +928,69 @@ export default function HomePage() {
                   onCancelGeneration={handleCancelGeneration}
                   onClearOutput={handleClearOutput}
                   onSessionUpdate={handleSessionUpdate}
+                  onOpenHistoryDiff={handleOpenHistoryDiff}
                 />
               </div>
-            </div>
-          )}
-
-          {activeTab === 'history' && (
-            <div className="max-w-4xl mx-auto">
+              </motion.div>
+            )}
+            {activeTab === 'image' && (
+              <motion.div
+                key="image"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="max-w-5xl mx-auto"
+              >
+                <ImagePromptStudio
+                  activeProvider={activeProvider}
+                  onSelectActiveModel={handleSelectActiveModel}
+                />
+              </motion.div>
+            )}
+            {activeTab === 'video' && (
+              <motion.div
+                key="video"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="max-w-6xl mx-auto"
+              >
+                <div className="space-y-6">
+                  <StudioHeader
+                    activeProject={activeVideoProject}
+                    projects={videoProjects}
+                    onSelectProject={handleSelectVideoProject}
+                    onNewProject={() => setVideoModalOpen(true)}
+                    onBackToDashboard={handleBackToVideoDashboard}
+                  />
+                  {activeVideoProject ? (
+                    <ProjectWorkspace
+                      project={activeVideoProject}
+                      provider={activeProvider}
+                      onUpdate={handleVideoProjectUpdate}
+                    />
+                  ) : (
+                    <ProjectDashboard
+                      projects={videoProjects}
+                      onSelectProject={handleSelectVideoProject}
+                      onNewProject={() => setVideoModalOpen(true)}
+                      onDeleteProject={handleDeleteVideoProject}
+                    />
+                  )}
+                </div>
+              </motion.div>
+            )}
+            {activeTab === 'history' && (
+              <motion.div
+                key="history"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="max-w-4xl mx-auto"
+              >
               <HistoryPanel
                 sessions={sessions}
                 onSelectSession={handleSelectSession}
@@ -717,12 +1003,20 @@ export default function HomePage() {
                 onImportSessions={handleImportSessions}
                 activeProvider={activeProvider}
                 onSessionUpdate={handleSessionUpdate}
+                pendingDiff={pendingHistoryDiff}
+                onPendingDiffHandled={() => setPendingHistoryDiff(null)}
               />
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="max-w-4xl mx-auto">
+              </motion.div>
+            )}
+            {activeTab === 'settings' && (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="max-w-4xl mx-auto"
+              >
               <ProviderSettings
                 providers={providers}
                 activeProviderId={activeProvider.id}
@@ -730,14 +1024,15 @@ export default function HomePage() {
                 onSaveProvider={handleSaveProvider}
                 onDeleteProvider={handleDeleteProvider}
               />
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
 
         {/* Footer */}
         <footer className="mt-auto border-t border-border py-4 px-4 sm:px-8 text-[11px] text-text-muted font-mono flex flex-wrap items-center justify-between gap-2 max-w-7xl w-full mx-auto">
           <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-success" />
             SAVED LOCALLY IN YOUR BROWSER
           </span>
           <span>&copy; {new Date().getFullYear()} PROMPTCRAFTER AI</span>
@@ -753,12 +1048,23 @@ export default function HomePage() {
         providers={providers.map((p) => ({ ...p, model: p.activeModel ?? p.model }))}
       />
 
+      {/* Video Prompt Studio — Directorial Brief modal (Phase 2) */}
+      <NewProjectModal
+        isOpen={videoModalOpen}
+        onClose={() => setVideoModalOpen(false)}
+        provider={activeProvider}
+        onCreate={handleCreateVideoProject}
+      />
+
       {/* Command Palette (⌘K) */}
       <CommandPalette
         isOpen={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         actions={paletteActions}
       />
+
+      {/* Toast viewport (DESIGN.md §9.13) */}
+      <Toaster />
     </div>
   );
 }

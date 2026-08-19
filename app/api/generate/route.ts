@@ -2,6 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildMetaSystemPrompt, buildUserPromptMessage, DOMAIN_PRESETS } from '@/lib/domains';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
+import { withModelFallback } from '@/lib/model-fallback';
+import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { GenerationRequest } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -41,17 +43,23 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const modelName = provider?.model || 'gemini-3.6-flash';
+      const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
 
-      const responseStream = await ai.models.generateContentStream({
-        model: modelName,
-        contents: userMessage,
-        config: {
-          systemInstruction,
-          temperature: provider?.temperature ?? 0.7,
-          topP: provider?.topP ?? 0.95,
-        },
-      });
+      // Stream creation is retried across fallback models; a failure after the
+      // first chunk reaches the client surfaces as a stream error.
+      const responseStream = await withModelFallback(
+        { ...provider, model: modelName },
+        (model) =>
+          ai.models.generateContentStream({
+            model,
+            contents: userMessage,
+            config: {
+              systemInstruction,
+              temperature: provider?.temperature ?? 0.7,
+              topP: provider?.topP ?? 0.95,
+            },
+          })
+      );
 
       const encoder = new TextEncoder();
       const customStream = new ReadableStream({

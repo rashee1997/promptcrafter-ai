@@ -7,6 +7,7 @@ import { getAllPosts, getPostBySlug } from '@/lib/content';
 import { SITE_URL } from '@/lib/site';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { ReadingProgress } from '@/components/reading-progress';
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
@@ -63,6 +64,7 @@ export default async function BlogPostPage({ params }: PostPageProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-page text-text-primary">
+      <ReadingProgress />
       <SiteHeader />
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         <article>
