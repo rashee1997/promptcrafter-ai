@@ -88,6 +88,7 @@ export function PromptForm({
   const [outputFormat, setOutputFormat] = useState<'markdown' | 'json' | 'bullet-points' | 'xml' | 'structured-text'>('markdown');
   const [includeConstraints, setIncludeConstraints] = useState(true);
   const [includeExamples, setIncludeExamples] = useState(true);
+  const [requireEvidence, setRequireEvidence] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState('');
   // Output character limit for the engineered prompt; blank string = no limit (optional).
   const [outputCharLimit, setOutputCharLimit] = useState<string>(String(DEFAULT_OUTPUT_CHAR_LIMIT));
@@ -294,6 +295,7 @@ export function PromptForm({
       outputFormat,
       includeConstraints,
       includeExamples,
+      requireEvidence,
       additionalNotes: additionalNotes.trim() || undefined,
       outputCharLimit: hasLimit ? Math.floor(parsedLimit) : undefined,
     });
@@ -1399,6 +1401,15 @@ export function PromptForm({
                           className="w-4 h-4 rounded border-border text-brand focus:ring-brand"
                         />
                         <span>Add &quot;what to avoid&quot; guidance</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-text-secondary">
+                        <input
+                          type="checkbox"
+                          checked={requireEvidence}
+                          onChange={(e) => setRequireEvidence(e.target.checked)}
+                          className="w-4 h-4 rounded border-border text-brand focus:ring-brand"
+                        />
+                        <span>Require evidence for factual claims</span>
                       </label>
                     </div>
 

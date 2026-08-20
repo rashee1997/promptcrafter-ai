@@ -450,6 +450,17 @@ Prompt Architecture Configuration:
 - Target Audience: ${input.targetAudience || 'General Domain Expert'}
 - Requested Output Format: ${selectedFormat}
 ${input.includeConstraints ? `- Include Explicit Negative Constraints & Guardrails: YES` : ''}
+${input.requireEvidence ? `- Require Evidence for Factual Claims: YES — the generated prompt must instruct the target AI to cite a source or explicitly flag unverified claims, never stating them as established fact.` : ''}
+
+STRUCTURAL OUTPUT RULE:
+The engineered prompt you produce MUST be organized into these five labeled sections (use the exact section names as headers, adapting to the domain where appropriate):
+1. Task Context — the specific goal, audience, and scope of the task.
+2. Tone & Style — the voice, register, and stylistic expectations.
+3. Background Data — relevant domain knowledge, brand rules, reference material, or constraints the AI must internalize.
+4. Rules & Instructions — step-by-step logic, guardrails, negative constraints, and edge-case handling.
+5. Immediate Request — the concrete deliverable or action the AI should produce.
+
+Every section must be present, even when a section is brief — the structure is the signal. Do not collapse sections, rename them to different concepts, or skip any.
 
 Generate the final engineered prompt now:`;
 }

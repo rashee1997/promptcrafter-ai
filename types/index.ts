@@ -175,6 +175,7 @@ export interface PromptTemplate {
   outputFormat?: 'markdown' | 'json' | 'bullet-points' | 'xml' | 'structured-text';
   includeConstraints: boolean;
   includeExamples: boolean;
+  requireEvidence?: boolean;
   additionalNotes?: string;
   outputCharLimit?: number;
   createdAt: number;
@@ -190,6 +191,8 @@ export interface PromptInput {
   outputFormat?: 'markdown' | 'json' | 'bullet-points' | 'xml' | 'structured-text';
   includeConstraints: boolean;
   includeExamples: boolean;
+  /** When true, the generated prompt instructs its target AI to cite a source or explicitly flag unverified claims instead of stating them as fact. */
+  requireEvidence?: boolean;
   additionalNotes?: string;
   /**
    * Optional hard cap on the length of the ENGINEERED prompt, in characters.
