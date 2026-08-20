@@ -82,9 +82,19 @@ export function PromptForm({
   const [selectedToneCategory, setSelectedToneCategory] = useState<string>('All');
 
   // ── Toastmasters mode state ──
-  const tmDefaultAsset = TOASTMASTERS_ASSET_CATALOG[0];
   const [tmAssetTypes, setTmAssetTypes] = useState<ToastmastersAssetId[]>(['event-flyer']);
-  const [tmDominantColor, setTmDominantColor] = useState<'loyal-blue' | 'true-maroon'>('loyal-blue');
+  const [tmPrimaryColor, setTmPrimaryColor] = useState<'loyal-blue' | 'true-maroon' | 'cool-gray' | 'happy-yellow' | 'custom'>('loyal-blue');
+  const [tmPrimaryColorHex, setTmPrimaryColorHex] = useState('#004165');
+  const [tmSecondaryColor, setTmSecondaryColor] = useState<'none' | 'loyal-blue' | 'true-maroon' | 'cool-gray' | 'happy-yellow' | 'custom'>('none');
+  const [tmSecondaryColorHex, setTmSecondaryColorHex] = useState('#772432');
+  const [tmBackgroundStyle, setTmBackgroundStyle] = useState<'solid' | 'two-tone-gradient' | 'diagonal-split' | 'radial'>('solid');
+  const [tmTypeface, setTmTypeface] = useState<'brand-default' | 'montserrat' | 'custom'>('brand-default');
+  const [tmCustomHeadingFont, setTmCustomHeadingFont] = useState('');
+  const [tmCustomBodyFont, setTmCustomBodyFont] = useState('');
+  const [tmCustomRatio, setTmCustomRatio] = useState('');
+  const [tmCustomResolution, setTmCustomResolution] = useState('');
+  const [tmLogoPosition, setTmLogoPosition] = useState<'top-left' | 'top-right' | 'top-center'>('top-left');
+  const [tmAccentStyle, setTmAccentStyle] = useState<'stripe' | 'corner-badge' | 'none'>('stripe');
   const [tmOutputMode, setTmOutputMode] = useState<'full' | 'white-removable'>('full');
   const [tmTextMode, setTmTextMode] = useState<'with-text' | 'text-free'>('with-text');
   const [tmLanguage, setTmLanguage] = useState<'english' | 'tamil' | 'bilingual'>('english');
@@ -97,6 +107,7 @@ export function PromptForm({
   const [tmEventTime, setTmEventTime] = useState('');
   const [tmEventVenue, setTmEventVenue] = useState('');
   const [tmTamilText, setTmTamilText] = useState('');
+  const [tmSampleReferenceNote, setTmSampleReferenceNote] = useState('');
 
   const topicRef = useRef<HTMLTextAreaElement>(null);
 
@@ -153,7 +164,18 @@ export function PromptForm({
 
     const tmInput: ToastmastersInput = {
       assetTypes: tmAssetTypes,
-      dominantColor: tmDominantColor,
+      primaryColor: tmPrimaryColor,
+      primaryColorHex: tmPrimaryColor === 'custom' ? tmPrimaryColorHex : undefined,
+      secondaryColor: tmSecondaryColor === 'none' ? 'none' : tmSecondaryColor,
+      secondaryColorHex: (tmSecondaryColor === 'custom' || (tmSecondaryColor !== 'none' && tmSecondaryColorHex)) ? tmSecondaryColorHex : undefined,
+      backgroundStyle: tmBackgroundStyle,
+      typeface: tmTypeface,
+      customHeadingFont: tmTypeface === 'custom' ? tmCustomHeadingFont : undefined,
+      customBodyFont: tmTypeface === 'custom' ? tmCustomBodyFont : undefined,
+      customRatio: tmCustomRatio || undefined,
+      customResolution: tmCustomResolution || undefined,
+      logoPosition: tmLogoPosition,
+      accentStyle: tmAccentStyle,
       outputMode: tmOutputMode,
       textMode: tmTextMode,
       language: tmLanguage,
@@ -166,6 +188,7 @@ export function PromptForm({
       eventTime: tmEventTime,
       eventVenue: tmEventVenue,
       tamilText: tmTamilText,
+      sampleReferenceNote: tmSampleReferenceNote || undefined,
     };
 
     onToastmastersGenerate(tmInput);
@@ -341,18 +364,34 @@ export function PromptForm({
             })}
           </div>
 
-          {/* Dominant Colour */}
+          {/* Primary Colour */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Dominant Colour</label>
-            <div className="flex gap-2">
-              {(['loyal-blue', 'true-maroon'] as const).map((color) => {
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Primary Colour</label>
+            <div className="flex flex-wrap gap-2">
+              {(['loyal-blue', 'true-maroon', 'cool-gray', 'happy-yellow', 'custom'] as const).map((color) => {
+                if (color === 'custom') return (
+                  <button
+                    key="custom"
+                    type="button"
+                    onClick={() => setTmPrimaryColor('custom')}
+                    aria-pressed={tmPrimaryColor === 'custom'}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                      tmPrimaryColor === 'custom'
+                        ? 'border-brand ring-2 ring-brand/30 shadow-md shadow-brand/10'
+                        : 'border-border hover:border-brand/40'
+                    }`}
+                  >
+                    <span className="w-5 h-5 rounded-full border border-black/10 shrink-0 bg-gradient-to-br from-gray-300 to-gray-400" />
+                    <span className="text-text-primary">Custom</span>
+                  </button>
+                );
                 const c = TOASTMASTERS_COLORS[color];
-                const selected = tmDominantColor === color;
+                const selected = tmPrimaryColor === color;
                 return (
                   <button
                     key={color}
                     type="button"
-                    onClick={() => setTmDominantColor(color)}
+                    onClick={() => setTmPrimaryColor(color)}
                     aria-pressed={selected}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
                       selected
@@ -368,6 +407,250 @@ export function PromptForm({
                   </button>
                 );
               })}
+            </div>
+            {tmPrimaryColor === 'custom' && (
+              <div className="flex items-center gap-2 pl-1">
+                <label className="text-[10px] font-semibold text-text-secondary">Hex:</label>
+                <input
+                  type="text"
+                  value={tmPrimaryColorHex}
+                  onChange={(e) => setTmPrimaryColorHex(e.target.value)}
+                  placeholder="#004165"
+                  className="w-24 p-1.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Secondary Colour + Background Style */}
+          <div className="space-y-3 p-3 rounded-xl bg-surface-muted border border-border">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Dual-Colour Treatment (optional)</span>
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold text-text-secondary">Secondary Colour</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTmSecondaryColor('none')}
+                  aria-pressed={tmSecondaryColor === 'none'}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${
+                    tmSecondaryColor === 'none'
+                      ? 'border-brand ring-2 ring-brand/30 shadow-md shadow-brand/10'
+                      : 'border-border hover:border-brand/40'
+                  }`}
+                >
+                  <span className="text-text-primary">None (solid)</span>
+                </button>
+                {(['loyal-blue', 'true-maroon', 'cool-gray', 'happy-yellow', 'custom'] as const).map((color) => {
+                  if (color === 'custom') return (
+                    <button
+                      key="sec-custom"
+                      type="button"
+                      onClick={() => setTmSecondaryColor('custom')}
+                      aria-pressed={tmSecondaryColor === 'custom'}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${
+                        tmSecondaryColor === 'custom'
+                          ? 'border-brand ring-2 ring-brand/30 shadow-md shadow-brand/10'
+                          : 'border-border hover:border-brand/40'
+                      }`}
+                    >
+                      <span className="w-4 h-4 rounded-full border border-black/10 shrink-0 bg-gradient-to-br from-gray-300 to-gray-400" />
+                      <span className="text-text-primary">Custom</span>
+                    </button>
+                  );
+                  const c = TOASTMASTERS_COLORS[color];
+                  const selected = tmSecondaryColor === color;
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setTmSecondaryColor(color)}
+                      aria-pressed={selected}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${
+                        selected
+                          ? 'border-brand ring-2 ring-brand/30 shadow-md shadow-brand/10'
+                          : 'border-border hover:border-brand/40'
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-full border border-black/10 shrink-0"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                      <span className="text-text-primary">{c.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {tmSecondaryColor === 'custom' && (
+                <div className="flex items-center gap-2 pl-1">
+                  <label className="text-[10px] font-semibold text-text-secondary">Hex:</label>
+                  <input
+                    type="text"
+                    value={tmSecondaryColorHex}
+                    onChange={(e) => setTmSecondaryColorHex(e.target.value)}
+                    placeholder="#772432"
+                    className="w-24 p-1.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                </div>
+              )}
+            </div>
+            {tmSecondaryColor !== 'none' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-semibold text-text-secondary">Background Style</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {([
+                    { id: 'solid' as const, label: 'Solid', desc: 'Primary dominant, secondary as accent' },
+                    { id: 'two-tone-gradient' as const, label: 'Gradient', desc: 'Smooth gradient between the two' },
+                    { id: 'diagonal-split' as const, label: 'Diagonal', desc: 'Hard diagonal split' },
+                    { id: 'radial' as const, label: 'Radial', desc: 'Center fade between the two' },
+                  ]).map((style) => (
+                    <button
+                      key={style.id}
+                      type="button"
+                      onClick={() => setTmBackgroundStyle(style.id)}
+                      aria-pressed={tmBackgroundStyle === style.id}
+                      className={`p-2 rounded-lg text-[10px] font-medium border transition-all text-left ${
+                        tmBackgroundStyle === style.id
+                          ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/30'
+                          : 'bg-surface-card/60 border-border text-text-secondary hover:border-brand/40'
+                      }`}
+                    >
+                      <span className="block font-bold">{style.label}</span>
+                      <span className="block text-[9px] text-text-muted font-normal mt-0.5">{style.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Typography */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Typography</label>
+            <div className="flex gap-1.5">
+              {([
+                { id: 'brand-default' as const, label: 'Brand Default', desc: 'Gotham + Myriad Pro' },
+                { id: 'montserrat' as const, label: 'Montserrat', desc: 'Free Google Font' },
+                { id: 'custom' as const, label: 'Custom', desc: 'Your own fonts' },
+              ]).map((tf) => (
+                <button
+                  key={tf.id}
+                  type="button"
+                  onClick={() => setTmTypeface(tf.id)}
+                  aria-pressed={tmTypeface === tf.id}
+                  className={`flex-1 p-2 rounded-lg text-[10px] font-medium border transition-all text-left ${
+                    tmTypeface === tf.id
+                      ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/30'
+                      : 'bg-surface-card/60 border-border text-text-secondary hover:border-brand/40'
+                  }`}
+                >
+                  <span className="block font-bold text-[11px]">{tf.label}</span>
+                  <span className="block text-[9px] text-text-muted font-normal mt-0.5">{tf.desc}</span>
+                </button>
+              ))}
+            </div>
+            {tmTypeface === 'custom' && (
+              <div className="grid grid-cols-2 gap-2 pl-1">
+                <div>
+                  <label className="text-[10px] font-semibold text-text-secondary block mb-1">Heading Font</label>
+                  <input
+                    type="text"
+                    value={tmCustomHeadingFont}
+                    onChange={(e) => setTmCustomHeadingFont(e.target.value)}
+                    placeholder="e.g., Playfair Display"
+                    className="w-full p-1.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-text-secondary block mb-1">Body Font</label>
+                  <input
+                    type="text"
+                    value={tmCustomBodyFont}
+                    onChange={(e) => setTmCustomBodyFont(e.target.value)}
+                    placeholder="e.g., Lora"
+                    className="w-full p-1.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Layout */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Logo Position</label>
+              <div className="flex gap-1">
+                {([
+                  { id: 'top-left' as const, label: 'Left' },
+                  { id: 'top-center' as const, label: 'Center' },
+                  { id: 'top-right' as const, label: 'Right' },
+                ]).map((pos) => (
+                  <button
+                    key={pos.id}
+                    type="button"
+                    onClick={() => setTmLogoPosition(pos.id)}
+                    aria-pressed={tmLogoPosition === pos.id}
+                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium border transition-all ${
+                      tmLogoPosition === pos.id
+                        ? 'bg-brand text-white border-brand shadow-sm'
+                        : 'bg-surface-card/60 border-border text-text-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    {pos.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Accent Style</label>
+              <div className="flex gap-1">
+                {([
+                  { id: 'stripe' as const, label: 'Stripe' },
+                  { id: 'corner-badge' as const, label: 'Badge' },
+                  { id: 'none' as const, label: 'None' },
+                ]).map((acc) => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => setTmAccentStyle(acc.id)}
+                    aria-pressed={tmAccentStyle === acc.id}
+                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium border transition-all ${
+                      tmAccentStyle === acc.id
+                        ? 'bg-brand text-white border-brand shadow-sm'
+                        : 'bg-surface-card/60 border-border text-text-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    {acc.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Resolution & Aspect Ratio */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Resolution & Aspect Ratio</label>
+            <p className="text-[10px] text-text-muted">Defaults are set per asset type. Override below if needed.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Custom Aspect Ratio</label>
+                <input
+                  type="text"
+                  value={tmCustomRatio}
+                  onChange={(e) => setTmCustomRatio(e.target.value)}
+                  placeholder="e.g., 2:3 (use default)"
+                  className="w-full p-1.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-text-secondary block mb-1">Custom Resolution</label>
+                <input
+                  type="text"
+                  value={tmCustomResolution}
+                  onChange={(e) => setTmCustomResolution(e.target.value)}
+                  placeholder="e.g., 4K (3840×2160)"
+                  className="w-full p-1.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                />
+              </div>
             </div>
           </div>
 
@@ -576,6 +859,21 @@ export function PromptForm({
             </div>
           </div>
 
+          {/* Sample Reference Note */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              Sample Reference
+              <span className="text-[10px] font-normal text-text-muted normal-case tracking-normal"> — optional</span>
+            </label>
+            <textarea
+              value={tmSampleReferenceNote}
+              onChange={(e) => setTmSampleReferenceNote(e.target.value)}
+              placeholder="Paste or describe a reference image/asset you want the AI to reinterpret (layout, colour flow, visual rhythm — NOT pixel-for-pixel copy)"
+              rows={2}
+              className="w-full p-2.5 text-xs rounded-lg border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+            />
+          </div>
+
           {/* Sticky Toastmasters Action Bar */}
           <div className="sticky bottom-3 z-20">
             <div className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface-card/90 backdrop-blur-md p-3 shadow-xl shadow-black/15">
@@ -585,7 +883,7 @@ export function PromptForm({
                   🎤 {tmAssetTypes.length} asset{tmAssetTypes.length === 1 ? '' : 's'}
                 </span>
                 <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
-                  {TOASTMASTERS_COLORS[tmDominantColor].name}
+                  {tmPrimaryColor === 'custom' ? 'Custom' : TOASTMASTERS_COLORS[tmPrimaryColor]?.name ?? tmPrimaryColor}
                 </span>
                 <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
                   {tmOutputMode === 'full' ? 'Full Asset' : 'White Removable'}

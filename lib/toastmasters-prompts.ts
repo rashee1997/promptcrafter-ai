@@ -1,17 +1,24 @@
 import {
   ToastmastersAssetId,
+  ToastmastersBackgroundStyle,
   ToastmastersInput,
   ToastmastersLanguage,
   ToastmastersOutputMode,
   ToastmastersTextMode,
+  ToastmastersBrandColor,
 } from '@/types';
 
 /* ── Brand Constants ────────────────────────────────────────────────────────── */
 
-export const TOASTMASTERS_COLORS = {
+export const TOASTMASTERS_COLORS: Record<
+  Exclude<ToastmastersBrandColor, 'custom'>,
+  { hex: string; name: string }
+> = {
   'loyal-blue': { hex: '#004165', name: 'Loyal Blue' },
   'true-maroon': { hex: '#772432', name: 'True Maroon' },
-} as const;
+  'cool-gray': { hex: '#6D6E71', name: 'Cool Gray' },
+  'happy-yellow': { hex: '#F2B01E', name: 'Happy Yellow' },
+};
 
 export const TOASTMASTERS_FONTS = {
   heading: 'Gotham',
@@ -192,9 +199,48 @@ function speakerPlaceholderBlock(count: number): string {
   ].join('\n');
 }
 
-function resolutionInstruction(entry: ToastmastersAssetEntry, outputMode: ToastmastersOutputMode): string {
-  const res = outputMode === 'white-removable' ? '4K (3840×2160)' : entry.defaultResolution;
-  return `Render at ${res} resolution, ${entry.defaultRatio} aspect ratio.`;
+/** Resolve a brand color key (or custom) to its hex + name. */
+function resolveColor(color: ToastmastersBrandColor | 'none', customHex?: string): { hex: string; name: string } {
+  if (color === 'none') return { hex: '#FFFFFF', name: 'None' };
+  if (color === 'custom') return { hex: customHex || '#000000', name: 'Custom' };
+  return TOASTMASTERS_COLORS[color];
+}
+
+/** Build the colour instruction block based on primary + secondary + background style. */
+function colorInstruction(input: ToastmastersInput): string {
+  const primary = resolveColor(input.primaryColor, input.primaryColorHex);
+  if (!input.secondaryColor || input.secondaryColor === 'none') {
+    return `Dominant colour: ${primary.name} (${primary.hex}), used as a solid fill.`;
+  }
+  const secondary = resolveColor(input.secondaryColor, input.secondaryColorHex);
+  const styleText: Record<ToastmastersBackgroundStyle, string> = {
+    'two-tone-gradient': `a smooth gradient from ${primary.name} (${primary.hex}) to ${secondary.name} (${secondary.hex})`,
+    'diagonal-split': `a diagonal split — ${primary.name} (${primary.hex}) on one side, ${secondary.name} (${secondary.hex}) on the other, hard edge`,
+    'radial': `a radial gradient — ${primary.name} (${primary.hex}) at the center fading to ${secondary.name} (${secondary.hex}) at the edges`,
+    solid: `${primary.name} (${primary.hex}) as the dominant fill with ${secondary.name} (${secondary.hex}) as an accent on secondary elements`,
+  };
+  return `Background treatment: ${styleText[input.backgroundStyle]}.`;
+}
+
+/** Resolve the active font names from the typeface picker. */
+function resolveFonts(input: ToastmastersInput): { heading: string; body: string } {
+  switch (input.typeface) {
+    case 'montserrat':
+      return { heading: 'Montserrat', body: 'Montserrat' };
+    case 'custom':
+      return { heading: input.customHeadingFont || 'Gotham', body: input.customBodyFont || 'Myriad Pro' };
+    case 'brand-default':
+    default:
+      return { heading: 'Gotham', body: 'Myriad Pro' };
+  }
+}
+
+function resolutionInstruction(entry: ToastmastersAssetEntry, input: ToastmastersInput): string {
+  const res = input.outputMode === 'white-removable'
+    ? '4K (3840×2160)'
+    : (input.customResolution || entry.defaultResolution);
+  const ratio = input.customRatio || entry.defaultRatio;
+  return `Render at ${res} resolution, ${ratio} aspect ratio.`;
 }
 
 /* ── Per-Asset Purpose & Layout Descriptions ────────────────────────────────── */
@@ -257,15 +303,42 @@ function buildSampleReferenceInstruction(note: string | undefined): string {
   ].join('\n');
 }
 
+/** Build layout description using the user-chosen logo position and accent style. */
+function dynamicLayoutText(
+  assetId: ToastmastersAssetId,
+  logoPosition: string,
+  accentStyle: string,
+): string {
+  const posLabel = logoPosition === 'top-right' ? 'Top-right corner' : logoPosition === 'top-center' ? 'Top centre' : 'Top-left corner';
+  const accentLabel = accentStyle === 'corner-badge' ? 'corner badge in the dominant brand colour' : accentStyle === 'none' ? '' : 'accent stripe in the dominant brand colour';
+  const posDetails: Record<string, string> = {
+    'top-left': 'top-left',
+    'top-right': 'top-right',
+    'top-center': 'top centre',
+  };
+  // Replace the hardcoded "top-left" / "logo placeholder" references in the layout prose
+  let base = ASSET_LAYOUT[assetId];
+  base = base.replace(/Top-left corner: logo placeholder/g, `${posLabel}: logo placeholder`);
+  base = base.replace(/top-left or top-right corner/g, posDetails[logoPosition] || 'top-left corner');
+  base = base.replace(/top-left: logo placeholder/g, `${posLabel.toLowerCase()}: logo placeholder`);
+  base = base.replace(/Top-left:/g, `${posLabel}:`);
+  if (accentLabel && accentLabel !== 'accent stripe in the dominant brand colour') {
+    base = base.replace(/Accent stripe in the dominant brand colour/g, accentLabel.charAt(0).toUpperCase() + accentLabel.slice(1));
+  }
+  return base;
+}
+
 function buildSingleAssetPrompt(
   assetId: ToastmastersAssetId,
   input: ToastmastersInput,
 ): string {
   const entry = getAssetEntry(assetId);
-  const dominant = TOASTMASTERS_COLORS[input.dominantColor];
   const isTextFree = input.textMode === 'text-free';
   const showLogo = input.includeLogoPlaceholder;
   const showSpeakers = input.includeSpeakerPlaceholders && entry.speakerEligible;
+  const fonts = resolveFonts(input);
+  const logoPos = input.logoPosition || 'top-left';
+  const accent = input.accentStyle || 'stripe';
 
   const sections: string[] = [];
 
@@ -280,10 +353,10 @@ function buildSingleAssetPrompt(
 
   // Brand Rules
   sections.push('## BRAND RULES');
-  sections.push(`- Dominant colour: ${dominant.name} (${dominant.hex})`);
-  sections.push('- Secondary/accent colour: use the complementary Toastmasters palette — Loyal Blue (#004165), True Maroon (#772432), Cool Gray (#D0D0D0), Happy Yellow (#FFD100).');
-  sections.push(`- Heading font: ${TOASTMASTERS_FONTS.heading} (bold, clean sans-serif).`);
-  sections.push(`- Body font: ${TOASTMASTERS_FONTS.body} (regular weight sans-serif).`);
+  sections.push(colorInstruction(input));
+  sections.push('- Secondary/accent colours in the Toastmasters palette: Loyal Blue (#004165), True Maroon (#772432), Cool Gray (#6D6E71), Happy Yellow (#F2B01E).');
+  sections.push(`- Heading font: ${fonts.heading} (bold, clean sans-serif).`);
+  sections.push(`- Body font: ${fonts.body} (regular weight sans-serif).`);
   sections.push('- The Toastmasters logo must NEVER be drawn, generated, or approximated by the AI. Use a placeholder frame only (see Logo Placeholder below).');
   sections.push('- Do not alter, truncate, or recolour the real logo — it comes with its own background and must be composited in post-production.');
   sections.push('');
@@ -311,12 +384,12 @@ function buildSingleAssetPrompt(
   sections.push(ASSET_PURPOSE[assetId]);
   sections.push('');
   sections.push('## LAYOUT');
-  sections.push(ASSET_LAYOUT[assetId]);
+  sections.push(dynamicLayoutText(assetId, logoPos, accent));
   sections.push('');
 
   // Resolution
   sections.push('## RESOLUTION & FORMAT');
-  sections.push(resolutionInstruction(entry, input.outputMode));
+  sections.push(resolutionInstruction(entry, input));
   sections.push('');
 
   // Event Text (only if text mode is with-text)
@@ -407,9 +480,13 @@ export function buildToastmastersPrompt(input: ToastmastersInput): string {
  */
 export function buildToastmastersUserMessage(input: ToastmastersInput): string {
   const assets = input.assetTypes.map((id) => getAssetEntry(id).label).join(', ');
+  const primary = resolveColor(input.primaryColor, input.primaryColorHex);
   return [
     `Create a brand-compliant image-generation prompt for Toastmasters assets: ${assets}.`,
-    `Dominant colour: ${TOASTMASTERS_COLORS[input.dominantColor].name}.`,
+    `Primary colour: ${primary.name} (${primary.hex}).`,
+    input.secondaryColor && input.secondaryColor !== 'none'
+      ? `Secondary colour: ${resolveColor(input.secondaryColor, input.secondaryColorHex).name}. Background style: ${input.backgroundStyle}.`
+      : 'Single colour (solid).',
     `Output mode: ${input.outputMode === 'white-removable' ? 'White Removable' : 'Full Asset'}.`,
     `Text mode: ${input.textMode === 'text-free' ? 'Text-Free Template' : 'With Text'}.`,
     `Language: ${input.language}.`,
