@@ -606,3 +606,105 @@ export interface TestPromptRequest {
   generatedPrompt: string;
   testInput: string;
 }
+
+// ── Phase 5: File, Project, PDF & Image Upload ──────────────────────────────
+
+/** Purpose tag for an image attachment in the Text Prompt Studio. */
+export type TextStudioImagePurpose =
+  | 'screenshot-to-describe'
+  | 'diagram-mockup-reference'
+  | 'example-output-style';
+
+/** A single code file read as text, client-side only. */
+export interface CodeFileAttachment {
+  id: string;
+  /** Relative path inside the project (e.g. 'src/components/Button.tsx'). */
+  path: string;
+  /** The file's text content. */
+  content: string;
+  /** Byte size of the original file. */
+  size: number;
+}
+
+/** A processed project upload — the filtered file list plus metadata. */
+export interface ProjectContext {
+  /** Files that passed all filters (exclusions, gitignore, size caps). */
+  files: CodeFileAttachment[];
+  /** Total number of files in the original upload. */
+  totalFilesFound: number;
+  /** Total number of files actually included after filtering. */
+  includedCount: number;
+  /** Files that were excluded by size cap — summarized for the user. */
+  omittedSummary?: {
+    count: number;
+    /** Largest file that was omitted (path + size). */
+    largestOmitted: { path: string; size: number };
+    totalSizeExceeded: number;
+  };
+  /** Human-readable name for this project (folder name). */
+  projectName: string;
+}
+
+/** A PDF file read as base64, client-side only. */
+export interface PdfAttachment {
+  id: string;
+  /** Original filename (e.g. 'spec.pdf'). */
+  name: string;
+  /** Base-64 encoded data (without the data: prefix). */
+  base64Data: string;
+  /** MIME type — always 'application/pdf'. */
+  mimeType: string;
+  /** Byte size. */
+  size: number;
+}
+
+/** An image attachment for the Text Prompt Studio (reuses the same pattern
+ * as ImagePromptReferenceImage but with text-studio-specific purposes). */
+export interface TextStudioImageAttachment {
+  id: string;
+  /** Base-64 data URL kept client-side only. */
+  dataUrl: string;
+  /** Original filename. */
+  name: string;
+  /** Purpose tag — changes the extraction prompt. */
+  purpose: TextStudioImagePurpose;
+  /** Byte size. */
+  size: number;
+}
+
+/** All possible attachment types for the Text Prompt Studio. */
+export interface TextStudioAttachments {
+  /** Code files (single or project). */
+  codeFiles: CodeFileAttachment[];
+  /** Project context (when a folder was uploaded). */
+  projectContext?: ProjectContext;
+  /** Attached PDFs. */
+  pdfs: PdfAttachment[];
+  /** Attached images. */
+  images: TextStudioImageAttachment[];
+}
+
+/** Attachment sent to the API alongside the generation request. */
+export interface AttachmentPayload {
+  /** Structured project context text block (already formatted). */
+  projectContextText?: string;
+  /** PDF inline data parts for Gemini. */
+  pdfParts?: { mimeType: string; data: string }[];
+  /** Image inline data parts for vision models. */
+  imageParts?: { mimeType: string; data: string; purpose: string }[];
+  /** Text-extracted content from PDFs (fallback when model can't read PDFs). */
+  extractedPdfText?: string;
+  /** Text-extracted content from images (fallback when model can't read images). */
+  extractedImageText?: string;
+  /** Whether auto-routing was used (for the visible toast). */
+  autoRouted?: boolean;
+  /** Message explaining what was auto-extracted (for the visible toast). */
+  autoRouteMessage?: string;
+}
+
+export interface GenerationRequest {
+  provider: ProviderConfig;
+  input: PromptInput;
+  /** Optional file/PDF/image attachments for the text studio. */
+  attachments?: AttachmentPayload;
+}

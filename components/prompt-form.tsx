@@ -26,15 +26,22 @@ import {
   getAssetEntry,
 } from '@/lib/toastmasters-prompts';
 import {
+  CodeFileAttachment,
   DomainPreset,
   FrameworkType,
+  PdfAttachment,
+  ProjectContext,
   PromptInput,
   ProviderConfig,
   StudioMode,
+  TextStudioImageAttachment,
+  TextStudioImagePurpose,
   ToastmastersAssetId,
   ToastmastersInput,
   ToneType,
 } from '@/types';
+import { ContextAttachmentPanel } from './context-attachment-panel';
+import { formatProjectContext } from '@/lib/file-upload-utils';
 import { CustomChipEditor, useCustomChipEntry } from './image-prompt/use-custom-chip-entry';
 
 interface PromptFormProps {
@@ -50,6 +57,13 @@ interface PromptFormProps {
   onStudioModeChange?: (mode: StudioMode) => void;
   /** Called when the user submits a Toastmasters request. */
   onToastmastersGenerate?: (input: ToastmastersInput) => void;
+  // ── Phase 5: File, Project, PDF & Image Upload ──
+  onAttachmentsChange?: (attachments: {
+    codeFiles: CodeFileAttachment[];
+    projectContext?: ProjectContext;
+    pdfs: PdfAttachment[];
+    images: TextStudioImageAttachment[];
+  }) => void;
 }
 
 export function PromptForm({
@@ -60,6 +74,7 @@ export function PromptForm({
   studioMode = 'prompt',
   onStudioModeChange,
   onToastmastersGenerate,
+  onAttachmentsChange,
 }: PromptFormProps) {
   const providerModels = activeProvider ? getProviderModelList(activeProvider) : [];
   const [topic, setTopic] = useState('');
@@ -76,6 +91,12 @@ export function PromptForm({
   const [additionalNotes, setAdditionalNotes] = useState('');
   // Output character limit for the engineered prompt; blank string = no limit (optional).
   const [outputCharLimit, setOutputCharLimit] = useState<string>(String(DEFAULT_OUTPUT_CHAR_LIMIT));
+  // ── Phase 5: Attachment state ──
+  const [codeFiles, setCodeFiles] = useState<CodeFileAttachment[]>([]);
+  const [projectContext, setProjectContext] = useState<ProjectContext | undefined>(undefined);
+  const [pdfs, setPdfs] = useState<PdfAttachment[]>([]);
+  const [images, setImages] = useState<TextStudioImageAttachment[]>([]);
+
   const [showStyle, setShowStyle] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedFrameworkCategory, setSelectedFrameworkCategory] = useState<string>('All');
@@ -276,6 +297,11 @@ export function PromptForm({
       additionalNotes: additionalNotes.trim() || undefined,
       outputCharLimit: hasLimit ? Math.floor(parsedLimit) : undefined,
     });
+
+    // Pass attachments up to the parent for inclusion in the API request
+    if (onAttachmentsChange) {
+      onAttachmentsChange({ codeFiles, projectContext, pdfs, images });
+    }
   };
 
   // Keep the palette listener pointed at the latest handleSubmit closure
@@ -1394,6 +1420,30 @@ export function PromptForm({
               </div>
             </Expandable>
         </div>
+
+        {/* ── Phase 5: File, Project, PDF & Image Upload ── */}
+        {!isToastmasters && (
+          <ContextAttachmentPanel
+            codeFiles={codeFiles}
+            projectContext={projectContext}
+            onAddFile={(file) => setCodeFiles((prev) => [...prev, file])}
+            onSetProject={(ctx) => { setProjectContext(ctx); setCodeFiles([]); }}
+            onClearFiles={() => { setCodeFiles([]); setProjectContext(undefined); }}
+            onRemoveFile={(id) => {
+              setCodeFiles((prev) => prev.filter((f) => f.id !== id));
+              if (projectContext) setProjectContext(undefined);
+            }}
+            pdfs={pdfs}
+            onAddPdf={(pdf) => setPdfs((prev) => [...prev, pdf])}
+            onRemovePdf={(id) => setPdfs((prev) => prev.filter((p) => p.id !== id))}
+            images={images}
+            onAddImage={(img) => setImages((prev) => [...prev, img])}
+            onRemoveImage={(id) => setImages((prev) => prev.filter((i) => i.id !== id))}
+            onUpdateImagePurpose={(id, purpose) =>
+              setImages((prev) => prev.map((i) => i.id === id ? { ...i, purpose } : i))
+            }
+          />
+        )}
 
         {/* Sticky Action Bar: Generate is always visible */}
         <div className="sticky bottom-3 z-20">

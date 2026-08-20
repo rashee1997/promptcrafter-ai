@@ -454,7 +454,14 @@ ${input.includeConstraints ? `- Include Explicit Negative Constraints & Guardrai
 Generate the final engineered prompt now:`;
 }
 
-export function buildUserPromptMessage(input: PromptInput, domain: DomainPreset): string {
+export function buildUserPromptMessage(
+  input: PromptInput,
+  domain: DomainPreset,
+  /** Pre-formatted project context text block (from lib/file-upload-utils). */
+  projectContextText?: string,
+  /** Auto-extracted text from PDFs/images that the active model couldn't read directly. */
+  extractedAttachmentsText?: string,
+): string {
   let message = `Topic / Goal: "${input.topic}"\n\n`;
 
   if (input.customDomain && domain.id === 'custom-domain') {
@@ -471,6 +478,16 @@ export function buildUserPromptMessage(input: PromptInput, domain: DomainPreset)
 
   if (input.additionalNotes) {
     message += `Additional Requirements / Context: ${input.additionalNotes}\n`;
+  }
+
+  // Inject project context as a separate, labeled section
+  if (projectContextText) {
+    message += `\n${projectContextText}\n`;
+  }
+
+  // Inject auto-extracted attachment text (when the active model couldn't read the files directly)
+  if (extractedAttachmentsText) {
+    message += `\n${extractedAttachmentsText}\n`;
   }
 
   if (input.outputCharLimit) {

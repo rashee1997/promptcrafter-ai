@@ -28,7 +28,21 @@ import {
   ImagePlus,
   Clapperboard,
 } from 'lucide-react';
-import { PromptInput, ProviderConfig, PromptVersion, Session, StudioMode, ToastmastersInput, ThreadMessage } from '@/types';
+import {
+  AttachmentPayload,
+  CodeFileAttachment,
+  PdfAttachment,
+  PromptInput,
+  ProjectContext,
+  ProviderConfig,
+  PromptVersion,
+  Session,
+  StudioMode,
+  TextStudioImageAttachment,
+  TextStudioImagePurpose,
+  ToastmastersInput,
+  ThreadMessage,
+} from '@/types';
 import { ScriptTreatment, VideoProject } from '@/types/video';
 import {
   clearAllSessions,
@@ -52,6 +66,7 @@ import {
 } from '@/lib/storage';
 import { DOMAIN_PRESETS } from '@/lib/domains';
 import { generatePromptStream, refinePromptStream } from '@/lib/ai-client';
+import { formatProjectContext } from '@/lib/file-upload-utils';
 import { buildToastmastersPrompt, getAssetEntry } from '@/lib/toastmasters-prompts';
 import { deleteVideoProject, getVideoProjects, saveVideoProject } from '@/lib/video-storage';
 import { computePromptStats, generateVersionName, unwrapCodeBlock } from '@/lib/prompt-stats';
@@ -82,6 +97,14 @@ export default function HomePage() {
 
   // Character limit warning — set when generated output exceeds the requested limit
   const [charLimitWarning, setCharLimitWarning] = useState<{ limit: number; actual: number } | null>(null);
+
+  // Phase 5 — attachments state (code files, PDFs, images)
+  const pendingAttachmentsRef = useRef<{
+    codeFiles: CodeFileAttachment[];
+    projectContext?: ProjectContext;
+    pdfs: PdfAttachment[];
+    images: TextStudioImageAttachment[];
+  }>({ codeFiles: [], pdfs: [], images: [] });
 
   // Command palette state
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -283,10 +306,33 @@ export default function HomePage() {
     const domain = DOMAIN_PRESETS.find((d) => d.id === input.domainId) || DOMAIN_PRESETS[0];
     let fullText = '';
 
+    // Build attachment payload from the pending state
+    const att = pendingAttachmentsRef.current;
+    const hasAttachments = att.codeFiles.length > 0 || !!att.projectContext || att.pdfs.length > 0 || att.images.length > 0;
+    const attachmentPayload: AttachmentPayload | undefined = hasAttachments ? {
+      projectContextText: att.projectContext ? formatProjectContext(att.projectContext) : undefined,
+      pdfParts: att.pdfs.map((pdf) => ({ mimeType: pdf.mimeType, data: pdf.base64Data })),
+      imageParts: att.images.map((img) => ({
+        mimeType: img.dataUrl.split(';')[0].replace('data:', '') || 'image/png',
+        data: img.dataUrl.split(',')[1] || '',
+        purpose: img.purpose,
+      })),
+    } : undefined;
+
+    // Show auto-route toast when non-Gemini provider has file attachments
+    if (attachmentPayload && (attachmentPayload.pdfParts?.length || attachmentPayload.imageParts?.length)) {
+      const providerName = activeProvider.useBuiltInGemini ? 'Gemini' : activeProvider.name;
+      const hasPdfs = (attachmentPayload.pdfParts?.length ?? 0) > 0;
+      const hasImages = (attachmentPayload.imageParts?.length ?? 0) > 0;
+      const fileTypes = [hasPdfs && 'PDFs', hasImages && 'images'].filter(Boolean).join(' and ');
+      toast.info('Auto-routing attachments', `${providerName} will receive ${fileTypes} as context via the built-in Gemini extractor.`);
+    }
+
     await generatePromptStream(
       {
         provider: activeProvider,
         input,
+        attachments: attachmentPayload,
       },
       (chunk) => {
         fullText += chunk;
@@ -908,6 +954,7 @@ export default function HomePage() {
                   studioMode={studioMode}
                   onStudioModeChange={setStudioMode}
                   onToastmastersGenerate={handleToastmastersGenerate}
+                  onAttachmentsChange={(att) => { pendingAttachmentsRef.current = att; }}
                 />
               </div>
 
