@@ -1,4 +1,4 @@
-import { CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
+import { CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, PromptTemplate, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
 import type { StoryBibleCharacterImage } from '@/types/video';
 import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
@@ -13,6 +13,7 @@ const STORE_SETTINGS = 'settings';
 const STORE_CUSTOM_PRESETS = 'customPresets';
 const STORE_VIDEO_PROJECTS = 'videoProjects';
 const STORE_STORY_BIBLE = 'storyBible';
+const STORE_TEMPLATES = 'templates';
 
 /**
  * Default Gemini model used whenever a request doesn't carry an explicit
@@ -66,6 +67,7 @@ const memorySessions: Session[] = [];
 const memoryHistory: HistoryItem[] = [];
 const memoryProviders: ProviderConfig[] = [DEFAULT_BUILTIN_PROVIDER];
 const memoryCustomPresets: CustomPresetEntry[] = [];
+const memoryTemplates: PromptTemplate[] = [];
 let memoryActiveProviderId: string = DEFAULT_BUILTIN_PROVIDER.id;
 const memoryActiveModels: Record<string, string> = {};
 
@@ -172,6 +174,11 @@ export function openDB(): Promise<IDBDatabase> {
           const storyBibleStore = db.createObjectStore(STORE_STORY_BIBLE, { keyPath: 'id' });
           storyBibleStore.createIndex('projectId', 'projectId', { unique: false });
           storyBibleStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+
+        // Store for saved prompt templates (configuration presets, not outputs).
+        if (!db.objectStoreNames.contains(STORE_TEMPLATES)) {
+          db.createObjectStore(STORE_TEMPLATES, { keyPath: 'id' });
         }
 
         // Schema migration v1 -> v2: read from `history` store and populate `sessions`
@@ -965,6 +972,86 @@ export async function setActiveProviderId(id: string): Promise<void> {
     localStorage.setItem('promptcrafter_active_provider_id', id);
   } catch {
     // Ignore storage write error
+  }
+}
+
+// --- Prompt Template Storage API ---
+
+function getLocalTemplates(): PromptTemplate[] {
+  if (typeof window === 'undefined') return memoryTemplates;
+  try {
+    const raw = localStorage.getItem('promptcrafter_templates');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : memoryTemplates;
+    }
+    return memoryTemplates;
+  } catch {
+    return memoryTemplates;
+  }
+}
+
+function setLocalTemplates(templates: PromptTemplate[]): void {
+  memoryTemplates.length = 0;
+  memoryTemplates.push(...templates);
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('promptcrafter_templates', JSON.stringify(templates));
+  } catch (err) {
+    console.warn('LocalStorage write skipped:', err);
+  }
+}
+
+export async function getTemplates(): Promise<PromptTemplate[]> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_TEMPLATES, 'readonly');
+    const store = tx.objectStore(STORE_TEMPLATES);
+    const all = await new Promise<PromptTemplate[]>((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    return all.sort((a, b) => b.createdAt - a.createdAt);
+  } catch {
+    return getLocalTemplates().sort((a, b) => b.createdAt - a.createdAt);
+  }
+}
+
+export async function saveTemplate(template: PromptTemplate): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_TEMPLATES, 'readwrite');
+    const store = tx.objectStore(STORE_TEMPLATES);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.put(template);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    const templates = getLocalTemplates();
+    const idx = templates.findIndex((t) => t.id === template.id);
+    if (idx >= 0) {
+      templates[idx] = template;
+    } else {
+      templates.unshift(template);
+    }
+    setLocalTemplates(templates);
+  }
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_TEMPLATES, 'readwrite');
+    const store = tx.objectStore(STORE_TEMPLATES);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    setLocalTemplates(getLocalTemplates().filter((t) => t.id !== id));
   }
 }
 

@@ -1076,7 +1076,7 @@ export function PromptForm({
                           </div>
                         </div>
                         <p className="text-[11px] text-text-muted leading-relaxed mt-2">
-                          {f.description}
+                          {f.bestFor || f.description}
                         </p>
                       </button>
                     );

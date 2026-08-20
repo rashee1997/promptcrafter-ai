@@ -67,6 +67,8 @@ interface PromptOutputProps {
   onSessionUpdate?: (session: Session) => void;
   /** §9.6 — jump to the History diff comparing two versions of the current session. */
   onOpenHistoryDiff?: (versionAId: string, versionBId: string) => void;
+  /** Character limit warning — when the generated output exceeded the requested limit. */
+  charLimitWarning?: { limit: number; actual: number } | null;
 }
 
 export function PromptOutput({
@@ -84,6 +86,7 @@ export function PromptOutput({
   onClearOutput,
   onSessionUpdate,
   onOpenHistoryDiff,
+  charLimitWarning,
 }: PromptOutputProps) {
   const [copiedType, setCopiedType] = useState<'prompt' | 'filled' | 'export' | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -551,6 +554,19 @@ export function PromptOutput({
         </div>
       </div>
 
+      {/* Character limit warning — shown when the output exceeded the requested limit */}
+      {!isGenerating && charLimitWarning && (
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-warning/10 border border-warning/30">
+          <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-warning">
+              Output is {charLimitWarning.actual.toLocaleString()} characters — {charLimitWarning.actual - charLimitWarning.limit > 0 ? `${(charLimitWarning.actual - charLimitWarning.limit).toLocaleString()} over` : ''} your {charLimitWarning.limit.toLocaleString()} character limit
+            </p>
+            <p className="text-[11px] text-text-muted mt-0.5">You can ask to tighten it in the refine box below, or increase the limit in Style &amp; options.</p>
+          </div>
+        </div>
+      )}
+
       {/* §9.6b — What changed vs the previous version (surfaces the refine edit immediately) */}
       {!isGenerating && activeVersion && diffPrevVersion && changeDiff && (
         <div className="rounded-xl border border-border bg-surface-muted/40 p-3 space-y-2">
@@ -596,11 +612,25 @@ export function PromptOutput({
       {/* F1 — Quality Scorecard */}
       {quality && scoreOpen && (
       <Expandable open={true} className="space-y-3 p-4 rounded-xl bg-surface-muted/70 border border-brand/25">
+          {quality.fallbackReason && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-warning/10 border border-warning/30">
+              <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-warning">Heuristic estimate — not a full AI review</p>
+                <p className="text-[11px] text-text-muted mt-0.5">{quality.fallbackReason}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Gauge className="w-4 h-4 text-brand" />
               <span className="text-xs font-bold text-text-primary">Quality check</span>
-              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-surface-hover text-text-muted border border-border uppercase tracking-wide">
+              <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md border uppercase tracking-wide ${
+                quality.source === 'llm-judge'
+                  ? 'bg-brand/10 text-brand border-brand/30'
+                  : 'bg-warning/10 text-warning border-warning/30'
+              }`}>
                 {quality.source === 'llm-judge' ? 'AI Review' : 'Quick Check'}
               </span>
             </div>
@@ -614,13 +644,6 @@ export function PromptOutput({
               </p>
             </div>
           </div>
-
-          {quality.fallbackReason && (
-            <p className="text-[10px] text-warning flex items-center gap-1.5">
-              <AlertTriangle className="w-3 h-3 shrink-0" />
-              {quality.fallbackReason}
-            </p>
-          )}
 
           {/* Dimension bars */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

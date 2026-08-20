@@ -20,6 +20,7 @@ import { MarkdownRenderer } from './markdown-renderer';
 import { ABTestResult, ProviderConfig } from '@/types';
 import { runABTest, testPromptExecution } from '@/lib/ai-client';
 import { consistencyLabel } from '@/lib/similarity';
+import { formatCostDollars } from '@/lib/model-pricing';
 import { getProviderModelList } from '@/lib/storage';
 import { useFocusTrap } from '@/lib/use-focus-trap';
 import { useScrollLock } from '@/lib/use-scroll-lock';
@@ -391,6 +392,20 @@ export function TestPromptModal({
                             <span className="text-[10px] font-bold text-brand truncate">{r.providerName}</span>
                             <span className="text-[9px] text-text-muted truncate">{r.model}</span>
                           </div>
+                          {(r.latencyMs != null || r.estimatedCost != null) && !r.error && (
+                            <div className="flex flex-wrap items-center gap-2 text-[9px] text-text-muted">
+                              {r.latencyMs != null && (
+                                <span className="flex items-center gap-0.5">
+                                  ⏱ {r.latencyMs < 1000 ? `${r.latencyMs}ms` : `${(r.latencyMs / 1000).toFixed(1)}s`}
+                                </span>
+                              )}
+                              {r.estimatedCost != null && r.estimatedCost > 0 && (
+                                <span className="flex items-center gap-0.5">
+                                  💰 ~{formatCostDollars(r.estimatedCost)}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {r.error ? (
                             <p className="text-[10px] text-danger leading-relaxed">Error: {r.error}</p>
                           ) : (
