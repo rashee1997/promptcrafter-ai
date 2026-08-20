@@ -94,7 +94,9 @@ export function HistoryPanel({
     Record<string, { checking: boolean; oldScore: number | null; newScore: number | null; message?: string }>
   >({});
 
-  // Deep link from the workspace version picker — apply + expand the target session once.
+  // Deep link from the workspace version picker — apply + expand the target session.
+  // Populate the diff state so it is ready, but don't force diffMode to split
+  // so the version thread stays visible on arrival.
   useEffect(() => {
     if (!pendingDiff) return;
     setExpandedSessionId(pendingDiff.sessionId);
@@ -481,183 +483,7 @@ export function HistoryPanel({
                     id={`session-thread-${session.id}`}
                     className="pt-3 border-t border-border space-y-4"
                   >
-                    {/* Diff Mode Toggle & Selector Bar */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted p-2.5 rounded-xl border border-border">
-                      <div className="flex items-center gap-2">
-                        <GitCompare className="w-4 h-4 text-brand" />
-                        <span className="text-xs font-bold text-text-primary">
-                          Compare versions
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (isDiffActive) {
-                            setDiffState({ sessionId: null, versionAId: '', versionBId: '', diffMode: 'unified' });
-                          } else {
-                            const vA = session.versions[0]?.id || '';
-                            const vB = session.versions[session.versions.length - 1]?.id || '';
-                            setDiffState({ sessionId: session.id, versionAId: vA, versionBId: vB, diffMode: 'unified' });
-                          }
-                        }}
-                        className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
-                          isDiffActive
-                            ? 'bg-brand text-white border-brand'
-                            : 'bg-surface-code text-text-secondary hover:bg-surface-hover border-border'
-                        }`}
-                        aria-pressed={isDiffActive}
-                      >
-                        {isDiffActive ? 'Hide comparison' : 'Compare'}
-                      </button>
-                    </div>
-
-                    {/* Diff Output Box */}
-                    {isDiffActive && (
-                      <div className="space-y-3 p-3 rounded-xl bg-surface-code border border-brand/30">
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <label className="block text-[11px] font-semibold text-text-muted mb-1">
-                              Original
-                            </label>
-                            <select
-                              value={diffState.versionAId}
-                              onChange={(e) =>
-                                setDiffState({ ...diffState, versionAId: e.target.value })
-                              }
-                              className="w-full p-1.5 text-xs rounded-lg bg-surface-code border border-border text-text-primary"
-                            >
-                              {session.versions.map((v) => (
-                                <option key={v.id} value={v.id}>
-                                  v{v.versionNumber}: {v.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-semibold text-text-muted mb-1">
-                              Newer
-                            </label>
-                            <select
-                              value={diffState.versionBId}
-                              onChange={(e) =>
-                                setDiffState({ ...diffState, versionBId: e.target.value })
-                              }
-                              className="w-full p-1.5 text-xs rounded-lg bg-surface-code border border-border text-text-primary"
-                            >
-                              {session.versions.map((v) => (
-                                <option key={v.id} value={v.id}>
-                                  v{v.versionNumber}: {v.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Diff view toggle: unified vs side-by-side split */}
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                            {diffState.diffMode === 'unified' ? 'Unified diff' : 'Side-by-side'}
-                          </span>
-                          <div className="flex items-center gap-0.5 bg-surface-muted p-0.5 rounded-lg border border-border">
-                            {(['unified', 'split'] as const).map((mode) => (
-                              <button
-                                key={mode}
-                                type="button"
-                                onClick={() => setDiffState({ ...diffState, diffMode: mode })}
-                                aria-pressed={diffState.diffMode === mode}
-                                className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
-                                  diffState.diffMode === mode
-                                    ? 'bg-brand text-white shadow-sm'
-                                    : 'text-text-secondary hover:text-text-primary'
-                                }`}
-                              >
-                                {mode === 'unified' ? 'Unified' : 'Split'}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Rendered Word Diff */}
-                        {(() => {
-                          const verA = session.versions.find((v) => v.id === diffState.versionAId);
-                          const verB = session.versions.find((v) => v.id === diffState.versionBId);
-                          if (!verA || !verB) return <span>Select versions to compare.</span>;
-
-                          const diffs = computeWordDiff(verA.content, verB.content);
-
-                          const renderChunks = (chunks: typeof diffs) =>
-                            chunks.map((chunk, idx) => {
-                              if (chunk.added) {
-                                return (
-                                  <span key={idx} className="bg-success/25 text-success font-bold px-0.5 rounded">
-                                    {chunk.value}
-                                  </span>
-                                );
-                              }
-                              if (chunk.removed) {
-                                return (
-                                  <span key={idx} className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70">
-                                    {chunk.value}
-                                  </span>
-                                );
-                              }
-                              return <span key={idx}>{chunk.value}</span>;
-                            });
-
-                          if (diffState.diffMode === 'split') {
-                            // Left: original with removals highlighted. Right: newer with additions highlighted.
-                            const leftChunks = diffs.filter((c) => !c.added);
-                            const rightChunks = diffs.filter((c) => !c.removed);
-                            return (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div className="rounded-lg border border-danger/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-                                  {renderChunks(leftChunks)}
-                                </div>
-                                <div className="rounded-lg border border-success/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-                                  {renderChunks(rightChunks)}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div className="p-3 rounded-lg bg-surface-code text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-                              {renderChunks(diffs)}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-
-                    {/* Score trend sparkline (§9.15) — shown once ≥2 versions are scored */}
-                    {(() => {
-                      const scored = session.versions.filter((v) => v.quality);
-                      if (scored.length < 2) return null;
-                      const series = scored.map((v) => v.quality!.overall);
-                      const firstV = scored[0];
-                      const lastV = scored[scored.length - 1];
-                      return (
-                        <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-surface-card/60 border border-border/70">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                            Score trend
-                          </span>
-                          <Sparkline
-                            values={series}
-                            stroke="var(--brand)"
-                            width={150}
-                            height={28}
-                            ariaLabel={`Quality trend for ${session.title}`}
-                            unitLabel="/100"
-                          />
-                          <span className="text-[11px] font-mono text-text-muted">
-                            v{firstV.versionNumber} → v{lastV.versionNumber}
-                          </span>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Versions List */}
+                    {/* Versions List — always shown first so the full thread is immediately visible */}
                     <div className="space-y-2">
                       <span className="text-xs font-bold text-text-secondary uppercase tracking-wider block">
                         Version history
@@ -821,6 +647,194 @@ export function HistoryPanel({
                         );
                       })}
                     </div>
+
+                    {/* Score trend sparkline (§9.15) — shown once ≥2 versions are scored */}
+                    {(() => {
+                      const scored = session.versions.filter((v) => v.quality);
+                      if (scored.length < 2) return null;
+                      const series = scored.map((v) => v.quality!.overall);
+                      const firstV = scored[0];
+                      const lastV = scored[scored.length - 1];
+                      return (
+                        <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-surface-card/60 border border-border/70">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                            Score trend
+                          </span>
+                          <Sparkline
+                            values={series}
+                            stroke="var(--brand)"
+                            width={150}
+                            height={28}
+                            ariaLabel={`Quality trend for ${session.title}`}
+                            unitLabel="/100"
+                          />
+                          <span className="text-[11px] font-mono text-text-muted">
+                            v{firstV.versionNumber} → v{lastV.versionNumber}
+                          </span>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Diff Mode Toggle — secondary, collapsed-by-default, below the thread */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted p-2.5 rounded-xl border border-border">
+                      <div className="flex items-center gap-2">
+                        <GitCompare className="w-4 h-4 text-brand" />
+                        <span className="text-xs font-bold text-text-primary">
+                          Compare versions
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (isDiffActive) {
+                            setDiffState({ sessionId: null, versionAId: '', versionBId: '', diffMode: 'unified' });
+                          } else {
+                            const vA = session.versions[0]?.id || '';
+                            const vB = session.versions[session.versions.length - 1]?.id || '';
+                            setDiffState({ sessionId: session.id, versionAId: vA, versionBId: vB, diffMode: 'unified' });
+                          }
+                        }}
+                        className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                          isDiffActive
+                            ? 'bg-brand text-white border-brand'
+                            : 'bg-surface-code text-text-secondary hover:bg-surface-hover border-border'
+                        }`}
+                        aria-pressed={isDiffActive}
+                      >
+                        {isDiffActive ? 'Hide comparison' : 'Compare'}
+                      </button>
+                    </div>
+
+                    {/* Diff Output Box */}
+                    {isDiffActive && (
+                      <div className="space-y-3 p-3 rounded-xl bg-surface-code border border-brand/30">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-text-muted mb-1">
+                              Original
+                            </label>
+                            <select
+                              value={diffState.versionAId}
+                              onChange={(e) =>
+                                setDiffState({ ...diffState, versionAId: e.target.value })
+                              }
+                              className="w-full p-1.5 text-xs rounded-lg bg-surface-code border border-border text-text-primary"
+                            >
+                              {session.versions.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  v{v.versionNumber}: {v.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-text-muted mb-1">
+                              Newer
+                            </label>
+                            <select
+                              value={diffState.versionBId}
+                              onChange={(e) =>
+                                setDiffState({ ...diffState, versionBId: e.target.value })
+                              }
+                              className="w-full p-1.5 text-xs rounded-lg bg-surface-code border border-border text-text-primary"
+                            >
+                              {session.versions.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  v{v.versionNumber}: {v.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Diff view toggle: unified vs side-by-side split */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                            {diffState.diffMode === 'unified' ? 'Unified diff' : 'Side-by-side'}
+                          </span>
+                          <div className="flex items-center gap-0.5 bg-surface-muted p-0.5 rounded-lg border border-border">
+                            {(['unified', 'split'] as const).map((mode) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setDiffState({ ...diffState, diffMode: mode })}
+                                aria-pressed={diffState.diffMode === mode}
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
+                                  diffState.diffMode === mode
+                                    ? 'bg-brand text-white shadow-sm'
+                                    : 'text-text-secondary hover:text-text-primary'
+                                }`}
+                              >
+                                {mode === 'unified' ? 'Unified' : 'Split'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Rendered Word Diff */}
+                        {(() => {
+                          const verA = session.versions.find((v) => v.id === diffState.versionAId);
+                          const verB = session.versions.find((v) => v.id === diffState.versionBId);
+                          if (!verA || !verB) return <span>Select versions to compare.</span>;
+
+                          const diffs = computeWordDiff(verA.content, verB.content);
+
+                          const renderChunks = (chunks: typeof diffs) =>
+                            chunks.map((chunk, idx) => {
+                              if (chunk.added) {
+                                return (
+                                  <span key={idx} className="bg-success/25 text-success font-bold px-0.5 rounded">
+                                    {chunk.value}
+                                  </span>
+                                );
+                              }
+                              if (chunk.removed) {
+                                return (
+                                  <span key={idx} className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70">
+                                    {chunk.value}
+                                  </span>
+                                );
+                              }
+                              return <span key={idx}>{chunk.value}</span>;
+                            });
+
+                          if (diffState.diffMode === 'split') {
+                            // Left: original with removals highlighted. Right: newer with additions highlighted.
+                            const leftChunks = diffs.filter((c) => !c.added);
+                            const rightChunks = diffs.filter((c) => !c.removed);
+                            return (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="rounded-lg border border-danger/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                                  {renderChunks(leftChunks)}
+                                </div>
+                                <div className="rounded-lg border border-success/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                                  {renderChunks(rightChunks)}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="p-3 rounded-lg bg-surface-code text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
+                              {renderChunks(diffs)}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Show all versions — persistent affordance to return to the full thread */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDiffState({ sessionId: null, versionAId: '', versionBId: '', diffMode: 'unified' });
+                          }}
+                          className="w-full mt-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-muted hover:bg-surface-hover border border-border text-text-secondary flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <History className="w-3.5 h-3.5" />
+                          <span>Show all versions</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </GlassCard>

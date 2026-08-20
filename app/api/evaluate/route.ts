@@ -6,7 +6,7 @@ import {
   heuristicPromptQuality,
   normalizeImprovementTag,
 } from '@/lib/prompt-quality';
-import { runNonStreamingCompletion } from '@/lib/server-completion';
+import { runNonStreamingCompletion, resolveJudgeProvider } from '@/lib/server-completion';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -121,8 +121,9 @@ export async function POST(req: NextRequest) {
     let raw: string | null = null;
 
     try {
+      const judgeProvider = resolveJudgeProvider(provider);
       raw = await runNonStreamingCompletion(
-        provider,
+        judgeProvider,
         [
           { role: 'system', content: QUALITY_RUBRIC_PROMPT },
           {
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
         // Pinned judge settings: temperature 0 keeps scores stable between runs.
         { temperature: 0 }
       );
-      quality = parseQuality(raw, provider.name, provider.model || provider.name, QUALITY_RUBRIC_VERSION);
+      quality = parseQuality(raw, judgeProvider.name, judgeProvider.model || judgeProvider.name, QUALITY_RUBRIC_VERSION);
     } catch (err) {
       console.error('LLM judge failed, falling back to heuristic:', err);
     }

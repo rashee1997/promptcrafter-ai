@@ -291,6 +291,9 @@ export function PromptOutput({
   // it never modifies the prompt, only records the score against the version.
   const handleScoreVersion = async () => {
     if (isScoring || isEditing || !versionPromptText) return;
+    // Capture the version ID now so we can detect if the user switched versions
+    // while the judge call was in flight.
+    const scoredVersionId = activeVersion?.id;
     setIsScoring(true);
     try {
       const judged = await evaluatePromptQuality(
@@ -308,12 +311,19 @@ export function PromptOutput({
         const updated = await setVersionQuality(currentSession.id, activeVersion.id, finalQuality);
         onSessionUpdate?.(updated);
       }
-      setScoreOpen(true);
+      // Only open the score panel if the version being displayed is still the one
+      // that was scored — otherwise show a toast so the director isn't shown a
+      // mismatched score panel for a different version.
+      if (activeVersion?.id === scoredVersionId) {
+        setScoreOpen(true);
+      }
       toast.success(
         `Version scored ${finalQuality.overall}/100`,
-        finalQuality.source === 'llm-judge'
-          ? 'Score saved to this version.'
-          : 'Quick estimate saved — run AI review when your connection is back.'
+        activeVersion?.id === scoredVersionId
+          ? (finalQuality.source === 'llm-judge'
+              ? 'Score saved to this version.'
+              : 'Quick estimate saved — run AI review when your connection is back.')
+          : 'Switch back to see the full score details.'
       );
     } catch (err: any) {
       toast.error("Couldn't score the version", err?.message || 'Please try again.');
