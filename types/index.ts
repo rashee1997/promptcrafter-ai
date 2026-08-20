@@ -54,6 +54,8 @@ export interface ToneOption {
   value: ToneType;
   label: string;
   description: string;
+  /** Guidance explaining when this tone is the right choice. */
+  bestFor?: string;
   category: string;
 }
 
@@ -61,6 +63,8 @@ export interface FrameworkOption {
   value: FrameworkType;
   label: string;
   tag: string;
+  /** Longer guidance explaining when this framework is the right choice. */
+  bestFor: string;
   description: string;
   category: string;
 }
@@ -94,6 +98,21 @@ export interface ProviderConfig {
   fallbackMode?: 'none' | 'manual' | 'auto';
   /** Manual fallback model id used when `fallbackMode === 'manual'`. */
   fallbackModel?: string;
+}
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  domainId: string;
+  tone: ToneType;
+  framework: FrameworkType;
+  targetAudience?: string;
+  outputFormat?: 'markdown' | 'json' | 'bullet-points' | 'xml' | 'structured-text';
+  includeConstraints: boolean;
+  includeExamples: boolean;
+  additionalNotes?: string;
+  outputCharLimit?: number;
+  createdAt: number;
 }
 
 export interface PromptInput {
@@ -374,6 +393,12 @@ export interface ABTestResultItem {
   model: string;
   output: string;
   error?: string;
+  /** Round-trip latency in milliseconds. */
+  latencyMs?: number;
+  /** Estimated cost of this single run in USD (from local pricing table). */
+  estimatedCost?: number;
+  /** Estimated output token count (for cost estimation). */
+  outputTokens?: number;
 }
 
 export interface ABTestResult {

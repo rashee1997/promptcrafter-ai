@@ -80,6 +80,9 @@ export default function HomePage() {
   const [testModalOpen, setTestModalOpen] = useState(false);
   const [promptToTest, setPromptToTest] = useState('');
 
+  // Character limit warning — set when generated output exceeds the requested limit
+  const [charLimitWarning, setCharLimitWarning] = useState<{ limit: number; actual: number } | null>(null);
+
   // Command palette state
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -222,6 +225,7 @@ export default function HomePage() {
     handleCancelGeneration();
     setStreamingText('');
     setCurrentSession(null);
+    setCharLimitWarning(null);
     window.dispatchEvent(new Event('pc:focus-topic'));
   };
 
@@ -274,6 +278,7 @@ export default function HomePage() {
 
     setIsGenerating(true);
     setStreamingText('');
+    setCharLimitWarning(null);
 
     const domain = DOMAIN_PRESETS.find((d) => d.id === input.domainId) || DOMAIN_PRESETS[0];
     let fullText = '';
@@ -344,6 +349,13 @@ export default function HomePage() {
           createdAt: timestamp,
           updatedAt: timestamp,
         };
+
+        // Check character limit
+        if (input.outputCharLimit && cleaned.length > input.outputCharLimit) {
+          setCharLimitWarning({ limit: input.outputCharLimit, actual: cleaned.length });
+        } else {
+          setCharLimitWarning(null);
+        }
 
         await saveSession(newSession);
         setCurrentSession(newSession);
@@ -929,6 +941,7 @@ export default function HomePage() {
                   onClearOutput={handleClearOutput}
                   onSessionUpdate={handleSessionUpdate}
                   onOpenHistoryDiff={handleOpenHistoryDiff}
+                  charLimitWarning={charLimitWarning}
                 />
               </div>
               </motion.div>

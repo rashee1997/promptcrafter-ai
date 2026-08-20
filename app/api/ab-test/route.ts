@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ABTestRequest, ABTestResult } from '@/types';
 import { runNonStreamingCompletion } from '@/lib/server-completion';
 import { consistencyScore } from '@/lib/similarity';
+import { getModelPrice } from '@/lib/model-pricing';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -21,16 +22,23 @@ export async function POST(req: NextRequest) {
     const userMessage = testInput?.trim() || 'Please execute the prompt with standard parameters.';
 
     const settled = await Promise.allSettled(
-      providers.map((provider) =>
-        runNonStreamingCompletion(
+      providers.map(async (provider) => {
+        const start = Date.now();
+        const output = await runNonStreamingCompletion(
           provider,
           [
             { role: 'system', content: generatedPrompt },
             { role: 'user', content: userMessage },
           ],
           { temperature: Math.min(provider?.temperature ?? 0.7, 0.5) }
-        ).then((output) => ({ provider, output }))
-      )
+        );
+        const latencyMs = Date.now() - start;
+        // Rough token estimate (chars / 3.8) for cost calculation
+        const outputTokens = Math.max(Math.ceil(output.length / 3.8), 0);
+        const price = getModelPrice(provider.model || provider.name);
+        const estimatedCost = (outputTokens * price.outputPerM) / 1_000_000;
+        return { provider, output, latencyMs, outputTokens, estimatedCost };
+      })
     );
 
     const results = settled.map((entry, idx) => {
@@ -41,6 +49,9 @@ export async function POST(req: NextRequest) {
           providerName: provider.name,
           model: provider.model || provider.name,
           output: entry.value.output,
+          latencyMs: entry.value.latencyMs,
+          estimatedCost: entry.value.estimatedCost,
+          outputTokens: entry.value.outputTokens,
         };
       }
       return {
