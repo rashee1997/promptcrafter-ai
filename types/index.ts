@@ -1,4 +1,4 @@
-export type StudioMode = 'prompt' | 'toastmasters';
+export type StudioMode = 'prompt';
 
 // ── Phase 6: App Settings ─────────────────────────────────────────────────
 
