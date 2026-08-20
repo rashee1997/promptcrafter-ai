@@ -1,5 +1,70 @@
 export type StudioMode = 'prompt' | 'toastmasters';
 
+// ── Phase 6: App Settings ─────────────────────────────────────────────────
+
+/** Auto-routing preference for attachments that the active model can't read. */
+export type AutoRoutingPreference = 'always' | 'ask' | 'never';
+
+/** Manual override for a model's multimodal capabilities. */
+export interface ModelCapabilityOverride {
+  /** Model name (as shown in the provider's model list). */
+  model: string;
+  /** Provider id this override applies to. '*' = all providers. */
+  providerId: string;
+  supportsVision: boolean;
+  supportsPdf: boolean;
+}
+
+/** User-configurable app settings persisted via IndexedDB/localStorage. */
+export interface AppSettings {
+  /** Version for forward-compatible migrations. */
+  _version: number;
+
+  // ── Model Capabilities (§2)
+  modelCapabilityOverrides: ModelCapabilityOverride[];
+
+  // ── File & Upload Preferences (§3)
+  /** Extra glob/directory patterns to exclude beyond the hardcoded defaults. */
+  uploadExclusions: string[];
+  /** Max files allowed in a project upload. */
+  uploadMaxFiles: number;
+  /** Max combined size in MB for a project upload. */
+  uploadMaxSizeMB: number;
+  /** Auto-routing behavior when the active model can't read attachments. */
+  autoRoutingPreference: AutoRoutingPreference;
+
+  // ── Defaults (§5)
+  /** Default domain id for new sessions. Empty string = no default (show selector). */
+  defaultDomainId: string;
+  /** Default framework for new sessions. Empty string = no default. */
+  defaultFramework: string;
+  /** Default tone for new sessions. Empty string = no default. */
+  defaultTone: string;
+  /** Default output format. Empty string = no default (uses 'markdown'). */
+  defaultOutputFormat: string;
+  /** Default character limit (replaces DEFAULT_OUTPUT_CHAR_LIMIT constant). 0 = no limit. */
+  defaultCharLimit: number;
+}
+
+/** Schema version — bump when AppSettings shape changes. */
+export const APP_SETTINGS_VERSION = 1;
+
+/** Default settings shape. */
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  _version: APP_SETTINGS_VERSION,
+  modelCapabilityOverrides: [],
+  uploadExclusions: [],
+  uploadMaxFiles: 500,
+  uploadMaxSizeMB: 5,
+  autoRoutingPreference: 'always',
+  defaultDomainId: '',
+  defaultFramework: '',
+  defaultTone: '',
+  defaultOutputFormat: '',
+  defaultCharLimit: 0,
+};
+
+
 export type ToneType = 
   | 'professional'
   | 'concise'

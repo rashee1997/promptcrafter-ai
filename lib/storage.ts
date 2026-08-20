@@ -1,4 +1,4 @@
-import { CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, PromptTemplate, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
+import { AppSettings, DEFAULT_APP_SETTINGS, CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, PromptTemplate, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
 import type { StoryBibleCharacterImage } from '@/types/video';
 import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
@@ -485,6 +485,62 @@ export async function deleteStoryBibleCharacterImage(id: string): Promise<void> 
     });
   } catch {
     setLocalStoryBible(getLocalStoryBible().filter((e) => e.id !== id));
+  }
+}
+
+// --- App Settings Storage API (Phase 6) ---
+
+const SETTINGS_STORAGE_KEY = 'promptcrafter_app_settings';
+let memorySettings: AppSettings = { ...DEFAULT_APP_SETTINGS };
+
+export async function getAppSettings(): Promise<AppSettings> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_SETTINGS, 'readonly');
+    const store = tx.objectStore(STORE_SETTINGS);
+    const result = await new Promise<AppSettings | undefined>((resolve, reject) => {
+      const req = store.get('appSettings');
+      req.onsuccess = () => resolve(req.result?.value as AppSettings | undefined);
+      req.onerror = () => reject(req.error);
+    });
+    if (result && typeof result === 'object') {
+      // Merge with defaults so new fields are always present
+      return { ...DEFAULT_APP_SETTINGS, ...result };
+    }
+    return { ...DEFAULT_APP_SETTINGS };
+  } catch {
+    // LocalStorage fallback
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(SETTINGS_STORAGE_KEY) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<AppSettings>;
+        return { ...DEFAULT_APP_SETTINGS, ...parsed };
+      }
+    } catch { /* ignore */ }
+    return { ...memorySettings };
+  }
+}
+
+export async function setAppSettings(settings: AppSettings): Promise<void> {
+  const toSave = { ...settings, _version: settings._version || DEFAULT_APP_SETTINGS._version };
+  memorySettings = { ...toSave };
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_SETTINGS, 'readwrite');
+    const store = tx.objectStore(STORE_SETTINGS);
+    await new Promise<void>((resolve, reject) => {
+      const req = store.put({ key: 'appSettings', value: toSave });
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(toSave));
+      }
+    } catch (err) {
+      console.warn('AppSettings LocalStorage write skipped:', err);
+    }
   }
 }
 

@@ -13,6 +13,7 @@ import { PromptForm } from '@/components/prompt-form';
 import { PromptOutput } from '@/components/prompt-output';
 import { HistoryPanel } from '@/components/history-panel';
 import { ProviderSettings } from '@/components/provider-settings';
+import { SettingsPage } from '@/components/settings-page';
 import { TestPromptModal } from '@/components/test-prompt-modal';
 import { CommandPalette, PaletteAction } from '@/components/command-palette';
 import { Toaster, toast } from '@/components/toast';
@@ -1077,12 +1078,15 @@ export default function HomePage() {
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
                 className="max-w-4xl mx-auto"
               >
-              <ProviderSettings
+              <SettingsPage
                 providers={providers}
                 activeProviderId={activeProvider.id}
                 onSelectActiveProvider={handleSelectActiveProvider}
                 onSaveProvider={handleSaveProvider}
                 onDeleteProvider={handleDeleteProvider}
+                darkMode={darkMode}
+                setDarkMode={setDarkMode}
+                onImportSessions={handleImportSessions}
               />
               </motion.div>
             )}
