@@ -170,6 +170,16 @@ export function PromptForm({
   };
 
   const isLogo = state.mode === 'logo';
+  const isToastmasters = state.mode === 'toastmasters';
+
+  const TOASTMASTERS_EXAMPLE_TOPICS = [
+    'Icebreaker night for new members',
+    'Table Topics contest promo',
+    'Officer installation ceremony',
+    'District evaluation contest',
+    'Membership drive campaign',
+  ];
+
   const exampleTopics = isToastmasters ? TOASTMASTERS_EXAMPLE_TOPICS : isLogo ? LOGO_EXAMPLE_TOPICS : EXAMPLE_TOPICS;
   // Pre-flight cliché check — client-side keyword scan before generation
   const clicheWarnings = useMemo(
@@ -243,16 +253,6 @@ export function PromptForm({
         .filter(Boolean)
         .join(' · ') || 'Industry · mark · concept · palette'
     : platformLabels.join(' · ') || 'Platforms';
-
-  const isToastmasters = state.mode === 'toastmasters';
-
-  const TOASTMASTERS_EXAMPLE_TOPICS = [
-    'Icebreaker night for new members',
-    'Table Topics contest promo',
-    'Officer installation ceremony',
-    'District evaluation contest',
-    'Membership drive campaign',
-  ];
 
   const renderModeButton = (m: StudioMode) => {
     const selected = state.mode === m;
