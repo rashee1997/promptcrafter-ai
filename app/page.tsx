@@ -44,6 +44,7 @@ import {
   ThreadMessage,
 } from '@/types';
 import { StoryTreatment, VideoProject } from '@/types/video';
+import { ProductShootStudio } from '@/components/product-shoot/product-shoot-studio';
 import {
   clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
@@ -112,6 +113,8 @@ export default function HomePage() {
   const [videoProjects, setVideoProjects] = useState<VideoProject[]>([]);
   const [activeVideoProjectId, setActiveVideoProjectId] = useState<string | null>(null);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
+  // Video sub-tab: 'projects' (existing storyboard) | 'product-shoot' (new isolated feature)
+  const [videoSubTab, setVideoSubTab] = useState<'projects' | 'product-shoot'>('projects');
 
   // Deep link from the workspace version picker into History's diff view
   const [pendingHistoryDiff, setPendingHistoryDiff] = useState<{
@@ -942,26 +945,60 @@ export default function HomePage() {
                 className="max-w-6xl mx-auto"
               >
                 <div className="space-y-6">
-                  <StudioHeader
-                    activeProject={activeVideoProject}
-                    projects={videoProjects}
-                    onSelectProject={handleSelectVideoProject}
-                    onNewProject={() => setVideoModalOpen(true)}
-                    onBackToDashboard={handleBackToVideoDashboard}
-                  />
-                  {activeVideoProject ? (
-                    <ProjectWorkspace
-                      project={activeVideoProject}
-                      provider={activeProvider}
-                      onUpdate={handleVideoProjectUpdate}
-                    />
+                  {/* Sub-tab switch: Projects | Product Shoot */}
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-sunken/60 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setVideoSubTab('projects')}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+                        ${
+                          videoSubTab === 'projects'
+                            ? 'bg-surface-card text-text-primary shadow-sm border border-border'
+                            : 'text-text-muted hover:text-text-secondary'
+                        }`}
+                    >
+                      Projects
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVideoSubTab('product-shoot')}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+                        ${
+                          videoSubTab === 'product-shoot'
+                            ? 'bg-surface-card text-text-primary shadow-sm border border-border'
+                            : 'text-text-muted hover:text-text-secondary'
+                        }`}
+                    >
+                      Product Shoot
+                    </button>
+                  </div>
+
+                  {videoSubTab === 'projects' ? (
+                    <>
+                      <StudioHeader
+                        activeProject={activeVideoProject}
+                        projects={videoProjects}
+                        onSelectProject={handleSelectVideoProject}
+                        onNewProject={() => setVideoModalOpen(true)}
+                        onBackToDashboard={handleBackToVideoDashboard}
+                      />
+                      {activeVideoProject ? (
+                        <ProjectWorkspace
+                          project={activeVideoProject}
+                          provider={activeProvider}
+                          onUpdate={handleVideoProjectUpdate}
+                        />
+                      ) : (
+                        <ProjectDashboard
+                          projects={videoProjects}
+                          onSelectProject={handleSelectVideoProject}
+                          onNewProject={() => setVideoModalOpen(true)}
+                          onDeleteProject={handleDeleteVideoProject}
+                        />
+                      )}
+                    </>
                   ) : (
-                    <ProjectDashboard
-                      projects={videoProjects}
-                      onSelectProject={handleSelectVideoProject}
-                      onNewProject={() => setVideoModalOpen(true)}
-                      onDeleteProject={handleDeleteVideoProject}
-                    />
+                    <ProductShootStudio activeProvider={activeProvider} />
                   )}
                 </div>
               </motion.div>
