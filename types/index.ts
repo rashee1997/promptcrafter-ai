@@ -200,78 +200,9 @@ export interface PromptInput {
    * Leave undefined for no limit.
    */
   outputCharLimit?: number;
-  /** When set, switches the form into Toastmasters asset-prompt mode. */
-  studioMode?: StudioMode;
-  /** Toastmasters-specific input fields. Only used when studioMode === 'toastmasters'. */
-  toastmasters?: ToastmastersInput;
 }
 
-export type ToastmastersAssetId =
-  | 'event-flyer'
-  | 'speaker-lineup'
-  | 'social-square'
-  | 'social-landscape'
-  | 'social-story'
-  | 'social-reel'
-  | 'magazine-cover'
-  | 'magazine-spread'
-  | 'newsletter-header'
-  | 'background-theme';
 
-export type ToastmastersOutputMode = 'full' | 'white-removable';
-export type ToastmastersTextMode = 'with-text' | 'text-free';
-export type ToastmastersLanguage = 'english' | 'tamil' | 'bilingual';
-
-/** Toastmasters brand palette colors — the 4 official approved colors + custom. */
-export type ToastmastersBrandColor = 'loyal-blue' | 'true-maroon' | 'cool-gray' | 'happy-yellow' | 'custom';
-
-/** Background treatment when two colors are present. */
-export type ToastmastersBackgroundStyle = 'solid' | 'two-tone-gradient' | 'diagonal-split' | 'radial';
-
-/** Typeface choice. */
-export type ToastmastersTypeface = 'brand-default' | 'montserrat' | 'custom';
-
-/** Logo position on the asset layout. */
-export type LogoPosition = 'top-left' | 'top-right' | 'top-center';
-
-/** Accent treatment in the layout. */
-export type AccentStyle = 'stripe' | 'corner-badge' | 'none';
-
-export interface ToastmastersInput {
-  assetTypes: ToastmastersAssetId[];
-  /** @deprecated Use primaryColor instead. Kept for backward compat with persisted sessions. */
-  dominantColor?: 'loyal-blue' | 'true-maroon';
-  primaryColor: ToastmastersBrandColor;
-  /** Custom hex when primaryColor === 'custom'. */
-  primaryColorHex?: string;
-  secondaryColor?: ToastmastersBrandColor | 'none';
-  secondaryColorHex?: string;
-  backgroundStyle: ToastmastersBackgroundStyle;
-  typeface: ToastmastersTypeface;
-  /** Custom heading font name when typeface === 'custom'. */
-  customHeadingFont?: string;
-  /** Custom body font name when typeface === 'custom'. */
-  customBodyFont?: string;
-  /** Custom aspect ratio override (e.g. '4:3'). */
-  customRatio?: string;
-  /** Custom resolution override (e.g. '4K (3840×2160)'). */
-  customResolution?: string;
-  logoPosition: LogoPosition;
-  accentStyle: AccentStyle;
-  outputMode: ToastmastersOutputMode;
-  textMode: ToastmastersTextMode;
-  language: ToastmastersLanguage;
-  includeLogoPlaceholder: boolean;
-  includeSpeakerPlaceholders: boolean;
-  speakerCount: number;
-  clubName: string;
-  eventTitle: string;
-  eventDate: string;
-  eventTime: string;
-  eventVenue: string;
-  tamilText: string;
-  sampleReferenceNote?: string;
-}
 
 /**
  * Fixed keys of the quality rubric. Used to tag improvement suggestions with

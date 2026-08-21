@@ -8,8 +8,7 @@ import { cn } from '@/lib/utils';
 import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, PURPOSE_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
 import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS, checkLogoCliches } from '@/lib/logo-prompts';
-import { TOASTMASTERS_ASSET_CATALOG, TOASTMASTERS_COLORS, getAssetEntry } from '@/lib/toastmasters-prompts';
-import { ImagePlatform, ProviderConfig, ToastmastersAssetId, ToastmastersBrandColor, ToastmastersBackgroundStyle, ToastmastersTypeface, ToastmastersOutputMode, ToastmastersTextMode, ToastmastersLanguage, LogoPosition, AccentStyle } from '@/types';
+import { ImagePlatform, ProviderConfig } from '@/types';
 import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
 import { CHIP_DOTS, ChipRow } from './chip-row';
@@ -33,59 +32,6 @@ interface PromptFormProps {
   onDeleteKit?: (id: string) => void;
   showKitDropdown?: boolean;
   onToggleKitDropdown?: () => void;
-  // Toastmasters state
-  tmAssetTypes?: ToastmastersAssetId[];
-  setTmAssetTypes?: (v: ToastmastersAssetId[]) => void;
-  tmPrimaryColor?: ToastmastersBrandColor;
-  setTmPrimaryColor?: (v: ToastmastersBrandColor) => void;
-  tmPrimaryColorHex?: string;
-  setTmPrimaryColorHex?: (v: string) => void;
-  tmSecondaryColor?: ToastmastersBrandColor | 'none';
-  setTmSecondaryColor?: (v: ToastmastersBrandColor | 'none') => void;
-  tmSecondaryColorHex?: string;
-  setTmSecondaryColorHex?: (v: string) => void;
-  tmBackgroundStyle?: ToastmastersBackgroundStyle;
-  setTmBackgroundStyle?: (v: ToastmastersBackgroundStyle) => void;
-  tmTypeface?: ToastmastersTypeface;
-  setTmTypeface?: (v: ToastmastersTypeface) => void;
-  tmCustomHeadingFont?: string;
-  setTmCustomHeadingFont?: (v: string) => void;
-  tmCustomBodyFont?: string;
-  setTmCustomBodyFont?: (v: string) => void;
-  tmCustomRatio?: string;
-  setTmCustomRatio?: (v: string) => void;
-  tmCustomResolution?: string;
-  setTmCustomResolution?: (v: string) => void;
-  tmLogoPosition?: LogoPosition;
-  setTmLogoPosition?: (v: LogoPosition) => void;
-  tmAccentStyle?: AccentStyle;
-  setTmAccentStyle?: (v: AccentStyle) => void;
-  tmOutputMode?: ToastmastersOutputMode;
-  setTmOutputMode?: (v: ToastmastersOutputMode) => void;
-  tmTextMode?: ToastmastersTextMode;
-  setTmTextMode?: (v: ToastmastersTextMode) => void;
-  tmLanguage?: ToastmastersLanguage;
-  setTmLanguage?: (v: ToastmastersLanguage) => void;
-  tmIncludeLogo?: boolean;
-  setTmIncludeLogo?: (v: boolean) => void;
-  tmIncludeSpeakers?: boolean;
-  setTmIncludeSpeakers?: (v: boolean) => void;
-  tmSpeakerCount?: number;
-  setTmSpeakerCount?: (v: number) => void;
-  tmClubName?: string;
-  setTmClubName?: (v: string) => void;
-  tmEventTitle?: string;
-  setTmEventTitle?: (v: string) => void;
-  tmEventDate?: string;
-  setTmEventDate?: (v: string) => void;
-  tmEventTime?: string;
-  setTmEventTime?: (v: string) => void;
-  tmEventVenue?: string;
-  setTmEventVenue?: (v: string) => void;
-  tmTamilText?: string;
-  setTmTamilText?: (v: string) => void;
-  tmSampleReferenceNote?: string;
-  setTmSampleReferenceNote?: (v: string) => void;
 }
 
 /**
@@ -108,59 +54,6 @@ export function PromptForm({
   onDeleteKit,
   showKitDropdown = false,
   onToggleKitDropdown,
-  // Toastmasters
-  tmAssetTypes = ['event-flyer'],
-  setTmAssetTypes,
-  tmPrimaryColor = 'loyal-blue',
-  setTmPrimaryColor,
-  tmPrimaryColorHex = '#004165',
-  setTmPrimaryColorHex,
-  tmSecondaryColor = 'none',
-  setTmSecondaryColor,
-  tmSecondaryColorHex = '#772432',
-  setTmSecondaryColorHex,
-  tmBackgroundStyle = 'solid',
-  setTmBackgroundStyle,
-  tmTypeface = 'brand-default',
-  setTmTypeface,
-  tmCustomHeadingFont = '',
-  setTmCustomHeadingFont,
-  tmCustomBodyFont = '',
-  setTmCustomBodyFont,
-  tmCustomRatio = '',
-  setTmCustomRatio,
-  tmCustomResolution = '',
-  setTmCustomResolution,
-  tmLogoPosition = 'top-left',
-  setTmLogoPosition,
-  tmAccentStyle = 'stripe',
-  setTmAccentStyle,
-  tmOutputMode = 'full',
-  setTmOutputMode,
-  tmTextMode = 'with-text',
-  setTmTextMode,
-  tmLanguage = 'english',
-  setTmLanguage,
-  tmIncludeLogo = true,
-  setTmIncludeLogo,
-  tmIncludeSpeakers = false,
-  setTmIncludeSpeakers,
-  tmSpeakerCount = 2,
-  setTmSpeakerCount,
-  tmClubName = '',
-  setTmClubName,
-  tmEventTitle = '',
-  setTmEventTitle,
-  tmEventDate = '',
-  setTmEventDate,
-  tmEventTime = '',
-  setTmEventTime,
-  tmEventVenue = '',
-  setTmEventVenue,
-  tmTamilText = '',
-  setTmTamilText,
-  tmSampleReferenceNote = '',
-  setTmSampleReferenceNote,
 }: PromptFormProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -170,17 +63,8 @@ export function PromptForm({
   };
 
   const isLogo = state.mode === 'logo';
-  const isToastmasters = state.mode === 'toastmasters';
 
-  const TOASTMASTERS_EXAMPLE_TOPICS = [
-    'Icebreaker night for new members',
-    'Table Topics contest promo',
-    'Officer installation ceremony',
-    'District evaluation contest',
-    'Membership drive campaign',
-  ];
-
-  const exampleTopics = isToastmasters ? TOASTMASTERS_EXAMPLE_TOPICS : isLogo ? LOGO_EXAMPLE_TOPICS : EXAMPLE_TOPICS;
+  const exampleTopics = isLogo ? LOGO_EXAMPLE_TOPICS : EXAMPLE_TOPICS;
   // Pre-flight cliché check — client-side keyword scan before generation
   const clicheWarnings = useMemo(
     () => (isLogo ? checkLogoCliches(state.subject) : []),
@@ -257,7 +141,6 @@ export function PromptForm({
   const renderModeButton = (m: StudioMode) => {
     const selected = state.mode === m;
     const isLogoMode = m === 'logo';
-    const isTmMode = m === 'toastmasters';
     return (
       <button
         key={m}
@@ -271,10 +154,10 @@ export function PromptForm({
             : 'border-transparent text-text-muted hover:text-text-primary'
         )}
       >
-        {isTmMode ? '\ud83c\udfa4' : isLogoMode ? <PenTool className="w-4 h-4 text-warning" /> : <ImageIcon className="w-4 h-4 text-brand" />}
-        {isTmMode ? 'Toastmasters' : isLogoMode ? 'Logo' : 'Image'}
+        {isLogoMode ? <PenTool className="w-4 h-4 text-warning" /> : <ImageIcon className="w-4 h-4 text-brand" />}
+        {isLogoMode ? 'Logo' : 'Image'}
         <span className="text-[9px] font-medium text-text-muted hidden sm:inline">
-          {isTmMode ? 'brand assets' : isLogoMode ? 'brand marks' : 'photos & scenes'}
+          {isLogoMode ? 'brand marks' : 'photos & scenes'}
         </span>
       </button>
     );
@@ -289,86 +172,12 @@ export function PromptForm({
         <div
           role="group"
           aria-label="Studio mode"
-          className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-surface-sunken border border-border"
+          className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-sunken border border-border"
         >
-          {(['image', 'logo', 'toastmasters'] as const).map(renderModeButton)}
+          {(['image', 'logo'] as const).map(renderModeButton)}
         </div>
 
-        {/* ── Toastmasters form (replaces normal form when TM mode active) ── */}
-        {isToastmasters && (
-          <div className="space-y-4">
-            {/* Asset Type Multi-Select */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Asset Types</label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {TOASTMASTERS_ASSET_CATALOG.map((asset) => {
-                  const selected = tmAssetTypes.includes(asset.id);
-                  return (
-                    <button
-                      key={asset.id}
-                      type="button"
-                      onClick={() => {
-                        if (!setTmAssetTypes) return;
-                        if (selected) {
-                          setTmAssetTypes(tmAssetTypes.filter((id) => id !== asset.id));
-                        } else {
-                          setTmAssetTypes([...tmAssetTypes, asset.id]);
-                        }
-                      }}
-                      className={cn(
-                        'p-2 rounded-lg text-[11px] font-medium border transition-all text-left',
-                        selected
-                          ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40'
-                          : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40'
-                      )}
-                    >
-                      {asset.label}
-                      <span className="text-[9px] text-text-muted block">{asset.category}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Brand Colors */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Primary Color</label>
-              <div className="flex flex-wrap gap-1.5">
-                {(Object.keys(TOASTMASTERS_COLORS) as ToastmastersBrandColor[]).map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setTmPrimaryColor?.(color)}
-                    className={cn(
-                      'px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all flex items-center gap-1.5',
-                      tmPrimaryColor === color
-                        ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40'
-                        : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40'
-                    )}
-                  >
-                    <span className="w-3 h-3 rounded-full border" style={{ backgroundColor: TOASTMASTERS_COLORS[color].hex }} />
-                    {TOASTMASTERS_COLORS[color].name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Event Details */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Event Details</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input value={tmClubName} onChange={(e) => setTmClubName?.(e.target.value)} placeholder="Club Name" className="p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary" />
-                <input value={tmEventTitle} onChange={(e) => setTmEventTitle?.(e.target.value)} placeholder="Event Title" className="p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary" />
-                <input value={tmEventDate} onChange={(e) => setTmEventDate?.(e.target.value)} placeholder="Date" className="p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary" />
-                <input value={tmEventTime} onChange={(e) => setTmEventTime?.(e.target.value)} placeholder="Time" className="p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary" />
-                <input value={tmEventVenue} onChange={(e) => setTmEventVenue?.(e.target.value)} placeholder="Venue / Link" className="col-span-2 p-2 text-xs rounded-lg border border-border bg-surface-input text-text-primary" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Purpose routing — "What matters most?" (hidden in Toastmasters mode) */}
-        {!isToastmasters && (
+        {/* Purpose routing — "What matters most?" */}
         <div className="space-y-2">
           <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
             <Route className="w-3.5 h-3.5 text-brand" />
@@ -415,17 +224,13 @@ export function PromptForm({
             </p>
           )}
         </div>
-        )}
 
-        {/* ── Normal Image/Logo form (hidden in Toastmasters mode) ── */}
-        {!isToastmasters && (
-        <>
         {/* Subject hero input */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label htmlFor="img-subject" className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-warning" />
-              {isToastmasters ? 'What is this asset for?' : isLogo ? 'What should the logo represent?' : 'What should the image show?'}
+              {isLogo ? 'What should the logo represent?' : 'What should the image show?'}
             </label>
             {state.subject && (
               <button
@@ -442,7 +247,7 @@ export function PromptForm({
               id="img-subject"
               value={state.subject}
               onChange={(e) => handlers.setSubject(e.target.value)}
-              placeholder={isToastmasters ? 'e.g. Icebreaker speech night for new members — welcoming, first-time-friendly, low-pressure vibe' : isLogo ? 'e.g. A specialty coffee roaster called Ember & Oak — artisan, warm, craft' : 'e.g. A lone lighthouse keeper on a storm-wracked cliff at night'}
+              placeholder={isLogo ? 'e.g. A specialty coffee roaster called Ember & Oak — artisan, warm, craft' : 'e.g. A lone lighthouse keeper on a storm-wracked cliff at night'}
               rows={3}
               className="w-full p-3.5 text-sm rounded-xl border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/80 focus:border-brand transition-all shadow-inner resize-y leading-relaxed"
             />
@@ -1060,8 +865,6 @@ export function PromptForm({
           providerModels={providerModels}
           onSelectActiveModel={onSelectActiveModel}
         />
-        </>
-        )}
       </form>
     </GlassCard>
   );

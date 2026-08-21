@@ -20,8 +20,7 @@ import { generateImagePromptStream, redoImagePromptStream } from '@/lib/ai-clien
 import { getProviderModelList } from '@/lib/storage';
 import { DEFAULT_LOGO_INPUT, LOGO_EXAMPLE_TOPICS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { getKits, saveKit, deleteKit, PromptKit } from '@/lib/image-prompt-kits';
-import { ImagePlatform, ImagePromptInput, ImagePromptReferenceImage, ProviderConfig, ToastmastersInput, ToastmastersAssetId, ToastmastersBrandColor, ToastmastersBackgroundStyle, ToastmastersTypeface, ToastmastersOutputMode, ToastmastersTextMode, ToastmastersLanguage, LogoPosition, AccentStyle } from '@/types';
-import { buildToastmastersPrompt, TOASTMASTERS_ASSET_CATALOG, TOASTMASTERS_COLORS, getAssetEntry } from '@/lib/toastmasters-prompts';
+import { ImagePlatform, ImagePromptInput, ImagePromptReferenceImage, ProviderConfig } from '@/types';
 import { OutputPanel } from './image-prompt/output-panel';
 import { PromptForm } from './image-prompt/prompt-form';
 import { SavedGallery } from './image-prompt/saved-gallery';
@@ -75,54 +74,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [referenceImages, setReferenceImages] = useState<ImagePromptReferenceImage[]>([]);
   const [keepRefImages, setKeepRefImages] = useState(false);
 
-  // ── Toastmasters state ──
-  const [tmAssetTypes, setTmAssetTypes] = useState<ToastmastersAssetId[]>(['event-flyer']);
-  const [tmPrimaryColor, setTmPrimaryColor] = useState<ToastmastersBrandColor>('loyal-blue');
-  const [tmPrimaryColorHex, setTmPrimaryColorHex] = useState('#004165');
-  const [tmSecondaryColor, setTmSecondaryColor] = useState<ToastmastersBrandColor | 'none'>('none');
-  const [tmSecondaryColorHex, setTmSecondaryColorHex] = useState('#772432');
-  const [tmBackgroundStyle, setTmBackgroundStyle] = useState<ToastmastersBackgroundStyle>('solid');
-  const [tmTypeface, setTmTypeface] = useState<ToastmastersTypeface>('brand-default');
-  const [tmCustomHeadingFont, setTmCustomHeadingFont] = useState('');
-  const [tmCustomBodyFont, setTmCustomBodyFont] = useState('');
-  const [tmCustomRatio, setTmCustomRatio] = useState('');
-  const [tmCustomResolution, setTmCustomResolution] = useState('');
-  const [tmLogoPosition, setTmLogoPosition] = useState<LogoPosition>('top-left');
-  const [tmAccentStyle, setTmAccentStyle] = useState<AccentStyle>('stripe');
-  const [tmOutputMode, setTmOutputMode] = useState<ToastmastersOutputMode>('full');
-  const [tmTextMode, setTmTextMode] = useState<ToastmastersTextMode>('with-text');
-  const [tmLanguage, setTmLanguage] = useState<ToastmastersLanguage>('english');
-  const [tmIncludeLogo, setTmIncludeLogo] = useState(true);
-  const [tmIncludeSpeakers, setTmIncludeSpeakers] = useState(false);
-  const [tmSpeakerCount, setTmSpeakerCount] = useState(2);
-  const [tmClubName, setTmClubName] = useState('');
-  const [tmEventTitle, setTmEventTitle] = useState('');
-  const [tmEventDate, setTmEventDate] = useState('');
-  const [tmEventTime, setTmEventTime] = useState('');
-  const [tmEventVenue, setTmEventVenue] = useState('');
-  const [tmTamilText, setTmTamilText] = useState('');
-  const [tmSampleReferenceNote, setTmSampleReferenceNote] = useState('');
 
-  // Auto-toggle placeholder defaults when asset selection or text mode changes
-  useEffect(() => {
-    const anySpeakerEligible = tmAssetTypes.some((id) => getAssetEntry(id).speakerEligible);
-    const isBackgroundOnly = tmAssetTypes.length === 1 && tmAssetTypes[0] === 'background-theme';
-    if (isBackgroundOnly) {
-      setTmIncludeLogo(false);
-      setTmIncludeSpeakers(false);
-    } else {
-      const first = getAssetEntry(tmAssetTypes[0] ?? 'event-flyer');
-      setTmIncludeLogo(first.defaultLogoPlaceholder);
-      setTmIncludeSpeakers(anySpeakerEligible ? first.defaultSpeakerPlaceholder : false);
-    }
-  }, [tmAssetTypes]);
-
-  useEffect(() => {
-    if (tmTextMode === 'text-free') {
-      setTmIncludeLogo(false);
-      setTmIncludeSpeakers(false);
-    }
-  }, [tmTextMode]);
 
   // ── Output state ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -228,36 +180,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setKeepRefImages,
   };
 
-  /** Build a ToastmastersInput from the TM state. */
-  const buildToastmastersInput = (): ToastmastersInput => ({
-    assetTypes: tmAssetTypes,
-    primaryColor: tmPrimaryColor,
-    primaryColorHex: tmPrimaryColor === 'custom' ? tmPrimaryColorHex : undefined,
-    secondaryColor: tmSecondaryColor,
-    secondaryColorHex: tmSecondaryColor === 'custom' ? tmSecondaryColorHex : undefined,
-    backgroundStyle: tmBackgroundStyle,
-    typeface: tmTypeface,
-    customHeadingFont: tmTypeface === 'custom' ? tmCustomHeadingFont : undefined,
-    customBodyFont: tmTypeface === 'custom' ? tmCustomBodyFont : undefined,
-    customRatio: tmCustomRatio || undefined,
-    customResolution: tmCustomResolution || undefined,
-    logoPosition: tmLogoPosition,
-    accentStyle: tmAccentStyle,
-    outputMode: tmOutputMode,
-    textMode: tmTextMode,
-    language: tmLanguage,
-    includeLogoPlaceholder: tmIncludeLogo,
-    includeSpeakerPlaceholders: tmIncludeSpeakers,
-    speakerCount: tmSpeakerCount,
-    clubName: tmClubName,
-    eventTitle: tmEventTitle,
-    eventDate: tmEventDate,
-    eventTime: tmEventTime,
-    eventVenue: tmEventVenue,
-    tamilText: tmTamilText,
-    sampleReferenceNote: tmSampleReferenceNote || undefined,
-  });
-
   const buildInput = (): ImagePromptInput => ({
     subject: subject.trim(),
     style,
@@ -287,62 +209,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     additionalNotes: additionalNotes.trim() || undefined,
     referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
   });
-
-  /** Toastmasters mode: build prompt client-side, then stream to save as a session. */
-  const handleToastmastersGenerate = async () => {
-    if (isGenerating) return;
-    const tmInput = buildToastmastersInput();
-    const promptText = buildToastmastersPrompt(tmInput);
-    if (!promptText.trim()) return;
-
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    setIsGenerating(true);
-    setStreamingText('');
-    if (sections) setPreviousSections(sections);
-    else setPreviousSections(null);
-    setSections(null);
-    setActiveTab('raw');
-
-    // Stream the Toastmasters prompt through the image pipeline as a full-text subject
-    const assetLabels = tmAssetTypes.map((id) => getAssetEntry(id).label).join(', ');
-    const input: ImagePromptInput = {
-      subject: promptText,
-      style: 'custom',
-      mode: 'image',
-      aspectRatio: getAssetEntry(tmAssetTypes[0] ?? 'event-flyer').defaultRatio,
-      platforms: [],
-      additionalNotes: `Toastmasters asset: ${assetLabels}. ${subject.trim()}`,
-    };
-    let fullText = '';
-
-    await generateImagePromptStream(
-      { provider: activeProvider, input },
-      (chunk) => {
-        fullText += chunk;
-        setStreamingText(fullText);
-      },
-      (completedText) => {
-        setIsGenerating(false);
-        let parsed = parseImagePromptOutput(completedText);
-        const tabs = buildOutputTabs(parsed);
-        if (tabs.length === 0) {
-          parsed = { ...parsed, master: completedText.trim() };
-        }
-        setSections(parsed);
-        setActiveTab('master');
-        toast.success('Toastmasters prompts ready', `${assetLabels} prompts are ready to copy.`);
-      },
-      (error) => {
-        setIsGenerating(false);
-        setStreamingText(`\u26a0\ufe0f Couldn't create Toastmasters prompts: ${error.message}`);
-        toast.error("Couldn't create Toastmasters prompts", error.message);
-      },
-      controller.signal
-    );
-  };
 
   const handleGenerate = async (notesOverride?: string) => {
     if (!subject.trim() || isGenerating) return;
@@ -445,7 +311,9 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   /** Restore a saved brief into the form (gallery → edit loop). */
   const handleRestore = (item: SavedImagePrompt) => {
     const inp = item.input;
-    const restoredMode: StudioMode = inp?.mode ?? item.mode ?? 'image';
+    const rawMode = inp?.mode ?? item.mode ?? 'image';
+    // Gracefully degrade old Toastmasters sessions to image mode
+    const restoredMode: StudioMode = (rawMode as string) === 'toastmasters' ? 'image' : rawMode;
     setSubject(inp?.subject ?? item.subject);
     setStyle(inp?.style ?? DEFAULT_IMAGE_INPUT.style);
     setMode(restoredMode);
@@ -612,8 +480,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setSavedPrompts(deleteSavedImagePrompt(id));
   };
 
-  const isToastmasters = mode === 'toastmasters';
-
   return (
     <div className="space-y-6">
       <StudioHeader platformCount={platforms.length} mode={mode} />
@@ -627,66 +493,14 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           activeProvider={activeProvider}
           providerModels={providerModels}
           onSelectActiveModel={onSelectActiveModel}
-          onSubmit={isToastmasters ? handleToastmastersGenerate : handleGenerate}
+          onSubmit={handleGenerate}
           kits={kits}
           onSaveKit={handleSaveKit}
           onLoadKit={handleLoadKit}
           onDeleteKit={handleDeleteKit}
           showKitDropdown={showKitDropdown}
           onToggleKitDropdown={() => setShowKitDropdown(!showKitDropdown)}
-          // Toastmasters state
-          tmAssetTypes={tmAssetTypes}
-          setTmAssetTypes={setTmAssetTypes}
-          tmPrimaryColor={tmPrimaryColor}
-          setTmPrimaryColor={setTmPrimaryColor}
-          tmPrimaryColorHex={tmPrimaryColorHex}
-          setTmPrimaryColorHex={setTmPrimaryColorHex}
-          tmSecondaryColor={tmSecondaryColor}
-          setTmSecondaryColor={setTmSecondaryColor}
-          tmSecondaryColorHex={tmSecondaryColorHex}
-          setTmSecondaryColorHex={setTmSecondaryColorHex}
-          tmBackgroundStyle={tmBackgroundStyle}
-          setTmBackgroundStyle={setTmBackgroundStyle}
-          tmTypeface={tmTypeface}
-          setTmTypeface={setTmTypeface}
-          tmCustomHeadingFont={tmCustomHeadingFont}
-          setTmCustomHeadingFont={setTmCustomHeadingFont}
-          tmCustomBodyFont={tmCustomBodyFont}
-          setTmCustomBodyFont={setTmCustomBodyFont}
-          tmCustomRatio={tmCustomRatio}
-          setTmCustomRatio={setTmCustomRatio}
-          tmCustomResolution={tmCustomResolution}
-          setTmCustomResolution={setTmCustomResolution}
-          tmLogoPosition={tmLogoPosition}
-          setTmLogoPosition={setTmLogoPosition}
-          tmAccentStyle={tmAccentStyle}
-          setTmAccentStyle={setTmAccentStyle}
-          tmOutputMode={tmOutputMode}
-          setTmOutputMode={setTmOutputMode}
-          tmTextMode={tmTextMode}
-          setTmTextMode={setTmTextMode}
-          tmLanguage={tmLanguage}
-          setTmLanguage={setTmLanguage}
-          tmIncludeLogo={tmIncludeLogo}
-          setTmIncludeLogo={setTmIncludeLogo}
-          tmIncludeSpeakers={tmIncludeSpeakers}
-          setTmIncludeSpeakers={setTmIncludeSpeakers}
-          tmSpeakerCount={tmSpeakerCount}
-          setTmSpeakerCount={setTmSpeakerCount}
-          tmClubName={tmClubName}
-          setTmClubName={setTmClubName}
-          tmEventTitle={tmEventTitle}
-          setTmEventTitle={setTmEventTitle}
-          tmEventDate={tmEventDate}
-          setTmEventDate={setTmEventDate}
-          tmEventTime={tmEventTime}
-          setTmEventTime={setTmEventTime}
-          tmEventVenue={tmEventVenue}
-          setTmEventVenue={setTmEventVenue}
-          tmTamilText={tmTamilText}
-          setTmTamilText={setTmTamilText}
-          tmSampleReferenceNote={tmSampleReferenceNote}
-          setTmSampleReferenceNote={setTmSampleReferenceNote}
+
         />
 
         {/* ── Right: Output & brief viewer ── */}
@@ -698,7 +512,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onTabChange={setActiveTab}
           activeProvider={activeProvider}
           mode={mode}
-          onUseExample={() => setSubject(mode === 'logo' ? LOGO_EXAMPLE_TOPICS[0] : mode === 'toastmasters' ? 'Icebreaker night for new members' : EXAMPLE_TOPICS[0])}
+          onUseExample={() => setSubject(mode === 'logo' ? LOGO_EXAMPLE_TOPICS[0] : EXAMPLE_TOPICS[0])}
           onSave={handleSave}
           onNew={handleNew}
           onRefineSuggestion={handleRefineSuggestion}
