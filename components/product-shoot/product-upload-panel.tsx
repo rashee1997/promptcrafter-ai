@@ -19,6 +19,8 @@ interface ProductUploadPanelProps {
  */
 function compressImageToDataUrl(dataUrl: string, maxDimension = 1200, quality = 0.85): Promise<string> {
   return new Promise((resolve) => {
+    const isPng = dataUrl.startsWith('data:image/png');
+    const isWebp = dataUrl.startsWith('data:image/webp');
     const img = new Image();
     img.onload = () => {
       let { width, height } = img;
@@ -40,7 +42,11 @@ function compressImageToDataUrl(dataUrl: string, maxDimension = 1200, quality = 
         return;
       }
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      if (isPng || isWebp) {
+        resolve(canvas.toDataURL('image/webp', quality) || canvas.toDataURL('image/png'));
+      } else {
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      }
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
@@ -120,6 +126,15 @@ export function ProductUploadPanel({
 
       {/* Upload area */}
       <div
+        role="button"
+        tabIndex={images.length < MAX_IMAGES ? 0 : -1}
+        aria-label="Upload product reference image"
+        onKeyDown={(e) => {
+          if (images.length < MAX_IMAGES && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         onDragOver={(e) => {
           e.preventDefault();
           setDragOver(true);
@@ -129,7 +144,7 @@ export function ProductUploadPanel({
         onClick={() => images.length < MAX_IMAGES && inputRef.current?.click()}
         className={`
           relative rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer
-          flex flex-col items-center justify-center gap-1.5 p-4 sm:p-5 min-h-[110px] sm:min-h-[125px]
+          flex flex-col items-center justify-center gap-1.5 p-4 sm:p-5 min-h-[110px] sm:min-h-[125px] focus:outline-none focus:ring-2 focus:ring-brand/40
           ${
             dragOver
               ? 'border-brand bg-brand/5'

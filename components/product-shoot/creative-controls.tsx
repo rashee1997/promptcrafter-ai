@@ -373,6 +373,30 @@ export function CreativeControlsPanel({
               <label htmlFor="ps-neg-constraints" className="block text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
                 Custom Negative Constraints
               </label>
+              <div className="flex flex-wrap gap-1 mb-1.5">
+                {[
+                  'no human faces or hands',
+                  'no harsh direct glare',
+                  'no fast rotating or spinning',
+                  'avoid dark backgrounds',
+                  'zero background clutter',
+                  'pure product only',
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => {
+                      const current = controls.negativeConstraints || '';
+                      if (!current.includes(chip)) {
+                        update('negativeConstraints', current ? `${current}, ${chip}` : chip);
+                      }
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-surface-muted hover:bg-brand/10 hover:text-brand border border-border transition-colors text-text-secondary"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
               <input
                 id="ps-neg-constraints"
                 type="text"

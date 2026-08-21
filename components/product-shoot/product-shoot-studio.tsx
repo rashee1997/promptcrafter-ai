@@ -130,7 +130,7 @@ export function ProductShootStudio({
             brief,
             recipeId: selectedRecipeId,
             creativeControls: overrideControls || creativeControls,
-            imageParts: visionPrePass ? [] : imageParts,
+            imageParts,
             visionPrePassUsed: visionPrePass,
           }),
           signal: controller.signal,
@@ -262,6 +262,32 @@ export function ProductShootStudio({
     setSavedShoots(updated);
   }, []);
 
+  // Cancel running generation
+  const handleCancel = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setIsGenerating(false);
+  }, []);
+
+  // Global ⌘⏎ / Ctrl+Enter generation listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        const target = e.target as HTMLElement | null;
+        if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) {
+          e.preventDefault();
+        }
+        if (canGenerate && !isGenerating) {
+          handleGenerate();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canGenerate, isGenerating, handleGenerate]);
+
   return (
     <div className="space-y-6">
       {/* Studio Header */}
@@ -325,47 +351,95 @@ export function ProductShootStudio({
             onToggle={() => setShowCreativeControls(!showCreativeControls)}
           />
 
-          {/* Generate Button */}
-          <motion.button
-            type="button"
-            onClick={() => handleGenerate()}
-            disabled={!canGenerate}
-            whileHover={canGenerate ? { scale: 1.012 } : undefined}
-            whileTap={canGenerate ? { scale: 0.988 } : undefined}
-            className={`
-              w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3.5
-              text-sm font-semibold transition-all duration-200 shadow-md min-h-[48px]
-              ${
-                canGenerate
-                  ? 'bg-gradient-to-r from-brand via-accent to-brand text-white shadow-[0_8px_24px_var(--shadow-glow)] hover:brightness-110'
-                  : 'bg-surface-muted text-text-muted cursor-not-allowed opacity-50'
-              }
-            `}
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="truncate">Directing Commercial Shot Package...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4" />
-                <span>Generate Shot Package</span>
-              </>
-            )}
-          </motion.button>
+          {/* Sticky Generate Action Bar */}
+          <div className="sticky bottom-3 z-20 pt-2">
+            <div className="flex flex-col gap-2.5 rounded-2xl border border-border/80 bg-surface-card/95 backdrop-blur-xl p-3.5 shadow-2xl shadow-black/20">
+              {/* Status Chips */}
+              <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-text-secondary">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span
+                    className={`px-2 py-0.5 rounded-md font-mono border ${
+                      images.length > 0
+                        ? 'bg-brand/10 border-brand/25 text-brand font-semibold'
+                        : 'bg-surface-muted border-border text-text-muted'
+                    }`}
+                  >
+                    📸 {images.length} {images.length === 1 ? 'image' : 'images'}
+                  </span>
+                  {selectedRecipeId && (
+                    <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-medium text-text-primary">
+                      🎬 {selectedRecipeId === SURPRISE_RECIPE_ID ? "Director's Choice" : (getRecipeById(selectedRecipeId)?.label || 'Recipe')}
+                    </span>
+                  )}
+                  <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-mono">
+                    {creativeControls.aspectRatio}
+                  </span>
+                  {creativeControls.generationMode === 'campaign-3shot' && (
+                    <span className="px-2 py-0.5 rounded-md bg-accent/10 border border-accent/25 text-accent font-semibold">
+                      3-Shot Arc
+                    </span>
+                  )}
+                </div>
 
-          {!canGenerate && !isGenerating && (
-            <p className="text-[11px] text-text-muted text-center px-2">
-              {images.length === 0
-                ? 'Upload at least one product reference image'
-                : !brief.name.trim()
-                  ? 'Enter a product name in the brief'
-                  : !selectedRecipeId
-                    ? 'Select a commercial scene recipe'
-                    : null}
-            </p>
-          )}
+                {!canGenerate && !isGenerating && (
+                  <span className="text-[11px] text-warning font-medium">
+                    {images.length === 0
+                      ? 'Add product image'
+                      : !brief.name.trim()
+                        ? 'Add product name'
+                        : !selectedRecipeId
+                          ? 'Select scene recipe'
+                          : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* Primary Action Button (Solid Brand Color) */}
+              <div className="flex items-center gap-2">
+                <motion.button
+                  type="button"
+                  onClick={() => handleGenerate()}
+                  disabled={!canGenerate || isGenerating}
+                  whileTap={canGenerate && !isGenerating ? { scale: 0.985 } : undefined}
+                  className={`
+                    flex-1 flex items-center justify-center gap-2 rounded-xl px-5 py-3.5
+                    text-sm font-bold transition-all duration-200 min-h-[48px]
+                    ${
+                      canGenerate && !isGenerating
+                        ? 'bg-brand hover:bg-brand-hover active:bg-brand-active text-white shadow-[0_8px_24px_var(--shadow-glow)] cursor-pointer'
+                        : 'bg-surface-muted text-text-muted cursor-not-allowed opacity-60'
+                    }
+                  `}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span className="truncate">Directing Commercial Shot Package...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 text-white fill-white" />
+                      <span>Generate Shot Package</span>
+                      <kbd className="ml-1.5 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-90">
+                        ⌘⏎
+                      </kbd>
+                    </>
+                  )}
+                </motion.button>
+
+                {isGenerating && (
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-3.5 py-3.5 rounded-xl border border-border bg-surface-input hover:bg-surface-muted text-xs font-semibold text-text-muted hover:text-danger transition-colors min-h-[48px]"
+                    title="Cancel Generation"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right column — Output & Dialect Deck */}

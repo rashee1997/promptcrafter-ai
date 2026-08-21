@@ -36,7 +36,32 @@ export function StudioHeader({
 }: StudioHeaderProps) {
   const [showExamplesMenu, setShowExamplesMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
+  const modelMenuRef = React.useRef<HTMLDivElement>(null);
+  const examplesMenuRef = React.useRef<HTMLDivElement>(null);
   const availableModels = getProviderModelList(activeProvider);
+
+  React.useEffect(() => {
+    const handlePointerDown = (e: PointerEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
+        setShowModelMenu(false);
+      }
+      if (examplesMenuRef.current && !examplesMenuRef.current.contains(e.target as Node)) {
+        setShowExamplesMenu(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowModelMenu(false);
+        setShowExamplesMenu(false);
+      }
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 border-b border-border/60">
@@ -64,7 +89,7 @@ export function StudioHeader({
       {/* Toolbar actions */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap justify-start sm:justify-end">
         {/* Model selector dropdown */}
-        <div className="relative">
+        <div ref={modelMenuRef} className="relative">
           <button
             type="button"
             onClick={() => {
@@ -112,7 +137,7 @@ export function StudioHeader({
         </div>
 
         {/* Example briefs menu */}
-        <div className="relative">
+        <div ref={examplesMenuRef} className="relative">
           <button
             type="button"
             onClick={() => {

@@ -41,7 +41,14 @@ export function saveProductShoot(shoot: SavedProductShoot): SavedProductShoot[] 
       updated = [shoot, ...existing].slice(0, MAX_SAVED_ITEMS);
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch (quotaErr) {
+      console.warn('LocalStorage quota exceeded, saving without thumbnail data to preserve prompts:', quotaErr);
+      const stripped = updated.map((item) => ({ ...item, imageThumbnails: undefined }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped));
+      return stripped;
+    }
     return updated;
   } catch (err) {
     console.error('Failed to save product shoot to storage:', err);

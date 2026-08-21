@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+  - **Product Shoot Studio UI/UX, Sticky Action Bar, & Dialect Parsing Hardening**:
+    - **Persistent Sticky Generation Action Bar**: Replaced off-screen bottom generate button with a floating `sticky bottom-3 z-20` action bar featuring live context chips (image count, selected scene recipe, aspect ratio, 3-shot campaign indicator), dynamic field validation warnings, and an abort/cancel stream trigger.
+    - **Solid Brand Button Token Alignment (`DESIGN.md`)**: Removed rainbow gradient button (`bg-gradient-to-r...`) and standardized on the canonical brand design token (`bg-brand hover:bg-brand-hover active:bg-brand-active text-white shadow-[0_8px_24px_var(--shadow-glow)]`).
+    - **Global `⌘⏎` / `Ctrl+Enter` Keyboard Trigger**: Bound keyboard submission across the entire studio so users can generate from any brief field or control selector without mouse interaction.
+    - **Dropdown Click-Outside & Escape Dismissal**: Added pointer event tracking and `Escape` key handlers in `components/product-shoot/studio-header.tsx` for clean dismissal of "Active Model" and "Load Example" dropdowns.
+    - **Alpha Channel Preservation for PNG Cutouts**: Updated `compressImageToDataUrl` in `components/product-shoot/product-upload-panel.tsx` to preserve transparent backgrounds when PNG/WebP product cutouts are uploaded.
+    - **LocalStorage Quota Defense**: Added automatic graceful fallback in `lib/product-shoot/storage.ts` that strips raw thumbnail data if `QuotaExceededError` is encountered, guaranteeing that prompt text and metadata are never lost.
+    - **Dialect Parsing Stop-Header Fix**: Updated `lib/product-shoot/dialects.ts` to prevent Minimax, Veo, and other platform dialect cards from greedily swallowing sequential extension beats, audio foley, or 3-shot campaign storyboards.
+    - **Quick Negative Constraint & Directorial Note Chips**: Added one-click directive chips (`+ no human faces or hands`, `+ avoid dark backgrounds`, `+ pure product only`, etc.) in `creative-controls.tsx`.
+
   - **Text Prompt Studio: Full Codebase Context Ingestion & Anti-Placeholder Engine**:
     - **Synchronous Attachment Dispatch**: Fixed React state race condition in `components/prompt-form.tsx` and `app/page.tsx` where project folder attachments were omitted on initial submission; attachments are now passed directly into `onGenerate` and mapped into `attachmentPayload`.
     - **Single Code File Ingestion**: Added fallback project context synthesis for loose single-file uploads (`att.codeFiles`), ensuring all attached source files are bundled and formatted for API ingestion.

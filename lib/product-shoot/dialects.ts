@@ -77,19 +77,42 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
   }
 
   // 1. Extract Main Prompt
-  const mainPrompt = extractSection(raw, 'Main Shot Prompt', ['Negative Prompt', 'Runway', 'Kling', 'Veo', 'Luma', 'Minimax', 'Aspect Variants']);
+  const ALL_HEADERS = [
+    'Main Shot Prompt',
+    'Negative Prompt',
+    'Runway',
+    'Kling',
+    'Google Veo',
+    'Veo',
+    'Luma',
+    'Minimax',
+    'Hailuo',
+    'Sequential Clip Extensions',
+    'Audio & Foley Design',
+    'Audio & Foley',
+    'Strategic Ad Copy & Voiceover',
+    'Strategic Ad Copy',
+    '3-Shot Campaign Storyboard',
+    '3-Shot Campaign',
+    'Aspect Variants',
+    'Alternative Concepts',
+    'Remix Suggestions',
+    'Remix',
+  ];
+
+  const mainPrompt = extractSection(raw, 'Main Shot Prompt', ALL_HEADERS.slice(1));
 
   // 2. Extract Negative Prompt
-  const negativePrompt = extractSection(raw, 'Negative Prompt', ['Runway', 'Kling', 'Veo', 'Luma', 'Minimax', 'Aspect Variants', 'Alternative Concepts']);
+  const negativePrompt = extractSection(raw, 'Negative Prompt', ALL_HEADERS.slice(2));
 
   // 3. Extract Model Dialects
-  const runwayPrompt = extractSection(raw, 'Runway', ['Kling', 'Veo', 'Luma', 'Minimax', 'Aspect Variants', 'Alternative Concepts', 'Negative Prompt']);
-  const klingPrompt = extractSection(raw, 'Kling', ['Veo', 'Luma', 'Minimax', 'Aspect Variants', 'Alternative Concepts', 'Negative Prompt']);
-  const veoPrompt = extractSection(raw, 'Google Veo', ['Luma', 'Minimax', 'Aspect Variants', 'Alternative Concepts', 'Negative Prompt'])
-    || extractSection(raw, 'Veo', ['Luma', 'Minimax', 'Aspect Variants', 'Alternative Concepts', 'Negative Prompt']);
-  const lumaPrompt = extractSection(raw, 'Luma', ['Minimax', 'Aspect Variants', 'Alternative Concepts', 'Negative Prompt']);
-  const minimaxPrompt = extractSection(raw, 'Minimax', ['Aspect Variants', 'Alternative Concepts', 'Negative Prompt', 'Remix'])
-    || extractSection(raw, 'Hailuo', ['Aspect Variants', 'Alternative Concepts', 'Negative Prompt', 'Remix']);
+  const runwayPrompt = extractSection(raw, 'Runway', ALL_HEADERS.slice(3));
+  const klingPrompt = extractSection(raw, 'Kling', ALL_HEADERS.slice(4));
+  const veoPrompt = extractSection(raw, 'Google Veo', ALL_HEADERS.slice(6))
+    || extractSection(raw, 'Veo', ALL_HEADERS.slice(6));
+  const lumaPrompt = extractSection(raw, 'Luma', ALL_HEADERS.slice(7));
+  const minimaxPrompt = extractSection(raw, 'Minimax', ALL_HEADERS.slice(9))
+    || extractSection(raw, 'Hailuo', ALL_HEADERS.slice(9));
 
   // 4. Extract Aspect Variants
   const aspectVariants: { ratio: string; prompt: string }[] = [];
