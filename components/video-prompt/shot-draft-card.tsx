@@ -58,7 +58,7 @@ export function ShotDraftCard({ draft, disabled, onApprove, onRevise }: ShotDraf
       )}
 
       {/* The 6-part shot prompt */}
-      <pre className="whitespace-pre-wrap break-words rounded-lg bg-surface-code border border-border p-2.5 text-[11px] leading-relaxed text-text-secondary font-mono max-h-56 overflow-y-auto scrollbar-thin">
+      <pre className="whitespace-pre-wrap break-words rounded-lg bg-surface-code border border-border p-2.5 text-[11px] leading-relaxed text-text-secondary font-mono max-h-56 overflow-y-auto scrollbar-thin overflow-x-hidden">
         {draftState.promptText}
       </pre>
 

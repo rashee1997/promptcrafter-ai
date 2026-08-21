@@ -76,7 +76,7 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
             Production active — story bible locked, shot drafting open
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
+          <div className="grid gap-5 md:grid-cols-[minmax(220px,26%)_minmax(0,1fr)] items-start">
             <Sidebar project={project} provider={provider} onUpdate={onUpdate} />
             <div className="space-y-5 min-w-0">
               <ChatThread

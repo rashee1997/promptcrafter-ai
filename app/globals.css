@@ -115,6 +115,7 @@
 /* ── Light Theme ── */
 :root {
   --radius: 0.625rem;
+  --header-h: 6rem; /* navbar 4rem + spacing; used by lg:sticky lg:top-[calc(var(--header-h)+0.5rem)] */
   --surface-page: oklch(0.97 0.005 260);
   --surface-card: oklch(1 0 0);
   --surface-elevated: oklch(0.98 0.01 260);

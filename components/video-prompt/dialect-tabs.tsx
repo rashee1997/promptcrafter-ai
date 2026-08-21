@@ -73,7 +73,7 @@ export function DialectTabs({ value, onChange, disabled, groupId = 'dialect', ta
         role="tablist"
         aria-label="Prompt dialect"
         aria-orientation="horizontal"
-        className="flex flex-wrap items-center gap-1.5"
+        className="flex overflow-x-auto scrollbar-thin snap-x snap-mandatory gap-1.5"
       >
       {chips.map((dialect, i) => {
         const selected = dialect.id === value;
@@ -95,7 +95,7 @@ export function DialectTabs({ value, onChange, disabled, groupId = 'dialect', ta
             onClick={() => onChange(dialect.id)}
             onKeyDown={(e) => handleKeyDown(e, i)}
             className={cn(
-              'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors',
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors shrink-0 snap-start',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60',
               selected
                 ? 'bg-brand/10 text-brand border-brand/40'

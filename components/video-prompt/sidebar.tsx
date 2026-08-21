@@ -106,7 +106,7 @@ export function Sidebar({ project, provider, onUpdate }: SidebarProps) {
     <aside
       className={cn(
         'rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-4 space-y-4 self-start w-full',
-        'max-h-[70vh] overflow-y-auto scrollbar-thin lg:max-h-none lg:overflow-visible lg:sticky lg:top-24'
+        'max-h-[70vh] overflow-y-auto scrollbar-thin lg:max-h-none lg:overflow-visible lg:sticky lg:top-[calc(var(--header-h,6rem)+0.5rem)]'
       )}
       aria-label="Active project sidebar"
     >

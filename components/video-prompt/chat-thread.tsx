@@ -195,7 +195,7 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
   }, [project]);
 
   return (
-    <div className="flex flex-col h-[62vh] min-h-[440px] gap-3">
+    <div className="flex flex-col h-[clamp(320px,60vh,720px)] gap-3">
       <Conversation className="h-full min-h-0">
         <ConversationContent>
           {messages.length === 0 && (

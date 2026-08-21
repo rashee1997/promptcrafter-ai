@@ -192,7 +192,7 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
       </div>
 
       {/* Chain */}
-      <div className="max-h-[70vh] overflow-y-auto scrollbar-thin pr-1">
+      <div className="lg:max-h-[70vh] lg:overflow-y-auto scrollbar-thin pr-1">
         <div className="flex flex-col">
           {shots.map((shot, i) => (
             <Fragment key={shot.id}>
