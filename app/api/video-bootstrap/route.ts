@@ -10,7 +10,7 @@ import { generateScreenplay } from '@/lib/video/bootstrap/screenplay';
 import { generateDirectionPlan } from '@/lib/video/bootstrap/direction';
 import { generateCharacters } from '@/lib/video/bootstrap/characters';
 import { suggestScenes } from '@/lib/video/bootstrap/scenes';
-import { generateStyle } from '@/lib/video/bootstrap/style';
+import { tailorStyle } from '@/lib/video/bootstrap/style';
 import { generateEffects } from '@/lib/video/bootstrap/effects';
 
 export const dynamic = 'force-dynamic';
@@ -111,15 +111,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ stage: 6, data: { locations } });
       }
       case 7: {
-        const options = await generateStyle({
+        const styleLibraryId = body.styleLibraryId;
+        if (!styleLibraryId) {
+          return NextResponse.json(
+            { error: 'A styleLibraryId is required for stage 7 (Phase E — curated style library).' },
+            { status: 400 }
+          );
+        }
+        const option = await tailorStyle({
           provider,
+          styleId: styleLibraryId,
           script: ctx.script ?? null,
           characters: ctx.characters ?? null,
           customInstructions,
           revisionPrompt,
-          previous: ctx.style ? [ctx.style] : null,
         });
-        return NextResponse.json({ stage: 7, data: { options } });
+        return NextResponse.json({ stage: 7, data: { options: [option] } });
       }
       case 8: {
         const options = await generateEffects({

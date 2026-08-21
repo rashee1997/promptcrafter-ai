@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Clapperboard, Sparkles } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
+import { getVisualStyle, type VisualStyle } from '@/lib/video/styles';
 import type {
   DirectionPlan,
   ScreenplayScene,
@@ -63,7 +64,7 @@ const STAGE_META: { id: VideoBootstrapStage; label: string; state: ThinkingOrbSt
   { id: 4, label: 'Direction', state: 'weaving', hint: 'Camera, lens, lighting, sound — the shooting plan' },
   { id: 5, label: 'Characters', state: 'shaping', hint: 'Cast with fixed appearance & wardrobe' },
   { id: 6, label: 'Locations', state: 'searching', hint: 'Scouted environments, fixed descriptions' },
-  { id: 7, label: 'Visual style', state: 'weaving', hint: 'One look — locks grade & stock' },
+  { id: 7, label: 'Visual style', state: 'weaving', hint: 'Pick a style from the library, optionally tailor with AI' },
   { id: 8, label: 'VFX direction', state: 'solving', hint: 'One treatment — locks effects & pacing' },
   { id: 9, label: 'Activate', state: 'breathing', hint: 'Lock style & VFX, start production' },
 ];
@@ -84,7 +85,7 @@ const BUSY_LABELS: Record<VideoBootstrapStage, string> = {
   4: 'Planning the direction…',
   5: 'Shaping the cast from the screenplay…',
   6: 'Scouting shootable locations…',
-  7: 'Weaving visual style options…',
+  7: 'Tailoring visual style to your project…',
   8: 'Solving the VFX direction…',
   9: 'Activating production…',
 };
@@ -97,7 +98,7 @@ const GENERATE_HINTS: Record<VideoBootstrapStage, string> = {
   4: 'Design the camera, lens, lighting, sound, and colour plan for every scene.',
   5: 'Extract the cast from the screenplay, with fixed appearance and wardrobe.',
   6: 'Scout shootable locations with fixed environment descriptions.',
-  7: 'Pitch distinct visual style options — grade, stock, and aspect ratio.',
+  7: 'Pick a visual style from the curated library. Optionally ask the AI to tailor it to your project.',
   8: 'Pitch VFX direction options grounded in the locked visual style.',
   9: 'Review everything and activate the production.',
 };
@@ -128,6 +129,9 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
   const [effectsOptions, setEffectsOptions] = useState<EffectsCandidate[]>([]);
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
   const [selectedEffectsId, setSelectedEffectsId] = useState<string | null>(null);
+  // Phase E4 — raw library entry id the director picked (before AI tailoring)
+  const [selectedStyleLibraryId, setSelectedStyleLibraryId] = useState<string | null>(null);
+  const [styleTailored, setStyleTailored] = useState(false);
   // Per-stage model overrides
   const [stageOverrides, setStageOverrides] = useState<Partial<Record<VideoBootstrapStage, StageModelRef>>>({});
   const [overrideFallbacks, setOverrideFallbacks] = useState<Partial<Record<VideoBootstrapStage, boolean>>>({});
@@ -206,6 +210,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         setStyleOptions(res.data.options);
         const ids = new Set(res.data.options.map((o) => o.id));
         setSelectedStyleId((prev) => (prev && ids.has(prev) ? prev : res.data.options[0]?.id ?? null));
+        setStyleTailored(true);
         break;
       }
       case 8: {
@@ -236,6 +241,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         previousContext: buildContext(stage),
         revisionPrompt,
         provider: await stageProvider(stage),
+        ...(stage === 7 && selectedStyleLibraryId ? { styleLibraryId: selectedStyleLibraryId } : {}),
       });
       applyStageData(res);
     } catch (e) {
@@ -263,7 +269,16 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
           characters,
           locations,
           ...(selectedStyle
-            ? { style: { lookAndMood: selectedStyle.lookAndMood, colorGrade: selectedStyle.colorGrade, filmStock: selectedStyle.filmStock, aspectRatio: selectedStyle.aspectRatio } }
+            ? {
+                style: {
+                  lookAndMood: selectedStyle.lookAndMood,
+                  colorGrade: selectedStyle.colorGrade,
+                  filmStock: selectedStyle.filmStock,
+                  aspectRatio: selectedStyle.aspectRatio,
+                  ...(selectedStyle.styleId ? { styleId: selectedStyle.styleId } : {}),
+                  ...(selectedStyle.cameraVocabulary ? { cameraVocabulary: selectedStyle.cameraVocabulary } : {}),
+                },
+              }
             : {}),
           ...(selectedEffects
             ? { effects: { vfxDirection: selectedEffects.vfxDirection, particleDensity: selectedEffects.particleDensity, pacing: selectedEffects.pacing } }
@@ -293,7 +308,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
       case 4: return directionPlan !== null;
       case 5: return characters.length > 0;
       case 6: return locations.length > 0;
-      case 7: return styleOptions.length > 0;
+      case 7: return !!selectedStyleLibraryId; // Phase E — has data once a library entry is picked
       case 8: return effectsOptions.length > 0;
       case 9: return true; // activation step always has data
       default: return false;
@@ -419,8 +434,10 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     if (hasStyle) {
       const s = project.storyBible.style!;
       const id = `seeded-${Date.now()}`;
-      setStyleOptions([{ id, name: 'Locked style', ...s }]);
+      setStyleOptions([{ id, name: s.styleId ?? 'Locked style', ...s }]);
       setSelectedStyleId(id);
+      if (s.styleId) setSelectedStyleLibraryId(s.styleId);
+      setStyleTailored(true);
     }
     if (hasEffects) {
       const e = project.storyBible.effects!;
@@ -534,7 +551,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
             </div>
           )}
 
-          {!stageHasData(step) && step !== 0 && step !== 9 && (
+          {!stageHasData(step) && step !== 0 && step !== 7 && step !== 9 && (
             <div className="rounded-2xl border border-border bg-surface-card/50 p-8 flex flex-col items-center gap-3 text-center">
               <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/25">
                 <Sparkles className="w-5 h-5 text-brand" aria-hidden="true" />
@@ -590,13 +607,49 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
           {step === 6 && locations.length > 0 && (
             <BootstrapScenesStep data={locations} busy={busy} onChange={setLocations} onSuggest={handleSuggestLocation} onConfirm={confirmStage} />
           )}
-          {step === 7 && styleOptions.length > 0 && (
+          {step === 7 && (
             <BootstrapStyleStep
-              data={styleOptions}
               selectedId={selectedStyleId}
+              tailoredStyle={selectedStyle ?? null}
+              libraryStyleId={selectedStyleLibraryId}
+              tailored={styleTailored}
               busy={busy}
-              onSelect={setSelectedStyleId}
-              onRegenerate={(note) => void runStage(7, note)}
+              onSelectLibrary={(id) => {
+                setSelectedStyleLibraryId(id);
+                setStyleTailored(false);
+                setStyleOptions([]);
+                setSelectedStyleId(null);
+              }}
+              onTailor={(note) => {
+                if (!selectedStyleLibraryId) return;
+                void runStage(7, note);
+              }}
+              onUseDefaults={() => {
+                if (!selectedStyleLibraryId) return;
+                const lib = getVisualStyle(selectedStyleLibraryId);
+                if (!lib) return;
+                const entry: StyleCandidate = {
+                  id: `lib-${lib.id}`,
+                  name: lib.label,
+                  lookAndMood: `${lib.label} — ${lib.promptTokens.slice(0, 3).join(', ')}`,
+                  colorGrade: lib.promptTokens.includes('rich matte colors with tactile surfaces')
+                    ? 'rich matte colors, tactile surfaces'
+                    : lib.promptTokens.includes('vibrant pastel palette')
+                      ? 'vibrant pastel palette'
+                      : lib.promptTokens.includes('bright cheerful palette')
+                        ? 'bright cheerful palette'
+                        : 'matched to style',
+                  filmStock: lib.cameraVocabulary === 'cinematic'
+                    ? lib.promptTokens.find((t) => t.includes('35mm') || t.includes('film grain')) ?? 'digital'
+                    : lib.label,
+                  aspectRatio: '16:9',
+                  styleId: lib.id,
+                  cameraVocabulary: lib.cameraVocabulary,
+                };
+                setStyleOptions([entry]);
+                setSelectedStyleId(entry.id);
+                setStyleTailored(true);
+              }}
               onConfirm={confirmStage}
               hasDownstreamWork={confirmed.includes(8)}
             />

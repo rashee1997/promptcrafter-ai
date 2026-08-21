@@ -23,6 +23,7 @@ import {
   type ShotSceneContext,
 } from './story-bible';
 import { getPlatformSpec } from './platforms';
+import { getVisualStyle } from './styles';
 
 /**
  * Maps character id → 1-based image index in the attached reference set.
@@ -45,7 +46,14 @@ const SIX_PART_ARCHITECTURE = `Every drafted shot prompt MUST be written as one 
 3. CAMERA: one specific motivated camera move or static framing (e.g. slow dolly-in, whip pan, handheld push, static wide) that advances the emotion.
 4. LIGHTING: the exact lighting/atmosphere treatment (locked visual style grade must be honored).
 5. ENVIRONMENT: the exact location from the Story Bible with its fixed set dressing, never a new invented space.
-6. LENS: concrete lens/focal-length language (e.g. 35mm close, 24mm wide, 85mm compression, anamorphic flare).`;
+6. LENS: __LENS_INSTRUCTION__`;
+
+/** Phase E3 — camera vocabulary gates what the LENS section may contain. */
+const LENS_INSTRUCTIONS: Record<string, string> = {
+  cinematic: 'Concrete lens/focal-length language (e.g. 35mm close, 24mm wide, 85mm compression, anamorphic flare).',
+  animated: 'Shot framing and movement language (e.g. wide establishing frame, slow push-in, tracking shot). Do NOT use film-stock or lens specs — they are meaningless for this style.',
+  graphic: 'Composition and transition language only (e.g. balanced framing, rule of thirds, clean composition). No lens or camera movement details.',
+};
 
 const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
 - Reply conversationally to the director first — one or two short sentences of intent and reasoning.
@@ -130,6 +138,13 @@ export function buildShotDraftingSystemPrompt(
   const nextShot = nextShotNumber(project);
   const lastShot = project.shots[project.shots.length - 1];
 
+  // Phase E3 — look up the visual style from the curated library.
+  const styleLib = project.storyBible?.style?.styleId
+    ? getVisualStyle(project.storyBible.style.styleId)
+    : null;
+  const cameraVocab = project.storyBible?.style?.cameraVocabulary ?? 'cinematic';
+  const lensInstruction = LENS_INSTRUCTIONS[cameraVocab] ?? LENS_INSTRUCTIONS.cinematic;
+
   // Phase 3 — look up the platform spec so the AI gets real constraints.
   const platformSpec = getPlatformSpec(project.targetPlatform);
 
@@ -141,17 +156,34 @@ export function buildShotDraftingSystemPrompt(
     ? `\n${platformSpec.draftingSystemPromptBlock}\n`
     : '';
 
+  // Phase E3 — camera vocabulary block (replaces fixed LENS instruction).
+  const cameraVocabBlock = cameraVocab !== 'cinematic'
+    ? `\nCAMERA VOCABULARY (${cameraVocab.toUpperCase()}):\n${LENS_INSTRUCTIONS[cameraVocab]}\n`
+    : '';
+
+  // Phase E3 — inject curated style prompt tokens into the system prompt.
+  const styleTokensBlock = styleLib
+    ? `\nSTYLE TOKENS (use these verbatim in shot prompts):\n${styleLib.promptTokens.join(', ')}\n`
+    : '';
+
+  // Phase E3 — inject style-specific negative tokens.
+  const styleNegativeBlock = styleLib
+    ? `\nSTYLE-SPECIFIC NEGATIVE TOKENS (always include these in negativePrompt):\n${styleLib.negativeTokens.join(', ')}\n`
+    : '';
+
+  const sixPart = SIX_PART_ARCHITECTURE.replace('__LENS_INSTRUCTION__', lensInstruction);
+
   const rules = withDuration(
     `HARD RULES:
 1. Inspect the Story Bible BEFORE drafting. Character names, visual descriptions, wardrobe, location names, environment descriptions, the locked visual style, and the locked VFX direction are NON-NEGOTIABLE and must appear verbatim — never invent a new character, a new location, or a different grade.
-2. ${SIX_PART_ARCHITECTURE}
+2. ${sixPart}
 3. Clip ceiling: every shot is ${durationFloor}–${durationMax} seconds. Compose the action so it fits the chosen duration; never draft a shot that implies longer.
 4. Keep visual style + VFX direction locked: shots may not change color grade, film stock, aspect ratio, particle density, or pacing.
 5. Continuity: each shot's continuityHandoff describes where the subject and camera end AND any scene-condition changes (wardrobe, weather, time-of-day) with the reason they changed, so the next shot can pick up without drift.
 6. Anchor every hand/prop interaction to a concrete object — never describe a hand or limb moving in empty space; give it something specific to hold, touch, or rest on (jittery/floating limbs are the #1 single-shot glitch).
 7. Do not stack contradictory descriptors in one section (e.g. "gritty realism" + "pristine, flawless skin") — pick one register per shot and hold it.
 8. ${DIALOGUE_RULES}
-9. ${NEGATIVE_PROMPT_RULES}`,
+9. ${NEGATIVE_PROMPT_RULES}${styleNegativeBlock}`,
     durationFloor,
     durationMax,
   );
@@ -239,7 +271,7 @@ ${bibleDigest}
 
 ${finalIdentityBlock}
 
-SCENE DEFAULTS — starting point for wardrobe and location conditions. You may evolve these across shots ONLY when the story motivates it (new day, after an event, weather turning for dramatic pressure). When you do, say so out loud in continuityHandoff so the next shot inherits the change instead of reverting:
+${styleTokensBlock}${cameraVocabBlock}SCENE DEFAULTS — starting point for wardrobe and location conditions. You may evolve these across shots ONLY when the story motivates it (new day, after an event, weather turning for dramatic pressure). When you do, say so out loud in continuityHandoff so the next shot inherits the change instead of reverting:
 ${sceneDefaultsContent}${wardrobeNote}
 
 CONTINUITY HANDOFF FROM THE STORYBOARD:

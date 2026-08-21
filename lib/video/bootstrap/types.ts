@@ -78,7 +78,7 @@ export interface BootstrapContext {
   effects?: EffectsCandidate | null;
 }
 
-/** POST /api/video-bootstrap body — only AI generation stages (1–5). */
+/** POST /api/video-bootstrap body — only AI generation stages (1–8). */
 export interface VideoBootstrapRequest {
   stage: APIBootstrapStage;
   intent: string;
@@ -86,6 +86,12 @@ export interface VideoBootstrapRequest {
   previousContext?: BootstrapContext;
   revisionPrompt?: string;
   provider: ProviderConfig;
+  /**
+   * Phase E4 — for stage 7 (style), the curated library entry the
+   * director selected. When present, the AI tailors this entry instead
+   * of inventing from scratch.
+   */
+  styleLibraryId?: string;
 }
 
 /** POST /api/video-bootstrap response — typed per stage (1–8). */

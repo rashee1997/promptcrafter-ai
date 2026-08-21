@@ -202,6 +202,21 @@ export interface VideoStyle {
   colorGrade: string;
   filmStock: string;
   aspectRatio: string;
+  /**
+   * Phase E — the curated library entry this style was derived from.
+   * When present, the system prompt injects the library's promptTokens
+   * and negativeTokens, and cameraVocabulary gates which camera language
+   * the shot drafter may use. Optional for backward compatibility:
+   * projects created before Phase E behave as if cinematic.
+   */
+  styleId?: string;
+  /**
+   * Phase E — gates camera language in the shot-drafting system prompt:
+   * 'cinematic' → lens / film-stock / aperture language applies.
+   * 'animated'  → framing + movement apply; no film stock or lens.
+   * 'graphic'   → composition and transitions only.
+   */
+  cameraVocabulary?: 'cinematic' | 'animated' | 'graphic';
 }
 
 export interface VideoEffects {
