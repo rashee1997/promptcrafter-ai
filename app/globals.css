@@ -198,7 +198,7 @@
 
 /* ── Defensive: prevent any future horizontal overflow from causing page-wide scroll ── */
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ── Accessibility: visible focus indicators (WCAG 2.4.7) ── */

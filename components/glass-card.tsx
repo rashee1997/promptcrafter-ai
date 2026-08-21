@@ -1,10 +1,7 @@
-'use client';
-
 import React from 'react';
-import { motion, HTMLMotionProps } from 'motion/react';
 import { cn } from '@/lib/utils';
 
-interface GlassCardProps extends HTMLMotionProps<'div'> {
+interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   variant?: 'default' | 'hoverable' | 'glowing' | 'subtle' | 'accent';
   className?: string;
@@ -33,14 +30,11 @@ export function GlassCard({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
+    <div
       className={cn(baseStyles, variantStyles[variant], className)}
       {...props}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

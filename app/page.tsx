@@ -865,9 +865,9 @@ export default function HomePage() {
             {activeTab === 'generator' && (
               <motion.div
                 key="generator"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
                 className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-0"
               >
@@ -923,9 +923,9 @@ export default function HomePage() {
             {activeTab === 'image' && (
               <motion.div
                 key="image"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
                 className="max-w-5xl mx-auto"
               >
@@ -938,9 +938,9 @@ export default function HomePage() {
             {activeTab === 'video' && (
               <motion.div
                 key="video"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
                 className="max-w-6xl mx-auto"
               >
@@ -1006,9 +1006,9 @@ export default function HomePage() {
             {activeTab === 'history' && (
               <motion.div
                 key="history"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
                 className="max-w-4xl mx-auto"
               >
@@ -1032,9 +1032,9 @@ export default function HomePage() {
             {activeTab === 'settings' && (
               <motion.div
                 key="settings"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
                 className="max-w-4xl mx-auto"
               >
