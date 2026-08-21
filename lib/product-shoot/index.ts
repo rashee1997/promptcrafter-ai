@@ -1,10 +1,8 @@
 /**
  * Product Shoot Studio — barrel export.
  *
- * This module is completely isolated from the Video Prompt Studio.
- * Deleting the entire `lib/product-shoot/` folder plus the corresponding
- * `components/product-shoot/` folder and two lines in `app/page.tsx`
- * removes the feature with zero impact on anything else.
+ * Provides a clean API for all types, presets, storage helpers,
+ * platform dialects, and system prompt builders.
  */
 
 export type {
@@ -14,11 +12,59 @@ export type {
   SceneGoal,
   ProductShootGenerationRequest,
   ProductShootOutput,
+  ProductShootSections,
   ShotConcept,
+  CreativeControls,
+  CameraMotion,
+  LightingStyle,
+  SurfaceMaterial,
+  PhysicsFX,
+  MotionPace,
+  HumanInteraction,
+  VideoAspectRatio,
+  VideoPlatformDialect,
+  PlatformPrompt,
+  SavedProductShoot,
 } from './types';
 
-export { SCENE_RECIPES, getRecipeById, SURPRISE_RECIPE_ID } from './scene-recipes';
+export {
+  SCENE_RECIPES,
+  getRecipeById,
+  SURPRISE_RECIPE_ID,
+} from './scene-recipes';
+
+export {
+  PRODUCT_CATEGORIES,
+  CAMERA_MOTION_PRESETS,
+  LIGHTING_PRESETS,
+  SURFACE_PRESETS,
+  PHYSICS_FX_PRESETS,
+  MOTION_PACE_PRESETS,
+  HUMAN_INTERACTION_PRESETS,
+  ASPECT_RATIOS,
+  EXAMPLE_PRODUCT_BRIEFS,
+  DEFAULT_CREATIVE_CONTROLS,
+} from './presets';
+
+export type { OptionPreset, ExampleProductBrief } from './presets';
+
+export {
+  getSavedProductShoots,
+  saveProductShoot,
+  deleteSavedProductShoot,
+  toggleFavoriteProductShoot,
+  clearAllSavedProductShoots,
+} from './storage';
+
+export {
+  PLATFORM_METAS,
+  parseProductShootOutput,
+} from './dialects';
+
+export type { PlatformMeta } from './dialects';
+
 export {
   buildProductShootSystemPrompt,
   buildProductShootUserMessage,
 } from './system-prompt';
+

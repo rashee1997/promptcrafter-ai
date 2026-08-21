@@ -35,7 +35,7 @@ const STREAM_HEADERS = {
 export async function POST(req: NextRequest) {
   try {
     const body: ProductShootGenerationRequest = await req.json();
-    const { provider, brief, recipeId, imageParts } = body;
+    const { provider, brief, recipeId, creativeControls, imageParts } = body;
 
     if (!brief?.name?.trim()) {
       return NextResponse.json(
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     // Build prompts
     const systemInstruction = buildProductShootSystemPrompt();
-    const userMessage = buildProductShootUserMessage(brief, recipe, recipeLabel);
+    const userMessage = buildProductShootUserMessage(brief, recipe, recipeLabel, creativeControls);
 
     // Build multimodal image parts for Gemini
     const geminiImageParts = imageParts.map((img) => ({

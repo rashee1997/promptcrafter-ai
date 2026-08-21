@@ -998,7 +998,10 @@ export default function HomePage() {
                       )}
                     </>
                   ) : (
-                    <ProductShootStudio activeProvider={activeProvider} />
+                    <ProductShootStudio
+                      activeProvider={activeProvider}
+                      onSelectActiveModel={handleSelectActiveModel}
+                    />
                   )}
                 </div>
               </motion.div>

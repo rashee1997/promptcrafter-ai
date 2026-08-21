@@ -1,109 +1,191 @@
 /**
  * System prompt builder for the Product Shoot Studio.
  *
- * The architecture is shaped by one rule: the product itself is not creative
- * territory. The reference image locks the product; the AI is free everywhere else.
+ * The architecture is shaped by one golden rule: the product itself is not creative
+ * territory. The reference image locks the product; the AI director is free everywhere else.
  */
 
-import type { ProductBrief } from './types';
-import type { SceneRecipe } from './types';
+import type { ProductBrief, SceneRecipe, CreativeControls } from './types';
+import {
+  CAMERA_MOTION_PRESETS,
+  LIGHTING_PRESETS,
+  SURFACE_PRESETS,
+  PHYSICS_FX_PRESETS,
+  MOTION_PACE_PRESETS,
+  HUMAN_INTERACTION_PRESETS,
+} from './presets';
 
 /**
- * Build the system prompt that instructs the model to generate a product
- * video shot package. The reference image reaches the model as an inline
- * image part; this prompt tells the model what to do with it.
+ * Build the system prompt that instructs the model to generate a professional
+ * product video shot package with model-specific platform dialects.
  */
 export function buildProductShootSystemPrompt(): string {
-  return `YOU ARE a commercial director creating a single product video shot.
+  return `YOU ARE an elite commercial director and technical prompt engineer for high-end product advertising and e-commerce video production.
 
-PRODUCT LOCK (non-negotiable):
-The attached reference image IS the product. Its shape, colour, logo, label, packaging, material and proportions must remain exactly as shown. Never restyle, redesign, recolour or reinterpret the product itself. All creative invention happens in the environment, lighting, camera, motion and human interaction AROUND it.
+PRODUCT RIGIDITY LOCK (NON-NEGOTIABLE):
+The attached reference image IS the immutable product. Its shape, branding, logo, label typography, packaging, materials, and proportions must remain 100% stable and intact. Never restyle, redesign, morph, or re-color the product. All creative invention happens in the environment, lighting, surface, camera choreography, atmospheric physics, and human interaction AROUND it. Exactly one product per scene.
 
-ONE PRODUCT ONLY: never introduce a second product into the frame.
+PROMPT FORMULA (5-ELEMENT STRUCTURE):
+1. SUBJECT — the immutable product as anchored in the reference image, plus any human hands/interaction.
+2. CONTEXT — the high-end setting, pedestal material, environment, and background geometry.
+3. EVENT — the physical motion, fluid dynamics, lighting sweep, or interaction happening in the world around the product.
+4. NUANCE — cinematographic style, camera choreography, lens/focal length, depth of field, color grading, and cadence.
+5. EXCLUSIONS — explicit distortion preventions (warped logos, distorted labels, extra products, melting geometry).
 
-CREATIVE MANDATE:
-Within that lock, be genuinely inventive. Do not produce a generic "product on a white background" unless the recipe explicitly calls for it. Invent a specific environment, a specific light source, a specific motion, and a specific human moment where the recipe allows one.
+PLATFORM DIALECT MASTERY:
+You must translate the commercial vision into specialized prompt formats for top video AI engines:
+- Runway Gen-3/4: Directorial camera commands (e.g. "camera pan right", "slow orbital sweep", "macro push-in", f/1.8 lens).
+- Kling 1.6/3.0: Audio-visual temporal pacing and natural human-object interaction cues.
+- Google Veo 2/3.1: Granular physical simulation, natural light caustics, and environmental rendering.
+- Luma Ray 2: High-impact physical collisions, fluid splash crowns, and texture dynamics.
+- Minimax Hailuo: High-energy commercial consistency and aesthetic flow.
 
-STRUCTURE — encode Hook, Value and CTA:
-- Open on visual surprise, dramatic motion, or immediate product relevance (the first 2–3 seconds decide whether this is watched).
-- Show the product solving a problem or fitting a desirable life.
-- End with the product readable and framed with clean space for text.
+OUTPUT FORMAT (PRODUCE EXACTLY THESE SECTIONS):
 
-PROMPT SHAPE — five elements:
-Every prompt you produce must contain these five parts, clearly labelled:
-1. SUBJECT — what appears (the product, as seen in the reference, plus any human interaction)
-2. CONTEXT — the setting, environment, and lighting
-3. EVENT — what happens (motion, action, transformation of the world around the product)
-4. NUANCE — style, camera movement, lens, colour grade, pacing
-5. EXCLUSIONS — what to avoid (start with product-distortion terms: warped logo, altered label, wrong proportions, duplicate product)
-
-OUTPUT FORMAT — produce exactly:
 ## Main Shot Prompt
-[The five-element prompt]
+[The full 5-element director's prompt with clearly formatted SUBJECT, CONTEXT, EVENT, NUANCE, and EXCLUSIONS]
 
 ## Negative Prompt
-[Product-distortion terms first, then scene-specific negatives]
+[Product-distortion terms first: "distorted label, warped logo, altered packaging, morphed text, extra product, duplicate bottles, blurry texture, flickering artifacts"]
+
+## Runway
+[Runway Gen-3/4 optimized prompt with camera motion directives and lens details]
+
+## Kling
+[Kling 1.6/3.0 optimized prompt with temporal progression and human interaction cues]
+
+## Google Veo
+[Google Veo 2/3.1 simulation prompt emphasizing lighting caustics, optical physics, and material textures]
+
+## Luma
+[Luma Ray 2 prompt focused on high-speed motion, splash/particle dynamics, and textural fidelity]
+
+## Minimax
+[Minimax Hailuo prompt optimized for vibrant commercial social ad engagement]
 
 ## Aspect Variants
 
 ### 16:9 (Landscape)
-[Prompt adapted for widescreen]
+[Adapted for widescreen horizontal framing with balanced negative space]
 
 ### 9:16 (Vertical / Mobile)
-[Prompt adapted for vertical — pacing and framing adjusted]
+[Adapted for vertical mobile feeds with bottom safe-zone clearance for UI/captions]
 
 ### 1:1 (Square)
-[Prompt adapted for square crop]
+[Adapted for square e-commerce catalog / Instagram feed]
+
+### 4:5 (Social Feed)
+[Adapted for Meta feed placement]
 
 ## Alternative Concepts
 
-### Concept 2: [Title]
-[Five-element prompt for a different creative angle]
+### Concept 2: [Creative Angle Title]
+[5-element prompt exploring a distinct visual aesthetic for this product]
 
-### Concept 3: [Title]
-[Five-element prompt for another creative angle]
+### Concept 3: [Creative Angle Title]
+[5-element prompt exploring another unique commercial staging]
 
-Keep each prompt specific and vivid — concrete light sources, concrete surfaces, concrete camera moves. Avoid vague terms like "beautiful" or "high quality".`;
+## Remix Suggestions
+- [Actionable remix 1, e.g. "Switch to high-contrast Chiaroscuro rim lighting"]
+- [Actionable remix 2, e.g. "Add a 1000fps water droplet collision splash crown"]
+- [Actionable remix 3, e.g. "Elevate on a polished Carrara marble slab"]
+- [Actionable remix 4, e.g. "Switch to vertical 9:16 UGC creator unboxing style"]
+- [Actionable remix 5, e.g. "Change to ultra slow-motion 120fps macro dolly push"]
+
+Keep every prompt concrete, photorealistic, and technically precise. Avoid fluffy adjectives like "masterpiece" or "photorealistic 8k"; instead describe tangible light sources, actual camera lenses, and authentic physical materials.`;
 }
 
 /**
  * Build the user message with the product brief, scene recipe direction,
- * and creative mandate. The images are attached as inline parts by the
- * API route — this message provides the textual context.
+ * and user-selected creative controls.
  */
 export function buildProductShootUserMessage(
   brief: ProductBrief,
   recipe: SceneRecipe | null,
-  recipeLabel: string
+  recipeLabel: string,
+  creativeControls?: CreativeControls
 ): string {
   const parts: string[] = [
-    `PRODUCT: ${brief.name}`,
+    `PRODUCT NAME: ${brief.name}`,
     brief.category ? `CATEGORY: ${brief.category}` : '',
-    `WHAT IT DOES: ${brief.description}`,
+    `WHAT IT DOES / DESCRIPTION: ${brief.description}`,
     `KEY SELLING POINT: ${brief.sellingPoint}`,
-    '',
-    'The product reference image is attached above. Treat it as the source of truth for the product\'s appearance.',
   ];
+
+  if (brief.targetAudience) {
+    parts.push(`TARGET AUDIENCE: ${brief.targetAudience}`);
+  }
+  if (brief.keyFeatures) {
+    parts.push(`KEY VISUAL FEATURES: ${brief.keyFeatures}`);
+  }
+
+  parts.push(
+    '',
+    'REFERENCE IMAGE ANCHOR:',
+    'The product reference image is attached above. It is the inviolable source of truth for the product geometry, logo, color, and packaging.'
+  );
 
   if (recipe) {
     parts.push(
       '',
       `SCENE RECIPE: ${recipe.label}`,
-      `GOAL: ${recipe.goal}`,
-      `DURATION: ~${recipe.durationHint} seconds`,
-      `PREFERRED ASPECT: ${recipe.aspectHint}`,
+      `GOAL: ${recipe.goal.toUpperCase()}`,
+      `TARGET DURATION: ~${recipe.durationHint} seconds`,
+      `PRIMARY ASPECT RATIO: ${recipe.aspectHint}`,
       '',
-      'CREATIVE DIRECTION:',
-      recipe.creativeDirection,
+      'RECIPE CREATIVE DIRECTION:',
+      recipe.creativeDirection
     );
   } else {
     parts.push(
       '',
-      `SCENE RECIPE: Surprise Me`,
-      '',
-      'No specific creative direction — use your judgment to create the most compelling single-product video shot for this product category. Follow the five-element prompt structure.',
+      `SCENE RECIPE: Surprise Me (Director's Choice)`,
+      'Invent the most compelling, high-converting commercial concept tailored specifically to this product category.'
     );
+  }
+
+  if (creativeControls) {
+    const customDirectives: string[] = [];
+
+    if (creativeControls.cameraMotion) {
+      const p = CAMERA_MOTION_PRESETS.find((c) => c.id === creativeControls.cameraMotion);
+      customDirectives.push(`CAMERA CHOREOGRAPHY: ${p ? p.keyword : creativeControls.cameraMotion}`);
+    }
+    if (creativeControls.lightingStyle) {
+      const p = LIGHTING_PRESETS.find((c) => c.id === creativeControls.lightingStyle);
+      customDirectives.push(`LIGHTING DESIGN: ${p ? p.keyword : creativeControls.lightingStyle}`);
+    }
+    if (creativeControls.surfaceMaterial) {
+      const p = SURFACE_PRESETS.find((c) => c.id === creativeControls.surfaceMaterial);
+      customDirectives.push(`SURFACE / PEDESTAL: ${p ? p.keyword : creativeControls.surfaceMaterial}`);
+    }
+    if (creativeControls.physicsFX && creativeControls.physicsFX !== 'none') {
+      const p = PHYSICS_FX_PRESETS.find((c) => c.id === creativeControls.physicsFX);
+      customDirectives.push(`PHYSICS & FX: ${p ? p.keyword : creativeControls.physicsFX}`);
+    }
+    if (creativeControls.motionPace) {
+      const p = MOTION_PACE_PRESETS.find((c) => c.id === creativeControls.motionPace);
+      customDirectives.push(`MOTION PACING: ${p ? p.keyword : creativeControls.motionPace}`);
+    }
+    if (creativeControls.humanInteraction && creativeControls.humanInteraction !== 'none-pure-product') {
+      const p = HUMAN_INTERACTION_PRESETS.find((c) => c.id === creativeControls.humanInteraction);
+      customDirectives.push(`HUMAN INTERACTION: ${p ? p.keyword : creativeControls.humanInteraction}`);
+    }
+    if (creativeControls.aspectRatio) {
+      customDirectives.push(`TARGET ASPECT RATIO: ${creativeControls.aspectRatio}`);
+    }
+    if (creativeControls.customVisualNotes) {
+      customDirectives.push(`ADDITIONAL VISUAL NOTES: ${creativeControls.customVisualNotes}`);
+    }
+    if (creativeControls.negativeConstraints) {
+      customDirectives.push(`USER NEGATIVE CONSTRAINTS: ${creativeControls.negativeConstraints}`);
+    }
+
+    if (customDirectives.length > 0) {
+      parts.push('', 'USER ART DIRECTION & CUSTOM CONTROLS:', ...customDirectives);
+    }
   }
 
   return parts.filter(Boolean).join('\n');
 }
+

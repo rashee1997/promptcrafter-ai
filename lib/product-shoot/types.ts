@@ -1,9 +1,9 @@
 /**
  * Product Shoot Studio — data contracts.
  *
- * Completely isolated from the Video Prompt Studio types. No imports from
- * types/video.ts. If this feature is deleted, removing these files has zero
- * effect on the rest of the app.
+ * Provides typed definitions for product video prompt generation, creative
+ * art direction controls, platform dialects (Runway, Kling, Veo, Luma, Minimax),
+ * output parsing, and saved storage history.
  */
 
 import type { ProviderConfig } from '@/types';
@@ -27,12 +27,83 @@ export interface ProductImage {
 export interface ProductBrief {
   /** Product name — required. */
   name: string;
-  /** Category (e.g. "skincare", "coffee", "electronics"). */
+  /** Category (e.g. "Skincare & Beauty", "Beverage & Food", "Tech & Gadgets", "Luxury & Jewelry", "Fashion & Apparel", "Home & Lifestyle"). */
   category: string;
   /** One-line "what it does" description. */
   description: string;
-  /** The single key selling point. */
+  /** The single key selling point / benefit. */
   sellingPoint: string;
+  /** Target audience / persona. */
+  targetAudience?: string;
+  /** Key features / ingredients to highlight. */
+  keyFeatures?: string;
+}
+
+// ── Creative Art Direction Controls ────────────────────────────────────
+
+export type CameraMotion =
+  | 'orbit-360'
+  | 'macro-dolly-in'
+  | 'top-down-flatlay'
+  | 'hero-low-angle-crane'
+  | 'floating-fpv-glide'
+  | 'whip-pan-reveal'
+  | 'static-lock-off';
+
+export type LightingStyle =
+  | 'luxury-chiaroscuro'
+  | 'softbox-diffused'
+  | 'golden-hour-sun'
+  | 'cyberpunk-neon'
+  | 'high-key-commercial'
+  | 'dramatic-backlit-rim'
+  | 'moody-editorial';
+
+export type SurfaceMaterial =
+  | 'carrara-marble'
+  | 'wet-black-obsidian'
+  | 'raw-concrete'
+  | 'warm-sand'
+  | 'brushed-titanium'
+  | 'velvet-drape'
+  | 'reflective-water-surface'
+  | 'floating-in-air';
+
+export type PhysicsFX =
+  | 'none'
+  | 'water-splash-crown'
+  | 'fine-mist-condensation'
+  | 'powder-explosion'
+  | 'zero-gravity-float'
+  | 'ambient-smoke-steam'
+  | 'neon-light-refraction'
+  | 'floating-botanical-petals';
+
+export type MotionPace =
+  | 'slow-mo-120fps'
+  | 'cinematic-24fps'
+  | 'fast-energy-cut'
+  | 'hyperlapse-timelapse';
+
+export type HumanInteraction =
+  | 'none-pure-product'
+  | 'hands-unboxing'
+  | 'hands-applying-routine'
+  | 'hands-holding-swatching'
+  | 'ugc-creator-demo';
+
+export type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:5';
+
+export interface CreativeControls {
+  cameraMotion?: string;
+  lightingStyle?: string;
+  surfaceMaterial?: string;
+  physicsFX?: string;
+  motionPace?: string;
+  humanInteraction?: string;
+  aspectRatio: VideoAspectRatio;
+  negativeConstraints?: string;
+  customVisualNotes?: string;
 }
 
 // ── Scene recipe ────────────────────────────────────────────────────────
@@ -51,10 +122,30 @@ export interface SceneRecipe {
   goal: SceneGoal;
   summary: string;
   durationHint: number;
-  aspectHint: '16:9' | '9:16' | '1:1';
+  aspectHint: VideoAspectRatio;
   /** Injected into the system prompt as creative direction. */
   creativeDirection: string;
   bestFor: string;
+  category?: string;
+  iconName?: string;
+}
+
+// ── Target Video Platforms ──────────────────────────────────────────────
+
+export type VideoPlatformDialect =
+  | 'master'
+  | 'runway'
+  | 'kling'
+  | 'veo'
+  | 'luma'
+  | 'minimax';
+
+export interface PlatformPrompt {
+  platform: VideoPlatformDialect;
+  title: string;
+  prompt: string;
+  parameters?: Record<string, string | number>;
+  notes?: string;
 }
 
 // ── Generation request / response ───────────────────────────────────────
@@ -63,6 +154,7 @@ export interface ProductShootGenerationRequest {
   provider: ProviderConfig;
   brief: ProductBrief;
   recipeId: string;
+  creativeControls?: CreativeControls;
   /** Base-64 image data parts sent to the model. */
   imageParts: { mimeType: string; data: string }[];
   /** Whether a vision pre-pass was used (for the visible note). */
@@ -71,22 +163,46 @@ export interface ProductShootGenerationRequest {
 
 /** One creative shot concept returned by the generation. */
 export interface ShotConcept {
-  /** Concept title / name. */
   title: string;
-  /** The main five-element prompt (subject, context, event, nuance, exclusions). */
   prompt: string;
-  /** Aspect-ratio variant of this concept. */
-  aspectVariant: { ratio: string; prompt: string };
+  aspectVariant?: { ratio: string; prompt: string };
 }
 
-/** The full generation output — a usable package. */
-export interface ProductShootOutput {
-  /** The main prompt (five-element structure). */
+/** The parsed output sections. */
+export interface ProductShootSections {
   mainPrompt: string;
-  /** Negative prompt leading with product-distortion terms. */
   negativePrompt: string;
-  /** Aspect-ratio variants (16:9, 9:16, 1:1). */
+  runwayPrompt?: string;
+  klingPrompt?: string;
+  veoPrompt?: string;
+  lumaPrompt?: string;
+  minimaxPrompt?: string;
   aspectVariants: { ratio: string; prompt: string }[];
-  /** 2–3 alternative creative concepts for the same product/recipe. */
   alternativeConcepts: ShotConcept[];
+  remixSuggestions: string[];
+}
+
+/** The full generation output structure. */
+export interface ProductShootOutput {
+  raw: string;
+  sections: ProductShootSections;
+}
+
+// ── Saved History Record ────────────────────────────────────────────────
+
+export interface SavedProductShoot {
+  id: string;
+  createdAt: number;
+  productName: string;
+  category: string;
+  brief: ProductBrief;
+  recipeId: string;
+  recipeLabel: string;
+  creativeControls: CreativeControls;
+  outputRaw: string;
+  sections: ProductShootSections;
+  modelUsed: string;
+  providerId: string;
+  imageThumbnails?: string[]; // Data URLs of reference thumbnails
+  isFavorite?: boolean;
 }
