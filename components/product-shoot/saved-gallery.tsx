@@ -139,17 +139,17 @@ export function SavedGallery({
                 className="rounded-xl border border-border bg-surface-card hover:border-brand/30 transition-all p-4 space-y-3"
               >
                 {/* Top Row: Meta & Actions */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-text-primary">
+                      <span className="text-sm font-bold text-text-primary truncate">
                         {shoot.productName}
                       </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand/10 text-brand border border-brand/20">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand/10 text-brand border border-brand/20 shrink-0">
                         {shoot.recipeLabel}
                       </span>
                       {shoot.category && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-surface-muted text-text-muted">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-surface-muted text-text-muted shrink-0">
                           {shoot.category}
                         </span>
                       )}
@@ -160,12 +160,12 @@ export function SavedGallery({
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
                     {/* Reuse in Studio */}
                     <button
                       type="button"
                       onClick={() => onReuse(shoot)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hover shadow-sm transition-all"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hover shadow-sm transition-all min-h-[32px]"
                       title="Load this brief, recipe and controls into the active canvas"
                     >
                       <RotateCcw className="w-3 h-3" />
@@ -354,8 +354,8 @@ export function SavedGallery({
                         </div>
 
                         {/* Metadata row */}
-                        <div className="flex items-center justify-between text-[10px] text-text-muted font-mono pt-2 border-t border-border/40">
-                          <span>Created {formattedDate}</span>
+                        <div className="flex items-center justify-between text-[10px] text-text-muted font-mono pt-2 border-t border-border/40 flex-wrap gap-2">
+                          <span suppressHydrationWarning>Created {formattedDate}</span>
                           <span>Model: {shoot.modelUsed}</span>
                           <span>Aspect: {shoot.creativeControls?.aspectRatio || '9:16'}</span>
                         </div>

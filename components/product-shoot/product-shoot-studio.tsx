@@ -296,21 +296,21 @@ export function ProductShootStudio({
       </AnimatePresence>
 
       {/* Main Two-Column Studio Layout */}
-      <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left column — Form & Controls */}
-        <div className="w-full lg:w-1/2 space-y-5">
+        <div className="w-full lg:col-span-5 xl:col-span-5 min-w-0 space-y-5">
           {/* 1. Product Reference Upload */}
-          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-5">
+          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-4 sm:p-5 shadow-sm">
             <ProductUploadPanel images={images} onImagesChange={setImages} />
           </div>
 
           {/* 2. Product Brief */}
-          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-5">
+          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-4 sm:p-5 shadow-sm">
             <BriefForm brief={brief} onChange={setBrief} />
           </div>
 
           {/* 3. Scene Recipe Picker */}
-          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-5">
+          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-4 sm:p-5 shadow-sm">
             <SceneRecipePicker
               selectedRecipeId={selectedRecipeId}
               onSelectRecipe={setSelectedRecipeId}
@@ -330,11 +330,11 @@ export function ProductShootStudio({
             type="button"
             onClick={() => handleGenerate()}
             disabled={!canGenerate}
-            whileHover={canGenerate ? { scale: 1.015 } : undefined}
-            whileTap={canGenerate ? { scale: 0.985 } : undefined}
+            whileHover={canGenerate ? { scale: 1.012 } : undefined}
+            whileTap={canGenerate ? { scale: 0.988 } : undefined}
             className={`
               w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3.5
-              text-sm font-semibold transition-all duration-200 shadow-md
+              text-sm font-semibold transition-all duration-200 shadow-md min-h-[48px]
               ${
                 canGenerate
                   ? 'bg-gradient-to-r from-brand via-accent to-brand text-white shadow-[0_8px_24px_var(--shadow-glow)] hover:brightness-110'
@@ -345,7 +345,7 @@ export function ProductShootStudio({
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Directing Commercial Shot Package...</span>
+                <span className="truncate">Directing Commercial Shot Package...</span>
               </>
             ) : (
               <>
@@ -356,7 +356,7 @@ export function ProductShootStudio({
           </motion.button>
 
           {!canGenerate && !isGenerating && (
-            <p className="text-[11px] text-text-muted text-center">
+            <p className="text-[11px] text-text-muted text-center px-2">
               {images.length === 0
                 ? 'Upload at least one product reference image'
                 : !brief.name.trim()
@@ -369,8 +369,8 @@ export function ProductShootStudio({
         </div>
 
         {/* Right column — Output & Dialect Deck */}
-        <div className="w-full lg:w-1/2 lg:sticky lg:top-20">
-          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-5 shadow-sm">
+        <div className="w-full lg:col-span-7 xl:col-span-7 min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto no-scrollbar scroll-smooth">
+          <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-4 sm:p-5 shadow-sm">
             <OutputPanel
               output={output}
               isGenerating={isGenerating}

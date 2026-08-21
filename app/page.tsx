@@ -942,7 +942,7 @@ export default function HomePage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                className="max-w-6xl mx-auto"
+                className="w-full max-w-[1560px] mx-auto px-2 sm:px-4 lg:px-6"
               >
                 <div className="space-y-6">
                   {/* Sub-tab switch: Projects | Product Shoot */}

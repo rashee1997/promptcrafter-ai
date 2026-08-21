@@ -173,7 +173,7 @@ export function CreativeControlsPanel({
                   {controls.generationMode === 'campaign-3shot' ? '3-Shot Multi-Arc' : 'Single Hero Shot'}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => update('generationMode', 'single')}
@@ -221,7 +221,7 @@ export function CreativeControlsPanel({
                   Level {controls.motionIntensity || 4} / 10
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-1.5">
                 {MOTION_INTENSITY_PRESETS.map((mip) => {
                   const isSelected = (controls.motionIntensity || 4) === mip.value;
                   return (
@@ -230,7 +230,7 @@ export function CreativeControlsPanel({
                       type="button"
                       onClick={() => update('motionIntensity', mip.value)}
                       title={mip.description}
-                      className={`p-2 rounded-lg border text-left transition-all ${
+                      className={`p-2 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[52px] ${
                         isSelected
                           ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
                           : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
@@ -257,7 +257,7 @@ export function CreativeControlsPanel({
                   Avoids model 10s hallucination
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-1.5">
                 {TARGET_DURATION_PRESETS.map((dp) => {
                   const isSelected = (controls.targetDuration || '5s-single') === dp.id;
                   return (
@@ -266,7 +266,7 @@ export function CreativeControlsPanel({
                       type="button"
                       onClick={() => update('targetDuration', dp.id)}
                       title={dp.description}
-                      className={`p-2 rounded-lg border text-left transition-all ${
+                      className={`p-2 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[52px] ${
                         isSelected
                           ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
                           : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
@@ -288,7 +288,7 @@ export function CreativeControlsPanel({
                 <Ratio className="w-3.5 h-3.5 text-brand" />
                 Target Video Framing / Aspect Ratio
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2">
                 {ASPECT_RATIOS.map((ar) => {
                   const isSelected = controls.aspectRatio === ar.id;
                   return (
@@ -296,7 +296,7 @@ export function CreativeControlsPanel({
                       key={ar.id}
                       type="button"
                       onClick={() => update('aspectRatio', ar.id)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between min-h-[56px] ${
                         isSelected
                           ? 'border-brand bg-brand/10 ring-2 ring-brand/30'
                           : 'border-border bg-surface-input hover:border-brand/40 hover:bg-surface-muted/40'
@@ -323,25 +323,25 @@ export function CreativeControlsPanel({
               onSelect={(id) => update('cameraMotion', id)}
             />
 
-            {/* Lighting & Atmosphere */}
+            {/* Lighting Style */}
             <ChipSelector
-              label="Lighting Design & Mood"
+              label="Lighting & Atmosphere"
               icon={Sun}
               presets={LIGHTING_PRESETS}
               selectedId={controls.lightingStyle}
               onSelect={(id) => update('lightingStyle', id)}
             />
 
-            {/* Surface / Pedestal Materials */}
+            {/* Surface / Pedestal */}
             <ChipSelector
-              label="Pedestal & Surface Material"
+              label="Pedestal / Surface Material"
               icon={Layers}
               presets={SURFACE_PRESETS}
               selectedId={controls.surfaceMaterial}
               onSelect={(id) => update('surfaceMaterial', id)}
             />
 
-            {/* Physics & Environmental FX */}
+            {/* Physics & FX */}
             <ChipSelector
               label="Physics & Environmental FX"
               icon={Sparkles}
@@ -352,50 +352,49 @@ export function CreativeControlsPanel({
 
             {/* Motion Pace */}
             <ChipSelector
-              label="Motion Pace & Shutter Cadence"
+              label="Motion Pacing / FPS"
               icon={Gauge}
               presets={MOTION_PACE_PRESETS}
               selectedId={controls.motionPace}
               onSelect={(id) => update('motionPace', id)}
             />
 
-            {/* Human Interaction / UGC Mode */}
+            {/* Human / UGC Interaction */}
             <ChipSelector
-              label="Human Interaction & Mode"
+              label="Human / UGC Interaction"
               icon={User}
               presets={HUMAN_INTERACTION_PRESETS}
               selectedId={controls.humanInteraction}
               onSelect={(id) => update('humanInteraction', id)}
             />
 
-            {/* Custom Directorial Notes */}
-            <div className="space-y-1.5 pt-1 border-t border-border/40">
-              <label htmlFor="ps-custom-notes" className="flex items-center gap-1 text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
-                <Info className="w-3.5 h-3.5 text-accent" />
-                Custom Directorial Vision Notes (Optional)
-              </label>
-              <input
-                id="ps-custom-notes"
-                type="text"
-                value={controls.customVisualNotes || ''}
-                onChange={(e) => update('customVisualNotes', e.target.value)}
-                placeholder="e.g. Floating gold foil flecks, sunrise color palette, anamorphic blue streak flares"
-                className="w-full rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
-              />
-            </div>
-
-            {/* User Negative Constraints */}
+            {/* Negative Constraints Input */}
             <div className="space-y-1.5">
-              <label htmlFor="ps-custom-negative" className="block text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
-                Additional Negative Constraints (Optional)
+              <label htmlFor="ps-neg-constraints" className="block text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+                Custom Negative Constraints
               </label>
               <input
-                id="ps-custom-negative"
+                id="ps-neg-constraints"
                 type="text"
                 value={controls.negativeConstraints || ''}
                 onChange={(e) => update('negativeConstraints', e.target.value)}
-                placeholder="e.g. no human faces, no dark shadows, no glitter, no fast camera spins"
-                className="w-full rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
+                placeholder="e.g. no human faces, avoid dark background, no fast spinning, no glare"
+                className="w-full min-w-0 rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
+              />
+            </div>
+
+            {/* Custom Visual Directorial Notes */}
+            <div className="space-y-1.5">
+              <label htmlFor="ps-custom-notes" className="block text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+                Custom Directorial Notes
+              </label>
+              <textarea
+                id="ps-custom-notes"
+                rows={2}
+                value={controls.customVisualNotes || ''}
+                onChange={(e) => update('customVisualNotes', e.target.value)}
+                placeholder="e.g. Emphasize the gold foil embossing when the light sweeps from left to right."
+                className="w-full min-w-0 rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors resize-none"
               />
             </div>
           </motion.div>

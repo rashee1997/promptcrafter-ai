@@ -53,7 +53,7 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
           <Tag className="w-3 h-3 text-brand" />
           Product Category
         </label>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 max-w-full">
           {PRODUCT_CATEGORIES.map((cat) => {
             const isSelected = brief.category.toLowerCase() === cat.toLowerCase();
             return (
@@ -61,9 +61,9 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
                 key={cat}
                 type="button"
                 onClick={() => update('category', isSelected ? '' : cat)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-150 border ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-150 border shrink-0 ${
                   isSelected
-                    ? 'bg-brand/15 text-brand border-brand/50 font-semibold'
+                    ? 'bg-brand/15 text-brand border-brand/50 font-semibold shadow-sm'
                     : 'bg-surface-input border-border text-text-secondary hover:text-text-primary hover:border-brand/30'
                 }`}
               >
@@ -78,7 +78,7 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
           value={brief.category}
           onChange={(e) => update('category', e.target.value)}
           placeholder="Or type custom category..."
-          className="w-full rounded-lg bg-surface-input border border-border px-3 py-2
+          className="w-full min-w-0 rounded-lg bg-surface-input border border-border px-3 py-2
             text-xs text-text-primary placeholder:text-text-muted
             focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/60
             transition-colors"
@@ -96,7 +96,7 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
           value={brief.description}
           onChange={(e) => update('description', e.target.value)}
           placeholder="e.g. Ultra-hydrating facial serum with 15% Vitamin C for luminous skin"
-          className="w-full rounded-lg bg-surface-input border border-border px-3 py-2
+          className="w-full min-w-0 rounded-lg bg-surface-input border border-border px-3 py-2
             text-xs text-text-primary placeholder:text-text-muted
             focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/60
             transition-colors"
@@ -115,7 +115,7 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
           value={brief.sellingPoint}
           onChange={(e) => update('sellingPoint', e.target.value)}
           placeholder="e.g. 72-hour glass-skin hydration barrier in a single dropper application"
-          className="w-full rounded-lg bg-surface-input border border-border px-3 py-2
+          className="w-full min-w-0 rounded-lg bg-surface-input border border-border px-3 py-2
             text-xs text-text-primary placeholder:text-text-muted
             focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand/60
             transition-colors"
@@ -128,13 +128,14 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="flex items-center gap-1.5 text-xs font-medium text-brand hover:text-brand-hover transition-colors"
+          aria-expanded={showAdvanced}
         >
           <ChevronDown
             className={`w-3.5 h-3.5 transition-transform duration-200 ${
               showAdvanced ? 'rotate-180' : ''
             }`}
           />
-          <span>{showAdvanced ? 'Hide additional brief details' : 'Add audience & visual details'}</span>
+          <span>{showAdvanced ? 'Hide visual & audience details' : 'Add visual details & audience persona'}</span>
         </button>
 
         <AnimatePresence>
@@ -143,6 +144,7 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
               className="space-y-3 pt-3"
             >
               <div className="space-y-1.5">
@@ -155,7 +157,7 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
                   value={brief.targetAudience || ''}
                   onChange={(e) => update('targetAudience', e.target.value)}
                   placeholder="e.g. Luxury skincare enthusiasts, Gen-Z creators, premium tech professionals"
-                  className="w-full rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
+                  className="w-full min-w-0 rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
                 />
               </div>
 
@@ -169,7 +171,7 @@ export function BriefForm({ brief, onChange }: BriefFormProps) {
                   value={brief.keyFeatures || ''}
                   onChange={(e) => update('keyFeatures', e.target.value)}
                   placeholder="e.g. Frosted amber glass bottle, gold embossed typography, dropper nozzle"
-                  className="w-full rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
+                  className="w-full min-w-0 rounded-lg bg-surface-input border border-border px-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
                 />
               </div>
             </motion.div>

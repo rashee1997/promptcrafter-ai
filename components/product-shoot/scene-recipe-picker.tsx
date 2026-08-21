@@ -115,15 +115,15 @@ export function SceneRecipePicker({
         </label>
 
         {/* Category filters */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full no-scrollbar scroll-smooth">
           {categories.map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setFilterCategory(cat)}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors whitespace-nowrap shrink-0 ${
                 filterCategory === cat
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                   : 'bg-surface-input text-text-muted hover:text-text-primary border border-border/60'
               }`}
             >
@@ -133,7 +133,7 @@ export function SceneRecipePicker({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
         {/* Surprise Me card */}
         <motion.button
           type="button"
@@ -184,7 +184,7 @@ export function SceneRecipePicker({
               onClick={() => onSelectRecipe(recipe.id)}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 20, duration: 0.18 }}
+              transition={{ delay: i * 0.02, duration: 0.18 }}
               whileHover={{ scale: 1.015 }}
               whileTap={{ scale: 0.985 }}
               className={`

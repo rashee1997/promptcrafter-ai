@@ -20,6 +20,7 @@ import type { ProductShootGenerationRequest } from '@/lib/product-shoot/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 const STREAM_HEADERS = {
   'Content-Type': 'text/plain; charset=utf-8',

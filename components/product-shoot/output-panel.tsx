@@ -247,7 +247,7 @@ export function OutputPanel({
             <div className="space-y-4">
               {/* Tab Navigation (in tabbed view mode) */}
               {viewMode === 'tabs' && (
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border/60">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-border/60 no-scrollbar scroll-smooth max-w-full">
                   {platformCards.map((card) => {
                     const isSelected = activeTab === card.id;
                     return (
@@ -255,9 +255,9 @@ export function OutputPanel({
                         key={card.id}
                         type="button"
                         onClick={() => setActiveTab(card.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                            ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                             : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                         }`}
                       >
@@ -267,13 +267,14 @@ export function OutputPanel({
                   })}
 
                   {/* Audio & Foley Tab */}
+                  {/* Audio & Foley Tab */}
                   {sections.audioDesign && (
                     <button
                       type="button"
                       onClick={() => setActiveTab('audio')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'audio'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -287,9 +288,9 @@ export function OutputPanel({
                     <button
                       type="button"
                       onClick={() => setActiveTab('adcopy')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'adcopy'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -302,9 +303,9 @@ export function OutputPanel({
                     <button
                       type="button"
                       onClick={() => setActiveTab('campaign')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'campaign'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -318,9 +319,9 @@ export function OutputPanel({
                     <button
                       type="button"
                       onClick={() => setActiveTab('extensions')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'extensions'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -333,9 +334,9 @@ export function OutputPanel({
                     <button
                       type="button"
                       onClick={() => setActiveTab('aspects')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'aspects'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -348,9 +349,9 @@ export function OutputPanel({
                     <button
                       type="button"
                       onClick={() => setActiveTab('alternatives')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'alternatives'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -363,9 +364,9 @@ export function OutputPanel({
                     <button
                       type="button"
                       onClick={() => setActiveTab('negative')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'negative'
-                          ? 'bg-danger text-white'
+                          ? 'bg-danger text-white font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-danger hover:border-danger/40'
                       }`}
                     >
