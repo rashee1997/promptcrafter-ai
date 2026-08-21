@@ -43,7 +43,7 @@ import {
 
   ThreadMessage,
 } from '@/types';
-import { ScriptTreatment, VideoProject } from '@/types/video';
+import { StoryTreatment, VideoProject } from '@/types/video';
 import {
   clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
@@ -658,7 +658,7 @@ export default function HomePage() {
   const handleCreateVideoProject = async (
     title: string,
     customInstructions: string,
-    confirmedScript?: ScriptTreatment | null
+    confirmedStory?: StoryTreatment | null
   ) => {
     const timestamp = Date.now();
     const project: VideoProject = {
@@ -671,9 +671,9 @@ export default function HomePage() {
       chatHistory: [],
       createdAt: timestamp,
       updatedAt: timestamp,
-      // Part 3 — the AI overview confirmed before creation; BootstrapFlow seeds
-      // Stage 1 from it and opens on Stage 2 instead of regenerating.
-      draftScriptOverview: confirmedScript ?? null,
+      // Part 3 — the AI story treatment confirmed before creation; BootstrapFlow
+      // seeds Stage 1 from it instead of regenerating.
+      storyTreatment: confirmedStory ?? null,
     };
     await saveVideoProject(project);
     setVideoProjects(await getVideoProjects());

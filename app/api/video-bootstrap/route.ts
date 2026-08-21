@@ -4,7 +4,10 @@ import type {
   VideoBootstrapRequest,
   VideoBootstrapStage,
 } from '@/lib/video/bootstrap/types';
-import { generateScript } from '@/lib/video/bootstrap/script';
+import { generateStoryTreatment } from '@/lib/video/bootstrap/story';
+import { generateScriptDialogue } from '@/lib/video/bootstrap/dialogue';
+import { generateScreenplay } from '@/lib/video/bootstrap/screenplay';
+import { generateDirectionPlan } from '@/lib/video/bootstrap/direction';
 import { generateCharacters } from '@/lib/video/bootstrap/characters';
 import { suggestScenes } from '@/lib/video/bootstrap/scenes';
 import { generateStyle } from '@/lib/video/bootstrap/style';
@@ -14,7 +17,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
- * Phase 3 — 5-stage AI-orchestrated project bootstrap.
+ * Phase B — 8-stage AI-orchestrated project bootstrap.
  * POST body: { stage, intent, customInstructions?, previousContext?, revisionPrompt?, provider }
  * Delegates to the matching lib/video/bootstrap module and returns typed JSON.
  */
@@ -40,17 +43,52 @@ export async function POST(req: NextRequest) {
     const ctx = (previousContext ?? {}) as BootstrapContext;
 
     switch (stage as VideoBootstrapStage) {
+      // Phase B — Story pipeline (1–4)
       case 1: {
-        const data = await generateScript({
+        const data = await generateStoryTreatment({
           provider,
           intent,
           customInstructions,
           revisionPrompt,
-          previous: ctx.script ?? null,
+          previous: ctx.storyTreatment ?? ctx.script ?? null,
         });
         return NextResponse.json({ stage: 1, data });
       }
       case 2: {
+        const data = await generateScriptDialogue({
+          provider,
+          intent,
+          storyTreatment: ctx.storyTreatment ?? null,
+          previous: ctx.scriptDialogue ?? null,
+          revisionPrompt,
+        });
+        return NextResponse.json({ stage: 2, data });
+      }
+      case 3: {
+        const data = await generateScreenplay({
+          provider,
+          intent,
+          storyTreatment: ctx.storyTreatment ?? null,
+          scriptDialogue: ctx.scriptDialogue ?? null,
+          previous: ctx.screenplay ?? null,
+          revisionPrompt,
+        });
+        return NextResponse.json({ stage: 3, data });
+      }
+      case 4: {
+        const data = await generateDirectionPlan({
+          provider,
+          intent,
+          screenplay: ctx.screenplay ?? null,
+          scriptDialogue: ctx.scriptDialogue ?? null,
+          storyTreatment: ctx.storyTreatment ?? null,
+          previous: ctx.directionPlan ?? null,
+          revisionPrompt,
+        });
+        return NextResponse.json({ stage: 4, data });
+      }
+      // Legacy pipeline (5–8, renumbered from 1–4)
+      case 5: {
         const characters = await generateCharacters({
           provider,
           intent,
@@ -59,9 +97,9 @@ export async function POST(req: NextRequest) {
           revisionPrompt,
           previous: ctx.characters ?? null,
         });
-        return NextResponse.json({ stage: 2, data: { characters } });
+        return NextResponse.json({ stage: 5, data: { characters } });
       }
-      case 3: {
+      case 6: {
         const locations = await suggestScenes({
           provider,
           intent,
@@ -70,9 +108,9 @@ export async function POST(req: NextRequest) {
           existingLocations: ctx.locations ?? null,
           revisionPrompt,
         });
-        return NextResponse.json({ stage: 3, data: { locations } });
+        return NextResponse.json({ stage: 6, data: { locations } });
       }
-      case 4: {
+      case 7: {
         const options = await generateStyle({
           provider,
           script: ctx.script ?? null,
@@ -81,9 +119,9 @@ export async function POST(req: NextRequest) {
           revisionPrompt,
           previous: ctx.style ? [ctx.style] : null,
         });
-        return NextResponse.json({ stage: 4, data: { options } });
+        return NextResponse.json({ stage: 7, data: { options } });
       }
-      case 5: {
+      case 8: {
         const options = await generateEffects({
           provider,
           script: ctx.script ?? null,
@@ -91,7 +129,7 @@ export async function POST(req: NextRequest) {
           revisionPrompt,
           previous: ctx.effects ? [ctx.effects] : null,
         });
-        return NextResponse.json({ stage: 5, data: { options } });
+        return NextResponse.json({ stage: 8, data: { options } });
       }
       default:
         return NextResponse.json(

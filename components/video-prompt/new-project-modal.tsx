@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, Check, Clapperboard, Lightbulb, Plus, RefreshCw, ScrollText, Sparkles, Users, X } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
-import type { ScriptTreatment } from '@/types/video';
+import type { StoryTreatment } from '@/types/video';
 import { runVideoBootstrap } from '@/lib/ai-client';
 import { GlassCard } from '@/components/glass-card';
 import { useFocusTrap } from '@/lib/use-focus-trap';
@@ -20,7 +20,7 @@ interface NewProjectModalProps {
   /** Called with the title and Directorial Brief when the user creates. The
    *  third arg is the AI-confirmed script treatment (Part 3), if the director
    *  took the AI overview path — null otherwise. */
-  onCreate: (title: string, customInstructions: string, confirmedScript?: ScriptTreatment | null) => void;
+  onCreate: (title: string, customInstructions: string, confirmedStory?: StoryTreatment | null) => void;
 }
 
 /** Starter chips — pre-fill the brief (or append) with one click. */
@@ -72,7 +72,7 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
   const [title, setTitle] = useState('');
   const [brief, setBrief] = useState('');
   const [characterNotes, setCharacterNotes] = useState<CharacterNote[]>([]);
-  const [overview, setOverview] = useState<ScriptTreatment | null>(null);
+  const [overview, setOverview] = useState<StoryTreatment | null>(null);
   const [view, setView] = useState<ModalView>('describe');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +147,7 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
           stage: 1,
           intent: title.trim(),
           customInstructions: buildInstructions(),
-          ...(revisionPrompt && overview ? { previousContext: { script: overview }, revisionPrompt } : {}),
+          ...(revisionPrompt && overview ? { previousContext: { storyTreatment: overview }, revisionPrompt } : {}),
           provider,
         },
         abort.signal
@@ -473,42 +473,50 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                         <p className="mt-1.5 text-sm text-text-primary leading-relaxed">{overview.logline}</p>
                       </div>
 
-                      {/* Act beats */}
+                      {/* Story acts */}
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">
-                          Act beats
+                          Story acts
                         </p>
                         <div className="grid gap-2">
-                          {overview.actBeats.map((beat, i) => (
+                          {overview.acts.map((act, i) => (
                             <div
                               key={i}
                               className="flex gap-3 rounded-xl border border-border bg-surface-card/60 p-3.5"
                             >
                               <span className="shrink-0 w-7 h-7 rounded-lg bg-brand/10 border border-brand/25 text-brand text-[10px] font-bold flex items-center justify-center tabular-nums">
-                                {i + 1}
+                                {act.act}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-text-muted">
-                                  {BEAT_LABELS[i]}
+                                  {BEAT_LABELS[i]} — {act.title}
                                 </p>
-                                <p className="mt-0.5 text-xs text-text-secondary leading-relaxed">{beat}</p>
+                                <ul className="mt-0.5 space-y-0.5">
+                                  {act.beats.map((beat: string, j: number) => (
+                                    <li key={j} className="text-xs text-text-secondary leading-relaxed">
+                                      • {beat}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      {/* Tone + overview */}
+                      {/* Premise + theme + emotional arc */}
+                      <div className="rounded-xl border border-border bg-surface-card/60 p-3.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Premise</p>
+                        <p className="mt-1 text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">{overview.premise}</p>
+                      </div>
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="rounded-xl border border-border bg-surface-card/60 p-3.5 sm:w-44 shrink-0">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Narrative tone</p>
-                          <span className="mt-1.5 inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-soft text-text-primary border border-accent/30">
-                            {overview.tone}
-                          </span>
-                        </div>
                         <div className="flex-1 rounded-xl border border-border bg-surface-card/60 p-3.5">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Overview</p>
-                          <p className="mt-1 text-xs text-text-secondary leading-relaxed">{overview.overview}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Emotional arc</p>
+                          <p className="mt-1 text-xs text-text-secondary leading-relaxed">{overview.emotionalArc}</p>
+                        </div>
+                        <div className="sm:w-44 rounded-xl border border-border bg-surface-card/60 p-3.5 shrink-0">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Theme</p>
+                          <p className="mt-1 text-xs text-text-secondary leading-relaxed">{overview.theme}</p>
                         </div>
                       </div>
 

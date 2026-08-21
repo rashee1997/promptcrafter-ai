@@ -64,6 +64,63 @@ export interface ScriptTreatment {
   overview: string;
 }
 
+/**
+ * Stage 1a — prose treatment, present tense, NO dialogue, NO scene headers.
+ * Answers: does this story work before anyone writes a screenplay?
+ */
+export interface StoryTreatment {
+  logline: string;
+  premise: string;
+  emotionalArc: string;
+  theme: string;
+  acts: { act: 1 | 2 | 3; title: string; beats: string[] }[];
+  endingImage: string;
+}
+
+/**
+ * Stage 1b — the spoken layer. Deliberately NO camera language
+ * (spec-script discipline).
+ */
+export interface ScriptDialogueDraft {
+  scenes: {
+    sceneNumber: number;
+    sceneGoal: string;
+    exchanges: { speaker: string; line: string; subtext?: string }[];
+    actionSummary: string;
+  }[];
+}
+
+/**
+ * Stage 1c — formatted screenplay scenes. This is what Phase D assigns
+ * locations against.
+ */
+export interface ScreenplayScene {
+  sceneNumber: number;
+  slugline: string;
+  interiorExterior: 'INT' | 'EXT';
+  locationId?: string;
+  timeOfDay: string;
+  presentCharacterIds: string[];
+  action: string;
+  dialogueRefs: number[];
+  estimatedShots: number;
+}
+
+/**
+ * Stage 1d — the director's plan for HOW it's shot. Camera language
+ * lives ONLY here.
+ */
+export interface DirectionPlan {
+  cameraLanguage: string;
+  lensPhilosophy: string;
+  colourPalette: string;
+  lightingApproach: string;
+  soundDesign: string;
+  visualMotif: string;
+  pacingRhythm: string;
+  perSceneNotes: { sceneNumber: number; approach: string; shotFunction: string }[];
+}
+
 export interface VideoCharacter {
   id: string;
   name: string;
@@ -282,6 +339,14 @@ export interface VideoProject {
    * here so the drafting AI knows the real constraints.
    */
   targetPlatformSubModel?: string | null;
+  /**
+   * Phase B — Story → Script → Screenplay → Direction pipeline.
+   * Optional for backward compatibility with pre-Phase-B projects.
+   */
+  storyTreatment?: StoryTreatment | null;
+  scriptDialogue?: ScriptDialogueDraft | null;
+  screenplay?: ScreenplayScene[] | null;
+  directionPlan?: DirectionPlan | null;
 }
 
 export type ThinkingOrbState =

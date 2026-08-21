@@ -6,6 +6,10 @@
 import type { ProviderConfig } from '@/types';
 import type {
   ScriptTreatment,
+  StoryTreatment,
+  ScriptDialogueDraft,
+  ScreenplayScene,
+  DirectionPlan,
   VideoCharacter,
   VideoEffects,
   VideoLocation,
@@ -13,20 +17,24 @@ import type {
 } from '@/types/video';
 
 /**
- * Phase 2 — the wizard now has 6 internal steps (0–5). Stage 0 is the
- * UI-only platform picker; Stages 1–5 are the AI generation pipeline.
+ * Phase B — the wizard now has 10 internal steps (0–9). Stage 0 is the
+ * UI-only platform picker; Stages 1–9 are the AI generation pipeline.
  */
-export type VideoBootstrapStage = 0 | 1 | 2 | 3 | 4 | 5;
+export type VideoBootstrapStage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 /**
- * The server-side API only handles AI generation stages (1–5). The platform
+ * The server-side API handles AI generation stages 1–8. The platform
  * picker (Stage 0) never hits the API.
  */
-export type APIBootstrapStage = 1 | 2 | 3 | 4 | 5;
+export type APIBootstrapStage = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /** Stage 1 output — script treatment. Defined in types/video.ts because
  *  VideoProject persists a creation-time draft of it. */
 export type { ScriptTreatment };
+export type { StoryTreatment };
+export type { ScriptDialogueDraft };
+export type { ScreenplayScene };
+export type { DirectionPlan };
 
 /** Stage 4 candidate — a visual style option (VideoStyle + picker metadata). */
 export interface StyleCandidate extends VideoStyle {
@@ -60,6 +68,10 @@ export interface EffectsProposal {
 export interface BootstrapContext {
   customInstructions?: string;
   script?: ScriptTreatment | null;
+  storyTreatment?: StoryTreatment | null;
+  scriptDialogue?: ScriptDialogueDraft | null;
+  screenplay?: ScreenplayScene[] | null;
+  directionPlan?: DirectionPlan | null;
   characters?: VideoCharacter[] | null;
   locations?: VideoLocation[] | null;
   style?: StyleCandidate | null;
@@ -76,13 +88,16 @@ export interface VideoBootstrapRequest {
   provider: ProviderConfig;
 }
 
-/** POST /api/video-bootstrap response — typed per stage (1–5). */
+/** POST /api/video-bootstrap response — typed per stage (1–8). */
 export type VideoBootstrapResponse =
-  | { stage: 1; data: ScriptTreatment }
-  | { stage: 2; data: CharactersProposal }
-  | { stage: 3; data: ScenesProposal }
-  | { stage: 4; data: StyleProposal }
-  | { stage: 5; data: EffectsProposal };
+  | { stage: 1; data: StoryTreatment }
+  | { stage: 2; data: ScriptDialogueDraft }
+  | { stage: 3; data: ScreenplayScene[] }
+  | { stage: 4; data: DirectionPlan }
+  | { stage: 5; data: CharactersProposal }
+  | { stage: 6; data: ScenesProposal }
+  | { stage: 7; data: StyleProposal }
+  | { stage: 8; data: EffectsProposal };
 
 /** POST /api/suggest-video-location body — ad-hoc location scouting. */
 export interface SuggestVideoLocationRequest {

@@ -3,17 +3,38 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Clapperboard, Sparkles } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
-import type { ThinkingOrbState, VideoCharacter, VideoLocation, VideoProject, VideoTargetPlatform } from '@/types/video';
+import type {
+  DirectionPlan,
+  ScreenplayScene,
+  ScriptDialogueDraft,
+  StoryTreatment,
+  ThinkingOrbState,
+  VideoCharacter,
+  VideoLocation,
+  VideoProject,
+  VideoTargetPlatform,
+} from '@/types/video';
 import { regenerateCharacterImagePrompt, runVideoBootstrap, suggestVideoLocations } from '@/lib/ai-client';
 import { getSavedProviders } from '@/lib/storage';
 import { saveVideoProject } from '@/lib/video-storage';
-import type { APIBootstrapStage, BootstrapContext, EffectsCandidate, ScriptTreatment, StyleCandidate, VideoBootstrapResponse, VideoBootstrapStage } from '@/lib/video/bootstrap/types';
+import type {
+  APIBootstrapStage,
+  BootstrapContext,
+  EffectsCandidate,
+  ScriptTreatment,
+  StyleCandidate,
+  VideoBootstrapResponse,
+  VideoBootstrapStage,
+} from '@/lib/video/bootstrap/types';
 import { cn } from '@/lib/utils';
 import { ThinkingOrb } from './thinking-orb';
 import { BootstrapProgress } from './bootstrap-progress';
 import { BootstrapModelSelector, type StageModelRef } from './bootstrap-model-selector';
 import { BootstrapPlatformStep } from './bootstrap-platform-step';
-import { BootstrapScriptStep } from './bootstrap-script-step';
+import { BootstrapStoryStep } from './bootstrap-story-step';
+import { BootstrapDialogueStep } from './bootstrap-dialogue-step';
+import { BootstrapScreenplayStep } from './bootstrap-screenplay-step';
+import { BootstrapDirectionStep } from './bootstrap-direction-step';
 import { BootstrapCharactersStep } from './bootstrap-characters-step';
 import { BootstrapScenesStep } from './bootstrap-scenes-step';
 import { BootstrapStyleStep } from './bootstrap-style-step';
@@ -30,50 +51,58 @@ interface BootstrapFlowProps {
 const STAGE_OVERRIDE_KEY = 'promptcrafter_video_stage_models';
 
 /**
- * Phase 2 — 6-step progress rail: Platform → Script → Characters → Locations
- * → Style → VFX. Platform is Stage 0 (UI-only, no AI generation). Stages
- * 1–5 map 1:1 onto the existing AI bootstrap pipeline (VideoBootstrapStage).
+ * Phase B — 10-step progress rail: Platform → Story → Dialogue → Screenplay →
+ * Direction → Characters → Locations → Style → VFX → Activate.
+ * Platform is Stage 0 (UI-only). Stages 1–9 are AI generation stages.
  */
 const STAGE_META: { id: VideoBootstrapStage; label: string; state: ThinkingOrbState; hint: string }[] = [
   { id: 0, label: 'Platform', state: 'breathing', hint: 'Pick one target platform before any shot is drafted' },
-  { id: 1, label: 'Script', state: 'composing', hint: 'Treatment — logline, act beats, tone' },
-  { id: 2, label: 'Characters', state: 'shaping', hint: 'Cast with fixed appearance & wardrobe' },
-  { id: 3, label: 'Locations', state: 'searching', hint: 'Scouted environments, fixed descriptions' },
-  { id: 4, label: 'Visual style', state: 'weaving', hint: 'One look — locks grade & stock' },
-  { id: 5, label: 'VFX direction', state: 'solving', hint: 'One treatment — locks effects & pacing' },
+  { id: 1, label: 'Story', state: 'composing', hint: 'Prose treatment — logline, premise, acts, emotional arc' },
+  { id: 2, label: 'Dialogue', state: 'composing', hint: 'Script — spoken lines and action, no camera language' },
+  { id: 3, label: 'Screenplay', state: 'shaping', hint: 'Formatted scenes with sluglines and shot estimates' },
+  { id: 4, label: 'Direction', state: 'weaving', hint: 'Camera, lens, lighting, sound — the shooting plan' },
+  { id: 5, label: 'Characters', state: 'shaping', hint: 'Cast with fixed appearance & wardrobe' },
+  { id: 6, label: 'Locations', state: 'searching', hint: 'Scouted environments, fixed descriptions' },
+  { id: 7, label: 'Visual style', state: 'weaving', hint: 'One look — locks grade & stock' },
+  { id: 8, label: 'VFX direction', state: 'solving', hint: 'One treatment — locks effects & pacing' },
+  { id: 9, label: 'Activate', state: 'breathing', hint: 'Lock style & VFX, start production' },
 ];
+
+/** Maps internal step (0–9) to the API stage number (1–8). */ 
+function stepToApiStage(step: VideoBootstrapStage): APIBootstrapStage | null {
+  if (step === 0 || step === 9) return null;
+  // Steps 1–4 → API stages 1–4 (story pipeline)
+  // Steps 5–8 → API stages 5–8 (legacy pipeline)
+  return step as APIBootstrapStage;
+}
 
 const BUSY_LABELS: Record<VideoBootstrapStage, string> = {
   0: 'Saving platform choice…',
-  1: 'Composing the script treatment…',
-  2: 'Shaping the cast from the treatment…',
-  3: 'Scouting shootable locations…',
-  4: 'Weaving visual style options…',
-  5: 'Solving the VFX direction…',
+  1: 'Writing the story treatment…',
+  2: 'Drafting dialogue and action…',
+  3: 'Formatting the screenplay…',
+  4: 'Planning the direction…',
+  5: 'Shaping the cast from the screenplay…',
+  6: 'Scouting shootable locations…',
+  7: 'Weaving visual style options…',
+  8: 'Solving the VFX direction…',
+  9: 'Activating production…',
 };
 
-/** Short director-facing blurb shown on each stage's explicit Generate CTA. */
 const GENERATE_HINTS: Record<VideoBootstrapStage, string> = {
   0: 'Pick a platform — every shot is written for that platform from this point on.',
-  1: 'Draft a logline, three act beats, tone, and overview from the directorial brief.',
-  2: 'Extract the cast from the confirmed treatment, with fixed appearance and wardrobe.',
-  3: 'Scout shootable locations with fixed environment descriptions.',
-  4: 'Pitch distinct visual style options — grade, stock, and aspect ratio.',
-  5: 'Pitch VFX direction options grounded in the locked visual style.',
+  1: 'Draft a prose story treatment: logline, premise, acts, emotional arc, and ending image.',
+  2: 'Write spoken lines and action descriptions from the treatment — no camera language.',
+  3: 'Format scenes with sluglines, scene numbers, and estimated shot counts.',
+  4: 'Design the camera, lens, lighting, sound, and colour plan for every scene.',
+  5: 'Extract the cast from the screenplay, with fixed appearance and wardrobe.',
+  6: 'Scout shootable locations with fixed environment descriptions.',
+  7: 'Pitch distinct visual style options — grade, stock, and aspect ratio.',
+  8: 'Pitch VFX direction options grounded in the locked visual style.',
+  9: 'Review everything and activate the production.',
 };
 
-/**
- * Phase 3 (extended) — 6-stage AI-orchestrated project bootstrap. Stage 0 is
- * a UI-only platform picker (no AI generation); Stages 1–5 run the existing
- * AI pipeline. A single intent is drafted, reviewed, and confirmed
- * stage-by-stage; the Thinking Orb animates each generation pass. Confirming
- * Stage 5 compiles the full StoryBible, flips the project to `active`
- * (locking Visual Style + VFX direction), persists it to IndexedDB, and hands
- * the updated project back to the workspace.
- */
 export function BootstrapFlow({ intent, customInstructions, provider, project, onComplete }: BootstrapFlowProps) {
-  // Internal step counter — 0 = Platform, 1 = Script, 2 = Characters,
-  // 3 = Locations, 4 = Visual style, 5 = VFX direction.
   const [step, setStep] = useState<VideoBootstrapStage>(0);
   const [confirmed, setConfirmed] = useState<VideoBootstrapStage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -86,6 +115,12 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
   const [targetPlatformSubModel, setTargetPlatformSubModel] = useState<string | null>(
     project.targetPlatformSubModel ?? null
   );
+  // Phase B — story pipeline states
+  const [storyTreatment, setStoryTreatment] = useState<StoryTreatment | null>(null);
+  const [scriptDialogue, setScriptDialogue] = useState<ScriptDialogueDraft | null>(null);
+  const [screenplay, setScreenplay] = useState<ScreenplayScene[] | null>(null);
+  const [directionPlan, setDirectionPlan] = useState<DirectionPlan | null>(null);
+  // Legacy states
   const [script, setScript] = useState<ScriptTreatment | null>(null);
   const [characters, setCharacters] = useState<VideoCharacter[]>([]);
   const [locations, setLocations] = useState<VideoLocation[]>([]);
@@ -93,23 +128,12 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
   const [effectsOptions, setEffectsOptions] = useState<EffectsCandidate[]>([]);
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
   const [selectedEffectsId, setSelectedEffectsId] = useState<string | null>(null);
-  // Task 4.5 — per-stage model overrides ({ [stage]: StageModelRef }). A ref
-  // is just { providerId, model } — never a full ProviderConfig, so API keys
-  // stay in the encrypted provider store. An unset stage falls back to the
-  // Settings-global provider, never mutating it.
+  // Per-stage model overrides
   const [stageOverrides, setStageOverrides] = useState<Partial<Record<VideoBootstrapStage, StageModelRef>>>({});
-  /** Stages whose saved override provider is missing from Settings (A9). */
   const [overrideFallbacks, setOverrideFallbacks] = useState<Partial<Record<VideoBootstrapStage, boolean>>>({});
   const busyRef = useRef(false);
   const seededRef = useRef(false);
 
-  /**
-   * Resolves the provider for a stage: the per-stage override pointer, looked
-   * up live in the saved (decrypted) provider store so the current key/model
-   * list is always used; otherwise the Settings-global provider. When the
-   * override points at a provider that was deleted from Settings, the fallback
-   * is NOT silent — a per-stage warning is surfaced (A9).
-   */
   const stageProvider = async (stage: VideoBootstrapStage): Promise<ProviderConfig> => {
     const ref = stageOverrides[stage];
     if (!ref) return provider;
@@ -127,8 +151,6 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     }
   };
 
-  // Load persisted overrides once on mount; persist every change (backward
-  // compatible: missing/empty = Settings default).
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STAGE_OVERRIDE_KEY);
@@ -137,7 +159,6 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
       const normalized: Partial<Record<VideoBootstrapStage, StageModelRef>> = {};
       for (const key of Object.keys(parsed) as unknown as VideoBootstrapStage[]) {
         const v = parsed[key] as StageModelRef & { id?: string };
-        // Normalize legacy full-ProviderConfig payloads (dev builds) to refs.
         if (v && typeof v === 'object' && typeof v.model === 'string' && typeof v.providerId === 'string') {
           normalized[key] = { providerId: v.providerId, model: v.model };
         } else if (v && typeof v === 'object' && typeof v.id === 'string' && typeof v.model === 'string') {
@@ -145,46 +166,49 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         }
       }
       setStageOverrides(normalized);
-    } catch {
-      // Corrupt override payload — keep the Settings default.
-    }
+    } catch { /* corrupt override payload */ }
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem(STAGE_OVERRIDE_KEY, JSON.stringify(stageOverrides));
-    } catch {
-      // Storage unavailable — overrides just don't persist.
-    }
+    } catch { /* storage unavailable */ }
   }, [stageOverrides]);
 
   const selectedStyle = styleOptions.find((o) => o.id === selectedStyleId) ?? null;
   const selectedEffects = effectsOptions.find((o) => o.id === selectedEffectsId) ?? null;
-  const maxReachable = Math.min(6, Math.max(0, ...confirmed) + 1);
+  const maxReachable = Math.min(9, Math.max(0, ...confirmed) + 1);
 
   function buildContext(stage: VideoBootstrapStage): BootstrapContext {
     return {
       customInstructions,
       script: script ?? null,
-      characters: stage > 2 ? characters : null,
-      locations: stage >= 3 ? locations : null,
-      style: stage > 4 ? selectedStyle : null,
-      effects: stage > 5 ? selectedEffects : null,
+      storyTreatment: storyTreatment ?? null,
+      scriptDialogue: scriptDialogue ?? null,
+      screenplay: screenplay ?? null,
+      directionPlan: directionPlan ?? null,
+      characters: stage > 5 ? characters : null,
+      locations: stage >= 6 ? locations : null,
+      style: stage > 7 ? selectedStyle : null,
+      effects: stage > 8 ? selectedEffects : null,
     };
   }
 
   function applyStageData(res: VideoBootstrapResponse) {
     switch (res.stage) {
-      case 1: setScript(res.data); break;
-      case 2: setCharacters(res.data.characters); break;
-      case 3: setLocations(res.data.locations); break;
-      case 4: {
+      case 1: setStoryTreatment(res.data); break;
+      case 2: setScriptDialogue(res.data); break;
+      case 3: setScreenplay(res.data); break;
+      case 4: setDirectionPlan(res.data); break;
+      case 5: setCharacters(res.data.characters); break;
+      case 6: setLocations(res.data.locations); break;
+      case 7: {
         setStyleOptions(res.data.options);
         const ids = new Set(res.data.options.map((o) => o.id));
         setSelectedStyleId((prev) => (prev && ids.has(prev) ? prev : res.data.options[0]?.id ?? null));
         break;
       }
-      case 5: {
+      case 8: {
         setEffectsOptions(res.data.options);
         const ids = new Set(res.data.options.map((o) => o.id));
         setSelectedEffectsId((prev) => (prev && ids.has(prev) ? prev : res.data.options[0]?.id ?? null));
@@ -194,26 +218,19 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
   }
 
   async function runStage(stage: VideoBootstrapStage, revisionPrompt?: string) {
-    // Stage 0 (Platform) is UI-only — nothing to generate.
-    if (stage === 0) return;
-
+    if (stage === 0 || stage === 9) return;
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
-      // Part 3 — once the director regenerates Stage 1 inside the wizard, the
-      // creation-time overview is stale; clear it so it never resurfaces on a
-      // later reload of the project.
       if (stage === 1 && project.draftScriptOverview) {
-        await saveVideoProject({ ...project, draftScriptOverview: null, updatedAt: Date.now() }).catch(() => {
-          // Persistence failure here must not block generation.
-        });
+        await saveVideoProject({ ...project, draftScriptOverview: null, updatedAt: Date.now() }).catch(() => {});
       }
-      // Map internal step (0-indexed) to the API stage number (1-indexed).
-      // For the API, internal steps 1–5 map 1:1 to APIBootstrapStage (1–5).
+      const apiStage = stepToApiStage(stage);
+      if (!apiStage) return;
       const res = await runVideoBootstrap({
-        stage: stage as APIBootstrapStage,
+        stage: apiStage,
         intent,
         customInstructions,
         previousContext: buildContext(stage),
@@ -235,11 +252,13 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
       const updated: VideoProject = {
         ...project,
         status: 'active',
-        // Phase 2 — persist the chosen platform and sub-model.
         ...(targetPlatform ? { targetPlatform, targetPlatformSubModel } : {}),
-        // Part 3 — the creation-time overview is consumed the moment the wizard
-        // finalizes; never let a stale draft resurface.
         draftScriptOverview: null,
+        // Phase B — persist pipeline outputs
+        ...(storyTreatment ? { storyTreatment } : {}),
+        ...(scriptDialogue ? { scriptDialogue } : {}),
+        ...(screenplay ? { screenplay } : {}),
+        ...(directionPlan ? { directionPlan } : {}),
         storyBible: {
           characters,
           locations,
@@ -265,72 +284,61 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     }
   }
 
-  /** True when a stage already has reviewed/generated data on screen. */
   function stageHasData(stage: VideoBootstrapStage): boolean {
-    return stage === 0 ? targetPlatform !== null
-      : stage === 1 ? !!script
-      : stage === 2 ? characters.length > 0
-      : stage === 3 ? locations.length > 0
-      : stage === 4 ? styleOptions.length > 0
-      : effectsOptions.length > 0;
+    switch (stage) {
+      case 0: return targetPlatform !== null;
+      case 1: return storyTreatment !== null;
+      case 2: return scriptDialogue !== null;
+      case 3: return screenplay !== null;
+      case 4: return directionPlan !== null;
+      case 5: return characters.length > 0;
+      case 6: return locations.length > 0;
+      case 7: return styleOptions.length > 0;
+      case 8: return effectsOptions.length > 0;
+      case 9: return true; // activation step always has data
+      default: return false;
+    }
   }
 
-  /** Confirm locks the stage in and advances the UI — it never auto-generates
-   *  the next stage (Issue 1). Generation is always an explicit button click. */
   function confirmStage() {
     if (busy || finalizing) return;
     setConfirmed((prev) => [...new Set([...prev, step])]);
-
-    // Stage 0 (Platform) — persist the choice to the project record.
     if (step === 0 && targetPlatform) {
-      const updated: VideoProject = {
-        ...project,
-        targetPlatform,
-        targetPlatformSubModel,
-        updatedAt: Date.now(),
-      };
-      saveVideoProject(updated).catch(() => {
-        // Persistence failure here must not block the wizard.
-      });
+      const updated: VideoProject = { ...project, targetPlatform, targetPlatformSubModel, updatedAt: Date.now() };
+      saveVideoProject(updated).catch(() => {});
     }
-
-    if (step < 5) {
+    if (step < 9) {
       setStep((step + 1) as VideoBootstrapStage);
     } else {
       void finalize();
     }
   }
 
-  /** Sidebar navigation between stages — pure navigation, no hidden
-   *  generation side effects (Issue 1). A stage without data shows its own
-   *  explicit Generate CTA. */
   function goTo(stage: VideoBootstrapStage) {
     if (busy || finalizing || stage > maxReachable || stage === step) return;
     setStep(stage);
     setError(null);
   }
 
-  /** D2 — regenerate ONE character's imagePrompt text via the Stage 2 override. */
   const handleRegenerateImagePrompt = async (character: VideoCharacter): Promise<string> => {
     return regenerateCharacterImagePrompt({
-      provider: await stageProvider(2),
+      provider: await stageProvider(5),
       character,
-      styleContext: script?.tone,
+      styleContext: storyTreatment?.theme,
     });
   };
 
-  /** D3 — re-draft just this character (keeps its id so saved images stay linked). */
   const handleRegenerateCharacter = async (character: VideoCharacter): Promise<VideoCharacter | null> => {
     try {
       const res = await runVideoBootstrap({
-        stage: 2,
+        stage: 5,
         intent,
         customInstructions,
-        previousContext: { script: script ?? null, characters: [character] },
+        previousContext: { script: script ?? null, storyTreatment: storyTreatment ?? null, characters: [character] },
         revisionPrompt: `Regenerate ONLY the character "${character.name}" — keep the same identity, role, and continuity; improve the draft.`,
-        provider: await stageProvider(2),
+        provider: await stageProvider(5),
       });
-      if (res.stage === 2 && res.data.characters.length > 0) {
+      if (res.stage === 5 && res.data.characters.length > 0) {
         return { ...res.data.characters[0], id: character.id };
       }
       return null;
@@ -344,10 +352,8 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     busyRef.current = true;
     setBusy(true);
     try {
-      // Ad-hoc "AI scout" calls reuse the Stage 3 override so scouting latency
-      // and quality match the director's choice for that stage.
       const suggestions = await suggestVideoLocations({
-        intent: hint || intent, script, style: selectedStyle, existingLocations: locations, provider: await stageProvider(3),
+        intent: hint || intent, script: script ?? null, style: selectedStyle, existingLocations: locations, provider: await stageProvider(6),
       });
       if (suggestions.length > 0) setLocations((prev) => [...prev, ...suggestions]);
       else setError('No locations suggested — try a more specific hint.');
@@ -359,33 +365,78 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
     }
   }
 
-  // Part 3 + Phase 2 — seed the wizard from persisted project state.
-  // If the director already picked a platform, confirm Stage 0 and advance.
-  // If the director already confirmed a script overview at project creation,
-  // confirm Stage 1 and open on Stage 2 — nothing auto-runs.
+  // Phase B + Part 3 — seed the wizard from persisted project state.
   useEffect(() => {
     if (seededRef.current) return;
     seededRef.current = true;
     const hasPlatform = !!project.targetPlatform;
-    const seeded = project.draftScriptOverview;
+    const hasStory = !!project.storyTreatment;
+    const hasDialogue = !!project.scriptDialogue;
+    const hasScreenplay = !!project.screenplay;
+    const hasDirection = !!project.directionPlan;
+    const hasChars = (project.storyBible?.characters?.length ?? 0) > 0;
+    const hasLocs = (project.storyBible?.locations?.length ?? 0) > 0;
+    const hasStyle = !!project.storyBible?.style;
+    const hasEffects = !!project.storyBible?.effects;
+    const legacyScript = project.draftScriptOverview;
 
-    if (hasPlatform && seeded) {
-      // Both platform and script already set — skip straight to Stage 2.
-      setScript(seeded);
-      setConfirmed([0, 1]);
-      setStep(2);
-    } else if (hasPlatform) {
-      // Platform set, no script yet — start at Stage 1 (Script).
-      setConfirmed([0]);
-      setStep(1);
-    } else if (seeded) {
-      // Script overview exists but no platform — show platform first (Stage 0).
-      // The draftScriptOverview is preserved in state and will surface when
-      // the wizard reaches Stage 1 (seedRef already consumed it).
-      setScript(seeded);
-      setStep(0);
+    // Migration: seed storyTreatment from legacy draftScriptOverview
+    if (!hasStory && legacyScript && hasPlatform) {
+      setStoryTreatment({
+        logline: legacyScript.logline,
+        premise: legacyScript.overview,
+        emotionalArc: legacyScript.actBeats.join(' → '),
+        theme: legacyScript.tone,
+        acts: legacyScript.actBeats.map((beat, i) => ({
+          act: (i + 1) as 1 | 2 | 3,
+          title: ['Setup', 'Confrontation', 'Resolution'][i] ?? 'Act',
+          beats: [beat],
+        })),
+        endingImage: '',
+      });
     }
-    // else: brand-new project — start at Stage 0 (Platform), as expected.
+
+    // Determine the highest confirmed stage
+    const confirmedStages: VideoBootstrapStage[] = [];
+    if (hasPlatform) confirmedStages.push(0);
+    if (hasStory) confirmedStages.push(1);
+    if (hasDialogue) confirmedStages.push(2);
+    if (hasScreenplay) confirmedStages.push(3);
+    if (hasDirection) confirmedStages.push(4);
+    if (hasChars) confirmedStages.push(5);
+    if (hasLocs) confirmedStages.push(6);
+    if (hasStyle) confirmedStages.push(7);
+    if (hasEffects) confirmedStages.push(8);
+
+    // Seed state from persisted project
+    if (legacyScript && !hasStory) setScript(legacyScript);
+    if (hasStory) setStoryTreatment(project.storyTreatment!);
+    if (hasDialogue) setScriptDialogue(project.scriptDialogue!);
+    if (hasScreenplay) setScreenplay(project.screenplay!);
+    if (hasDirection) setDirectionPlan(project.directionPlan!);
+    if (hasChars) setCharacters(project.storyBible.characters);
+    if (hasLocs) setLocations(project.storyBible.locations);
+    if (hasStyle) {
+      const s = project.storyBible.style!;
+      const id = `seeded-${Date.now()}`;
+      setStyleOptions([{ id, name: 'Locked style', ...s }]);
+      setSelectedStyleId(id);
+    }
+    if (hasEffects) {
+      const e = project.storyBible.effects!;
+      const id = `seeded-${Date.now()}`;
+      setEffectsOptions([{ id, name: 'Locked VFX', ...e }]);
+      setSelectedEffectsId(id);
+    }
+
+    if (confirmedStages.length > 0) {
+      setConfirmed(confirmedStages);
+      // Open at the first unconfirmed stage, or stage 9 (activate) if all done
+      const nextStage = ([0,1,2,3,4,5,6,7,8,9] as VideoBootstrapStage[]).find(
+        (s) => !confirmedStages.includes(s)
+      ) ?? 9;
+      setStep(nextStage);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -395,7 +446,6 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
 
   return (
     <div className="space-y-5">
-      {/* 6-step progress bar (extracted to keep this file under the ceiling) */}
       <BootstrapProgress
         meta={STAGE_META}
         step={step}
@@ -406,9 +456,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         stageOverrides={stageOverrides}
       />
 
-      {/* Stage header — Thinking Orb animates during generation; the per-stage
-          model selector (Task 4.5) sits beside it and overrides Settings. The
-          platform stage (0) has no generation and uses a simpler header. */}
+      {/* Stage header */}
       {step === 0 ? (
         <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-4">
           <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/25 shrink-0">
@@ -416,16 +464,13 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              Stage 1 of 6 · {meta.hint}
+              Stage 1 of 10 · {meta.hint}
             </p>
             <h3 className="mt-0.5 text-base font-bold text-text-primary truncate">
-              {stageHasData(0)
-                ? 'Platform confirmed — pick a different one or continue'
-                : 'Pick your target platform'}
+              {stageHasData(0) ? 'Platform confirmed — pick a different one or continue' : 'Pick your target platform'}
             </h3>
             <p className="mt-0.5 text-xs text-text-secondary leading-relaxed">
-              Nothing runs until you pick a platform and confirm. Every shot
-              from then on is written for that platform&apos;s constraints.
+              Nothing runs until you pick a platform and confirm. Every shot from then on is written for that platform&apos;s constraints.
             </p>
           </div>
         </div>
@@ -437,7 +482,6 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
             defaultProvider={provider}
             value={stageOverrides[step] ?? null}
             onChange={(p) => {
-              // Re-selecting a provider clears any stale fallback warning.
               setOverrideFallbacks((prev) => ({ ...prev, [step]: false }));
               setStageOverrides((prev) => {
                 const next = { ...prev };
@@ -449,23 +493,16 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
           />
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              Stage {step + 1} of 6 · {meta.hint}
+              Stage {step + 1} of 10 · {meta.hint}
             </p>
             {overrideFallbacks[step] && (
-              <p
-                role="status"
-                className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-warning/30 bg-warning/5 px-2 py-1 text-[10px] font-semibold text-warning"
-              >
+              <p role="status" className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-warning/30 bg-warning/5 px-2 py-1 text-[10px] font-semibold text-warning">
                 <Clapperboard className="w-3 h-3" aria-hidden="true" />
                 Saved override provider is no longer available — using the Settings default for this stage.
               </p>
             )}
             <h3 className="mt-0.5 text-base font-bold text-text-primary truncate">
-              {working
-                ? busyLabel
-                : stageHasData(step)
-                  ? `Review the ${meta.label.toLowerCase()} draft`
-                  : `Draft the ${meta.label.toLowerCase()}`}
+              {working ? busyLabel : stageHasData(step) ? `Review the ${meta.label.toLowerCase()} draft` : `Draft the ${meta.label.toLowerCase()}`}
             </h3>
             <p className="mt-0.5 text-xs text-text-secondary leading-relaxed">
               {working
@@ -478,7 +515,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         </div>
       )}
 
-      {/* Body — skeleton while generating, step review otherwise */}
+      {/* Body */}
       {working ? (
         <div className="rounded-2xl border border-border bg-surface-card/50 p-6 space-y-3" aria-live="polite">
           <div className="h-3 w-2/3 rounded-full bg-surface-muted animate-pulse" />
@@ -491,17 +528,13 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
             <div role="alert" className="rounded-xl border border-danger/30 bg-danger/5 p-3.5 text-xs text-danger">
               <p className="font-bold">Generation failed</p>
               <p className="mt-0.5 break-words">{error}</p>
-              <button
-                type="button"
-                onClick={() => void runStage(step)}
-                className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-muted border border-border hover:border-danger/40 transition-colors"
-              >
+              <button type="button" onClick={() => void runStage(step)} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-muted border border-border hover:border-danger/40 transition-colors">
                 Retry stage
               </button>
             </div>
           )}
 
-          {!stageHasData(step) && step !== 0 && (
+          {!stageHasData(step) && step !== 0 && step !== 9 && (
             <div className="rounded-2xl border border-border bg-surface-card/50 p-8 flex flex-col items-center gap-3 text-center">
               <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/25">
                 <Sparkles className="w-5 h-5 text-brand" aria-hidden="true" />
@@ -510,18 +543,14 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
                 <p className="text-sm font-bold text-text-primary">Draft the {meta.label.toLowerCase()}</p>
                 <p className="text-xs text-text-secondary leading-relaxed">{GENERATE_HINTS[step]}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => void runStage(step)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all"
-              >
+              <button type="button" onClick={() => void runStage(step)} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all">
                 <Sparkles className="w-4 h-4" aria-hidden="true" />
                 Generate {meta.label}
               </button>
             </div>
           )}
 
-          {/* Stage 0 — Platform picker (UI-only, no AI generation) */}
+          {/* Step 0 — Platform picker */}
           {step === 0 && (
             <div className="rounded-2xl border border-border bg-surface-card/50 p-6">
               <BootstrapPlatformStep
@@ -534,11 +563,20 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
             </div>
           )}
 
-          {/* Stages 1–5 — AI-generated steps */}
-          {step === 1 && script && (
-            <BootstrapScriptStep data={script} busy={busy} onRevise={(p) => void runStage(1, p)} onConfirm={confirmStage} />
+          {/* Steps 1–9 — AI-generated steps */}
+          {step === 1 && storyTreatment && (
+            <BootstrapStoryStep data={storyTreatment} busy={busy} onRevise={(p) => void runStage(1, p)} onConfirm={confirmStage} />
           )}
-          {step === 2 && characters.length > 0 && (
+          {step === 2 && scriptDialogue && (
+            <BootstrapDialogueStep data={scriptDialogue} busy={busy} onRevise={(p) => void runStage(2, p)} onConfirm={confirmStage} />
+          )}
+          {step === 3 && screenplay && (
+            <BootstrapScreenplayStep data={screenplay} busy={busy} onRevise={(p) => void runStage(3, p)} onConfirm={confirmStage} />
+          )}
+          {step === 4 && directionPlan && (
+            <BootstrapDirectionStep data={directionPlan} busy={busy} onRevise={(p) => void runStage(4, p)} onConfirm={confirmStage} />
+          )}
+          {step === 5 && characters.length > 0 && (
             <BootstrapCharactersStep
               data={characters}
               busy={busy}
@@ -549,37 +587,55 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
               onRegenerateCharacter={handleRegenerateCharacter}
             />
           )}
-          {step === 3 && locations.length > 0 && (
+          {step === 6 && locations.length > 0 && (
             <BootstrapScenesStep data={locations} busy={busy} onChange={setLocations} onSuggest={handleSuggestLocation} onConfirm={confirmStage} />
           )}
-          {step === 4 && styleOptions.length > 0 && (
+          {step === 7 && styleOptions.length > 0 && (
             <BootstrapStyleStep
               data={styleOptions}
               selectedId={selectedStyleId}
               busy={busy}
               onSelect={setSelectedStyleId}
-              onRegenerate={(note) => void runStage(4, note)}
+              onRegenerate={(note) => void runStage(7, note)}
               onConfirm={confirmStage}
-              hasDownstreamWork={confirmed.includes(5)}
+              hasDownstreamWork={confirmed.includes(8)}
             />
           )}
-          {step === 5 && effectsOptions.length > 0 && (
+          {step === 8 && effectsOptions.length > 0 && (
             <BootstrapEffectsStep
               data={effectsOptions}
               selectedId={selectedEffectsId}
               busy={busy}
               onSelect={setSelectedEffectsId}
-              onRegenerate={(note) => void runStage(5, note)}
+              onRegenerate={(note) => void runStage(8, note)}
               onConfirm={confirmStage}
               hasDownstreamWork={false}
             />
+          )}
+          {step === 9 && (
+            <div className="rounded-2xl border border-border bg-surface-card/50 p-6 flex flex-col items-center gap-4 text-center">
+              <div className="p-2.5 rounded-xl bg-success/10 border border-success/25">
+                <Sparkles className="w-5 h-5 text-success" aria-hidden="true" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <p className="text-sm font-bold text-text-primary">Ready to activate</p>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Story, dialogue, screenplay, direction, cast, locations, style, and VFX are all locked.
+                  Click below to activate the production.
+                </p>
+              </div>
+              <button type="button" onClick={confirmStage} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all">
+                <Sparkles className="w-4 h-4" aria-hidden="true" />
+                Activate production
+              </button>
+            </div>
           )}
         </>
       )}
 
       <p className="flex items-center gap-1.5 text-[10px] text-text-muted">
         <Clapperboard className="w-3 h-3 text-brand" aria-hidden="true" />
-        Confirming Stage 6 activates the production and locks the Visual Style &amp; VFX direction.
+        Confirming the final stage activates the production and locks Visual Style &amp; VFX direction.
       </p>
     </div>
   );
