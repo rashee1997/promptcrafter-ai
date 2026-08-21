@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Bookmark, Building2, Check, ChevronDown, Cpu, FolderOpen, Image as ImageIcon, LayoutGrid, Lightbulb, Palette as PaletteIcon, PenTool, Plus, RefreshCw, Route, Save, Shapes, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { Expandable } from '../expandable';
