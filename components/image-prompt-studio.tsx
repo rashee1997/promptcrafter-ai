@@ -30,8 +30,11 @@ import {
   ImagePromptInput,
   ImagePromptOutputFormat,
   ImagePromptReferenceImage,
+  ImageStyleRecipe,
+  LogoArchetypeRecipe,
   ProviderConfig,
 } from '@/types';
+import { AiTemplateGeneratorModal } from './image-prompt/ai-template-generator-modal';
 import { OutputPanel } from './image-prompt/output-panel';
 import { PromptForm } from './image-prompt/prompt-form';
 import { SavedGallery } from './image-prompt/saved-gallery';
@@ -85,6 +88,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [showRefine, setShowRefine] = useState(false);
   const [referenceImages, setReferenceImages] = useState<ImagePromptReferenceImage[]>([]);
   const [keepRefImages, setKeepRefImages] = useState(false);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [showAiTemplateModal, setShowAiTemplateModal] = useState(false);
 
   // ── Reverse-engineering state ──
   const [isReverseEngineering, setIsReverseEngineering] = useState(false);
@@ -124,8 +129,60 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   /** Switching modes swaps the brief anatomy; logos are square-first artifacts. */
   const handleSetMode = (next: StudioMode) => {
     setMode(next);
+    setSelectedRecipeId(null);
     if (next === 'logo') setAspectRatio('1:1');
     else setAspectRatio(DEFAULT_IMAGE_INPUT.aspectRatio);
+  };
+
+  const handleSelectImageRecipe = (recipe: ImageStyleRecipe | null) => {
+    if (!recipe) {
+      setSelectedRecipeId(null);
+      return;
+    }
+    setSelectedRecipeId(recipe.id);
+    if (!subject.trim() && recipe.config.sampleSubject) {
+      setSubject(recipe.config.sampleSubject);
+    }
+    if (recipe.config.style) setStyle(recipe.config.style);
+    if (recipe.config.camera) setCamera(recipe.config.camera);
+    if (recipe.config.lighting) setLighting(recipe.config.lighting);
+    if (recipe.config.composition) setComposition(recipe.config.composition);
+    if (recipe.config.colorGrade) setColorGrade(recipe.config.colorGrade);
+    if (recipe.config.mood) setMood(recipe.config.mood);
+    if (recipe.config.aspectRatio) setAspectRatio(recipe.config.aspectRatio);
+    if (recipe.config.negativePrompt) setNegativePrompt(recipe.config.negativePrompt);
+    if (recipe.config.resolution) setResolution(recipe.config.resolution);
+    toast.success('Style Recipe Applied', `Loaded "${recipe.label}" with matched optics & lighting.`);
+  };
+
+  const handleSelectLogoArchetype = (archetype: LogoArchetypeRecipe | null) => {
+    if (!archetype) {
+      setSelectedRecipeId(null);
+      return;
+    }
+    setSelectedRecipeId(archetype.id);
+    if (archetype.config.sampleBrandName && !brandName.trim()) {
+      setBrandName(archetype.config.sampleBrandName);
+    }
+    if (archetype.config.sampleIndustry && !industry) {
+      setIndustry(archetype.config.sampleIndustry);
+    }
+    if (archetype.config.sampleConcept && !concept) {
+      setConcept(archetype.config.sampleConcept);
+    }
+    if (archetype.config.logoType) setLogoType(archetype.config.logoType);
+    if (archetype.config.logoStyle) setLogoStyle(archetype.config.logoStyle);
+    if (archetype.config.palette) setPalette(archetype.config.palette);
+    if (archetype.config.shapeLanguage) setShapeLanguage(archetype.config.shapeLanguage);
+    if (archetype.config.typography) setTypography(archetype.config.typography);
+    if (archetype.config.lockup) setLockup(archetype.config.lockup);
+    if (archetype.config.hiddenMeaning) setHiddenMeaning(archetype.config.hiddenMeaning);
+    if (archetype.config.boldness) setBoldness(archetype.config.boldness);
+    if (archetype.config.usage && archetype.config.usage.length > 0) {
+      setUsage(archetype.config.usage);
+    }
+    if (archetype.config.negativePrompt) setNegativePrompt(archetype.config.negativePrompt);
+    toast.success('Brand Archetype Applied', `Loaded "${archetype.label}" identity architecture.`);
   };
 
   const formState: StudioFormState = {
@@ -161,6 +218,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     showRefine,
     referenceImages,
     keepRefImages,
+    selectedRecipeId,
   };
 
   const formHandlers: StudioFormHandlers = {
@@ -202,6 +260,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     updateReferenceImagePurpose: (id, purpose) =>
       setReferenceImages((prev) => prev.map((r) => (r.id === id ? { ...r, purpose } : r))),
     setKeepRefImages,
+    setSelectedRecipeId,
   };
 
   const buildInput = (): ImagePromptInput => ({
@@ -620,6 +679,9 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onReverseEngineerImage={handleReverseEngineerImage}
           isReverseEngineering={isReverseEngineering}
           reverseEngineeringId={reverseEngineeringId}
+          onSelectImageRecipe={handleSelectImageRecipe}
+          onSelectLogoArchetype={handleSelectLogoArchetype}
+          onOpenAiGenerator={() => setShowAiTemplateModal(true)}
         />
 
         {/* ── Right: Output & brief viewer ── */}
@@ -654,6 +716,17 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onRestore={handleRestore}
         />
       )}
+
+      {/* ── AI Template Architect Modal ── */}
+      <AiTemplateGeneratorModal
+        isOpen={showAiTemplateModal}
+        onClose={() => setShowAiTemplateModal(false)}
+        mode={mode}
+        activeProvider={activeProvider}
+        onApplyImageRecipe={handleSelectImageRecipe}
+        onApplyLogoArchetype={handleSelectLogoArchetype}
+      />
     </div>
   );
 }
+

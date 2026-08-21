@@ -633,10 +633,80 @@ export interface ImageEditRequest {
 }
 
 /** Response contract for Image Edit instructions. */
-export interface ImageEditResult {
-  editedPrompt: string;
-  conversationalInstruction: string;
-  deltaSummary: string;
+export interface ImageStyleRecipeConfig {
+  style?: string;
+  lighting?: string;
+  camera?: string;
+  composition?: string;
+  colorGrade?: string;
+  mood?: string;
+  renderEngine?: string;
+  aspectRatio: string;
+  resolution?: string;
+  negativePrompt?: string;
+  sampleSubject?: string;
+  sampleFullPrompt?: string;
+  directorNotes?: string;
+}
+
+export interface ImageStyleRecipe {
+  id: string;
+  label: string;
+  category: 'Editorial & Fashion' | 'Cinematic & Film' | '3D & CGI' | 'Fine Art & Graphic' | 'Sci-Fi & Cyberpunk' | 'Architecture & Spaces' | 'Custom AI' | string;
+  summary: string;
+  goal: 'photoreal' | 'cinematic' | 'artistic' | 'cgi' | 'stylized' | 'retro' | 'editorial' | string;
+  iconName?: string;
+  aspectHint: string;
+  isAiGenerated?: boolean;
+  userPromptBasis?: string;
+  createdAt?: number;
+  config: ImageStyleRecipeConfig;
+}
+
+export interface LogoArchetypeConfig {
+  logoType: string;
+  logoStyle: string;
+  palette: string;
+  shapeLanguage: string;
+  typography: string;
+  lockup: string;
+  hiddenMeaning?: string;
+  boldness: string;
+  usage: string[];
+  aspectRatio: string;
+  negativePrompt?: string;
+  sampleBrandName?: string;
+  sampleIndustry?: string;
+  sampleConcept?: string;
+  directorNotes?: string;
+}
+
+export interface LogoArchetypeRecipe {
+  id: string;
+  label: string;
+  category: 'Tech & SaaS' | 'Modern & Swiss' | 'Luxury & Heritage' | 'Creative & Modern' | 'Artisan & Craft' | 'Custom AI' | string;
+  summary: string;
+  goal: 'tech' | 'luxury' | 'creative' | 'vintage' | 'minimal' | 'playful' | string;
+  iconName?: string;
+  isAiGenerated?: boolean;
+  userPromptBasis?: string;
+  createdAt?: number;
+  config: LogoArchetypeConfig;
+}
+
+/** Request contract for AI-Assisted Style / Logo Template generation */
+export interface TemplateGenerationRequest {
+  provider: ProviderConfig;
+  prompt: string;
+  mode: 'image' | 'logo';
+  contextCategory?: string;
+}
+
+/** Response contract for AI-Assisted Template generation */
+export interface TemplateGenerationResult {
+  mode: 'image' | 'logo';
+  recipe?: ImageStyleRecipe;
+  archetype?: LogoArchetypeRecipe;
 }
 
 export interface GenerationRequest {

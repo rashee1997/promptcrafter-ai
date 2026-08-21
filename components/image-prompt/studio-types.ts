@@ -60,6 +60,8 @@ export interface StudioFormState {
   referenceImages: ImagePromptReferenceImage[];
   /** When true, reference images are persisted with the saved prompt. */
   keepRefImages: boolean;
+  /** Active selected scene recipe or brand archetype ID */
+  selectedRecipeId?: string | null;
 }
 
 /** Setter callbacks for the form state — mirrors the useState setters in the studio. */
@@ -98,4 +100,6 @@ export interface StudioFormHandlers {
   removeReferenceImage: (id: string) => void;
   updateReferenceImagePurpose: (id: string, purpose: ImagePromptReferenceImage['purpose']) => void;
   setKeepRefImages: (value: boolean) => void;
+  setSelectedRecipeId: (id: string | null) => void;
 }
+

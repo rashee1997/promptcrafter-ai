@@ -8,11 +8,12 @@ import { cn } from '@/lib/utils';
 import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, PURPOSE_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
 import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS, checkLogoCliches } from '@/lib/logo-prompts';
-import { ImagePlatform, ProviderConfig } from '@/types';
+import { ImagePlatform, ImagePromptReferenceImage, ProviderConfig, ImageStyleRecipe, LogoArchetypeRecipe } from '@/types';
 import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
 import { CHIP_DOTS, ChipRow } from './chip-row';
 import { ReferenceImageUpload } from './reference-image-upload';
+import { StyleRecipePicker } from './style-recipe-picker';
 import { StudioFormHandlers, StudioFormState, StudioMode } from './studio-types';
 import { CustomChipEditor, useCustomChipEntry } from './use-custom-chip-entry';
 import { PromptKit } from '@/lib/image-prompt-kits';
@@ -36,7 +37,12 @@ interface PromptFormProps {
   onReverseEngineerImage?: (img: ImagePromptReferenceImage) => void;
   isReverseEngineering?: boolean;
   reverseEngineeringId?: string | null;
+  /** Recipe / Archetype selection & AI generation */
+  onSelectImageRecipe?: (recipe: ImageStyleRecipe | null) => void;
+  onSelectLogoArchetype?: (archetype: LogoArchetypeRecipe | null) => void;
+  onOpenAiGenerator?: () => void;
 }
+
 
 /**
  * Left card — settings column, tiered into three levels of disclosure:
@@ -61,6 +67,9 @@ export function PromptForm({
   onReverseEngineerImage,
   isReverseEngineering,
   reverseEngineeringId,
+  onSelectImageRecipe,
+  onSelectLogoArchetype,
+  onOpenAiGenerator,
 }: PromptFormProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -376,12 +385,28 @@ export function PromptForm({
           )}
         </div>
 
+        {/* Predefined Scene Recipes / Brand Archetypes Deck */}
+        {(onSelectImageRecipe || onSelectLogoArchetype) && (
+          <div className="pt-1 pb-1">
+            <StyleRecipePicker
+              mode={state.mode}
+              selectedRecipeId={state.selectedRecipeId || null}
+              onSelectImageRecipe={onSelectImageRecipe || (() => {})}
+              onSelectLogoArchetype={onSelectLogoArchetype || (() => {})}
+              onOpenAiGenerator={onOpenAiGenerator || (() => {})}
+            />
+          </div>
+        )}
+
         {/* Style presets (image styles or logo styles) */}
         <div className="space-y-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            <LayoutGrid className="w-3.5 h-3.5 text-brand" />
-            {isLogo ? 'Logo style' : 'Visual style'}
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+              <LayoutGrid className="w-3.5 h-3.5 text-brand" />
+              {isLogo ? 'Fine-tune logo style' : 'Fine-tune visual style'}
+            </span>
+            <span className="text-[10px] text-text-muted">Individual Style Override</span>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
             {styleOptions.map((s, i) => {
               const selected = activeStyle === s.id;

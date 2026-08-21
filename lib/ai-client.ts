@@ -457,3 +457,22 @@ export async function suggestVideoLocations(
     return [];
   }
 }
+
+/** Image & Logo Prompt Studio — AI-Assisted Style / Logo Template generation */
+export async function generateStyleTemplate(
+  request: TemplateGenerationRequest,
+  signal?: AbortSignal
+): Promise<TemplateGenerationResult> {
+  const res = await fetch('/api/image-style-template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: `Server HTTP ${res.status}` }));
+    throw new Error(errData.error || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
