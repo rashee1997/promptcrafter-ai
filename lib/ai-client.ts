@@ -5,8 +5,12 @@ import {
   CaseEvaluationResult,
   EvaluateRequest,
   GenerationRequest,
+  ImageEditRequest,
+  ImageEditResult,
   ImagePromptGenerationRequest,
   ImagePromptRedoRequest,
+  ImageToPromptRequest,
+  ImageToPromptResult,
   PromptQuality,
   ProviderConfig,
   RefineRequest,
@@ -252,6 +256,48 @@ export async function generateImagePromptStream(
   } catch (err: any) {
     if (err.name === 'AbortError') return;
     onError(err instanceof Error ? err : new Error(String(err)));
+  }
+}
+
+/** Image Studio — Reverse Engineer an image to structured prompt anatomy. */
+export async function reverseEngineerImageToPrompt(
+  request: ImageToPromptRequest
+): Promise<ImageToPromptResult | null> {
+  try {
+    const res = await fetch('/api/image-to-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.error('reverseEngineerImageToPrompt failed:', err);
+    throw err;
+  }
+}
+
+/** Image Studio — Conversational Edit Mode ("Edit, don't re-roll"). */
+export async function editImagePrompt(
+  request: ImageEditRequest
+): Promise<ImageEditResult | null> {
+  try {
+    const res = await fetch('/api/image-edit-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.error('editImagePrompt failed:', err);
+    throw err;
   }
 }
 

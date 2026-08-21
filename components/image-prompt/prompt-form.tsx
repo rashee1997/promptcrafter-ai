@@ -32,6 +32,10 @@ interface PromptFormProps {
   onDeleteKit?: (id: string) => void;
   showKitDropdown?: boolean;
   onToggleKitDropdown?: () => void;
+  /** Image-to-Prompt reverse engineering */
+  onReverseEngineerImage?: (img: ImagePromptReferenceImage) => void;
+  isReverseEngineering?: boolean;
+  reverseEngineeringId?: string | null;
 }
 
 /**
@@ -54,6 +58,9 @@ export function PromptForm({
   onDeleteKit,
   showKitDropdown = false,
   onToggleKitDropdown,
+  onReverseEngineerImage,
+  isReverseEngineering,
+  reverseEngineeringId,
 }: PromptFormProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -511,6 +518,37 @@ export function PromptForm({
           })()}
         </div>
 
+        {/* Output format toggle: Prose / JSON / Both */}
+        <div className="space-y-2">
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-brand" />
+            Output Format
+          </span>
+          <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-surface-sunken border border-border">
+            {(['prose', 'json', 'both'] as const).map((fmt) => {
+              const selected = (state.outputFormat ?? 'prose') === fmt;
+              return (
+                <button
+                  key={fmt}
+                  type="button"
+                  onClick={() => handlers.setOutputFormat(fmt)}
+                  aria-pressed={selected}
+                  className={cn(
+                    'flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold border transition-all',
+                    selected
+                      ? 'bg-surface-card border-brand/40 text-text-primary ring-1 ring-brand/40 shadow-sm'
+                      : 'border-transparent text-text-muted hover:text-text-primary'
+                  )}
+                >
+                  <span className="capitalize">{fmt}</span>
+                  {fmt === 'json' && <span className="text-[9px] text-brand uppercase font-mono">schema</span>}
+                  {fmt === 'both' && <span className="text-[9px] text-text-muted">all</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Reference images — quick upload zone in Tier 1 */}
         {state.referenceImages.length >= 0 && (
           <div className="space-y-2">
@@ -529,6 +567,9 @@ export function PromptForm({
               onAdd={handlers.addReferenceImage}
               onRemove={handlers.removeReferenceImage}
               onUpdatePurpose={handlers.updateReferenceImagePurpose}
+              onReverseEngineer={onReverseEngineerImage}
+              isReverseEngineering={isReverseEngineering}
+              reverseEngineeringId={reverseEngineeringId}
             />
             {state.referenceImages.length > 0 && (
               <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -607,12 +648,17 @@ export function PromptForm({
                     const textMarkTypes = ['wordmark', 'lettermark', 'emblem', 'combination'];
                     const markHasText = textMarkTypes.includes(state.logoType);
                     const needsTextAccurate = hasText || markHasText;
-                    const hasTextAccurate = state.platforms.includes('ideogram') || state.platforms.includes('gemini');
-                    const hasWeakPlatforms = state.platforms.includes('midjourney') || state.platforms.includes('dalle');
-                    if (needsTextAccurate && hasWeakPlatforms && !hasTextAccurate) {
+                    const hasTextAccurate =
+                      state.platforms.includes('ideogram') ||
+                      state.platforms.includes('gemini') ||
+                      state.platforms.includes('gpt-image') ||
+                      state.platforms.includes('dalle');
+                    const hasOnlyWeakPlatforms =
+                      state.platforms.length > 0 && !hasTextAccurate;
+                    if (needsTextAccurate && hasOnlyWeakPlatforms) {
                       return (
                         <div className="mt-2 p-2.5 rounded-lg bg-warning/10 border border-warning/30 text-[10px] text-warning font-medium leading-relaxed">
-                          ⚠️ Ideogram and Gemini are most reliable for wordmark text — consider adding one for a text-accurate version.
+                          ⚠️ GPT Image 2, Ideogram, and Gemini are most reliable for wordmark text — consider adding one for a text-accurate version.
                         </div>
                       );
                     }

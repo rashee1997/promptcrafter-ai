@@ -19,6 +19,9 @@ interface ReferenceImageUploadProps {
   onAdd: (img: ImagePromptReferenceImage) => void;
   onRemove: (id: string) => void;
   onUpdatePurpose: (id: string, purpose: ImagePromptReferenceImage['purpose']) => void;
+  onReverseEngineer?: (img: ImagePromptReferenceImage) => void;
+  isReverseEngineering?: boolean;
+  reverseEngineeringId?: string | null;
 }
 
 export function ReferenceImageUpload({
@@ -26,6 +29,9 @@ export function ReferenceImageUpload({
   onAdd,
   onRemove,
   onUpdatePurpose,
+  onReverseEngineer,
+  isReverseEngineering,
+  reverseEngineeringId,
 }: ReferenceImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -165,18 +171,32 @@ export function ReferenceImageUpload({
             </p>
           </div>
 
-          {/* Remove button */}
-          <button
-            type="button"
-            onClick={() => onRemove(img.id)}
-            className="shrink-0 p-1 rounded text-text-muted hover:text-danger transition-colors"
-            title="Remove reference image"
-            aria-label="Remove reference image"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ))}
+            {/* Actions: Reverse engineer & Remove */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onReverseEngineer && (
+                <button
+                  type="button"
+                  disabled={isReverseEngineering}
+                  onClick={() => onReverseEngineer(img)}
+                  className="px-2 py-0.5 rounded text-[9px] font-semibold bg-brand/10 border border-brand/25 text-brand hover:bg-brand/20 transition-all disabled:opacity-50 flex items-center gap-1"
+                  title="Reverse engineer this image into a full prompt brief"
+                >
+                  <Tag className="w-2.5 h-2.5" />
+                  {isReverseEngineering && reverseEngineeringId === img.id ? 'Analyzing…' : 'Image-to-Prompt'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onRemove(img.id)}
+                className="shrink-0 p-1 rounded text-text-muted hover:text-danger transition-colors"
+                title="Remove reference image"
+                aria-label="Remove reference image"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
 
       {images.length > 0 && images.length < MAX_IMAGES && (
         <p className="text-[9px] text-text-muted leading-relaxed">

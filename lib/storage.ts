@@ -5,7 +5,7 @@ import { computePromptStats } from './prompt-stats';
 import { blobToDataUrl } from './compression';
 
 const DB_NAME = 'PromptCrafter_DB';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const STORE_HISTORY = 'history';
 const STORE_SESSIONS = 'sessions';
 const STORE_PROVIDERS = 'providers';
@@ -14,6 +14,8 @@ const STORE_CUSTOM_PRESETS = 'customPresets';
 const STORE_VIDEO_PROJECTS = 'videoProjects';
 const STORE_STORY_BIBLE = 'storyBible';
 const STORE_TEMPLATES = 'templates';
+const STORE_IMAGE_PROMPTS = 'imagePrompts';
+const STORE_IMAGE_KITS = 'imageKits';
 
 /**
  * Default Gemini model used whenever a request doesn't carry an explicit
@@ -179,6 +181,17 @@ export function openDB(): Promise<IDBDatabase> {
         // Store for saved prompt templates (configuration presets, not outputs).
         if (!db.objectStoreNames.contains(STORE_TEMPLATES)) {
           db.createObjectStore(STORE_TEMPLATES, { keyPath: 'id' });
+        }
+
+        // Schema v6: Image Prompt Studio gallery and reusable Brand/Subject kits
+        if (!db.objectStoreNames.contains(STORE_IMAGE_PROMPTS)) {
+          const imgStore = db.createObjectStore(STORE_IMAGE_PROMPTS, { keyPath: 'id' });
+          imgStore.createIndex('createdAt', 'createdAt', { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORE_IMAGE_KITS)) {
+          const kitStore = db.createObjectStore(STORE_IMAGE_KITS, { keyPath: 'id' });
+          kitStore.createIndex('createdAt', 'createdAt', { unique: false });
         }
 
         // Schema migration v1 -> v2: read from `history` store and populate `sessions`

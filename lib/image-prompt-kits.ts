@@ -7,15 +7,20 @@
 // Storage pattern mirrors SavedImagePrompt (separate key, synchronous API).
 // ────────────────────────────────────────────────────────────────────────────
 
-import { ImagePlatform } from '@/types';
+import { ImagePlatform, ImagePromptOutputFormat } from '@/types';
+import { auditPlaceholders, fillPlaceholders } from './placeholder';
 
 export interface PromptKit {
   id: string;
   name: string;
-  /** Reusable subject description text. */
+  /** Reusable subject description text. May include [VARIABLE] placeholders. */
   subjectDescription: string;
-  /** Style preset id (image or logo style). */
+  /** Generic / legacy style preset field. */
   stylePreset?: string;
+  /** Image mode — style preset id. */
+  imageStyle?: string;
+  /** Logo mode — style preset id. */
+  logoStyle?: string;
   /** Logo mode — color palette id. */
   palette?: string;
   /** Logo mode — industry preset id. */
@@ -28,6 +33,18 @@ export interface PromptKit {
   logoType?: string;
   /** Logo mode — concept id. */
   concept?: string;
+  /** Logo mode — shape language id. */
+  shapeLanguage?: string;
+  /** Logo mode — typography direction id. */
+  typography?: string;
+  /** Logo mode — lockup layout id. */
+  lockup?: string;
+  /** Logo mode — hidden meaning id. */
+  hiddenMeaning?: string;
+  /** Logo mode — versatility targets. */
+  usage?: string[];
+  /** Logo mode — concept boldness id. */
+  boldness?: string;
   /** Lighting preset id. */
   lighting?: string;
   /** Mood preset id. */
@@ -40,6 +57,14 @@ export interface PromptKit {
   colorGrade?: string;
   /** Aspect ratio. */
   aspectRatio?: string;
+  /** Resolution tier: '512px' | '1K' | '2K' | '4K'. */
+  resolution?: string;
+  /** In-image text to render. */
+  inImageText?: string;
+  /** Output format: 'prose' | 'json' | 'both'. */
+  outputFormat?: ImagePromptOutputFormat;
+  /** Purpose / end-use intent. */
+  purpose?: string;
   /** Platform dialects to generate. */
   platforms?: ImagePlatform[];
   /** Negative prompt guidance. */
@@ -90,3 +115,27 @@ export function deleteKit(id: string): PromptKit[] {
   }
   return next;
 }
+
+/** Check if a kit contains templated placeholders like [BRAND] or [PRODUCT]. */
+export function getKitPlaceholders(kit: PromptKit): string[] {
+  const combined = [
+    kit.subjectDescription,
+    kit.brandName,
+    kit.inImageText,
+    kit.additionalNotes,
+  ].filter(Boolean).join(' ');
+  const { keys } = auditPlaceholders(combined);
+  return keys;
+}
+
+/** Fill bracket placeholders across a kit's text fields. */
+export function fillKitPlaceholders(kit: PromptKit, values: Record<string, string>): PromptKit {
+  return {
+    ...kit,
+    subjectDescription: fillPlaceholders(kit.subjectDescription, values),
+    brandName: kit.brandName ? fillPlaceholders(kit.brandName, values) : undefined,
+    inImageText: kit.inImageText ? fillPlaceholders(kit.inImageText, values) : undefined,
+    additionalNotes: kit.additionalNotes ? fillPlaceholders(kit.additionalNotes, values) : undefined,
+  };
+}
+

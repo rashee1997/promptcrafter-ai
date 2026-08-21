@@ -262,11 +262,14 @@ export const DEFAULT_LOGO_INPUT = {
 /** Same section headers as image mode, so the existing output parser works. */
 const LOGO_PLATFORM_HEADERS: Record<ImagePlatform, string> = {
   midjourney: 'MIDJOURNEY',
-  dalle: 'DALL-E',
+  'gpt-image': 'GPT IMAGE 2',
+  dalle: 'GPT IMAGE 2',
   'stable-diffusion': 'STABLE DIFFUSION',
-  flux: 'FLUX',
+  flux: 'FLUX 2',
   ideogram: 'IDEOGRAM',
   gemini: 'GEMINI / NANO BANANA',
+  recraft: 'RECRAFT V4.1',
+  seedream: 'SEEDREAM',
 };
 
 /** Resolve a preset label from any of the logo option pools, falling back to the raw id. */
@@ -287,7 +290,7 @@ export function buildLogoPromptSystemPrompt(input: ImagePromptInput): string {
   const logoStyle = LOGO_STYLE_PRESETS.find((s) => s.id === input.logoStyle);
   const palette = LOGO_PALETTE_PRESETS.find((p) => p.id === input.palette);
   const mood = input.mood;
-  const platformList = PLATFORM_IDS.filter((p) => input.platforms.includes(p));
+  const platformList = input.platforms;
   const hasRefImages = !!input.referenceImages && input.referenceImages.length > 0;
   const refImages = input.referenceImages ?? [];
   // Logos with text are majority-text artifacts — wordmark/lettermark/emblem/
@@ -308,15 +311,22 @@ export function buildLogoPromptSystemPrompt(input: ImagePromptInput): string {
     .map((id) => {
       switch (id) {
         case 'midjourney':
-          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, parameters appended at the end: --ar ${input.aspectRatio}; use --style raw for flat/minimal marks; when the brief is a symbol-only concept (no wordmark), add --no text so the model does not garble letters; always add --no watermark, clip art, photorealistic background; if a negative prompt is provided, fold its key exclusions into --no. Put any wordmark in quotes at the end and keep it to short labels — Midjourney mangles long text.${hasWordmarkText ? ` WARNING — Midjourney is not reliable for wordmark text. Keep any text extremely short (1–2 words) or omit it entirely and recommend Ideogram or Gemini instead for text-accurate logo rendering.` : ''}`;
+          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), most important words first, parameters at the end: --ar ${input.aspectRatio}; use --style raw for flat/minimal marks; when the brief is a symbol-only concept (no wordmark), add --no text so the model does not garble letters; always add --no watermark, clip art, photorealistic background; if a negative prompt is provided, fold its key exclusions into --no. For brand reference consistency, note Omni Reference --oref <url> --ow 100 (--v 7).`;
+        case 'gpt-image':
         case 'dalle':
-          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a brand-design brief; state the mark type, lockup layout, concept meaning, and exact wordmark text in quotes; say "flat vector logo on a white background, ${input.aspectRatio} aspect ratio" and "scales cleanly to a 16px favicon"; no parameter flags, no negative-prompt syntax — exclusions are phrased as "without X" (without gradients, without shadows).${hasWordmarkText ? ` WARNING — DALL·E is not reliable for wordmark text beyond very short words (1–2 words). For longer or typographically precise wordmarks, recommend Ideogram or Gemini instead.` : ''}`;
-        case 'stable-diffusion':
-          return `STABLE DIFFUSION / FLUX dialect: dense keyword tokens with weighting syntax like (flat vector:1.2), (minimal:1.1) and restrained quality tags; put the negative prompt on its own line starting with "Negative prompt:" and always include text artifacts, garbled letters, watermark, clip art, photorealistic background (drop gradients/shadows if the style is flat); add a final sampler line "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras"; keep any in-image text to short labels.`;
-        case 'ideogram':
-          return `IDEOGRAM dialect: natural-language prompt optimized for legible in-image text — Ideogram is the strongest typography model, so put the exact wordmark in quotes, describe the typeface (weight, case, spacing), and make the lockup layout explicit (centered emblem, icon left of name); avoid cluttered backgrounds that blur text.`;
+          return `GPT IMAGE 2 dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) formatted for OpenAI's reasoning image model with Thinking mode. State the mark type, lockup layout, concept meaning, and exact wordmark text in quotes; say "flat vector logo on a solid white background, ${input.aspectRatio} aspect ratio" and "scales cleanly to a 16px favicon"; specify typography, tracking, and contrast. GPT Image 2 is arena #1 for typography accuracy.`;
         case 'gemini':
-          return `GEMINI / NANO BANANA dialect: a natural-language creative brief in full sentences — act like a brand designer, not a keyword list. Open with a strong verb ("Design", "Create", "Craft") and follow the formula [Brand/subject] + [Concept & meaning] + [Mark type & lockup] + [Style idiom] + [Shape language] + [Palette, max three colors, named or hexed] + [Vibe/audience] + [Technical: flat vector, white background, ${input.aspectRatio}, scales to 16px]. Put the exact wordmark in quotes and describe the typography ("heavy geometric sans-serif, uppercase, wide tracking"). Use positive framing ("without gradients" not "no gradients") and, when the mark is simple, explicitly request "scales cleanly to a 16px favicon". When the palette is monochrome, say "designed in pure black on white, high-contrast silhouette, no gradients, single-color print-ready".`;
+          return `GEMINI / NANO BANANA dialect: a natural-language creative brief in full sentences — act like a brand designer, not a keyword list. Open with a strong verb ("Design", "Create", "Craft") and follow the formula [Brand/subject] + [Concept & meaning] + [Mark type & lockup] + [Style idiom] + [Shape language] + [Palette, max three colors, named or hexed] + [Vibe/audience] + [Technical: flat vector, white background, ${input.aspectRatio}, scales to 16px]. Put the exact wordmark in quotes and describe the typography ("heavy geometric sans-serif, uppercase, wide tracking"). Use positive framing ("without gradients" not "no gradients"). When the palette is monochrome, say "designed in pure black on white, high-contrast silhouette, no gradients, single-color print-ready".`;
+        case 'recraft':
+          return `RECRAFT V4.1 dialect: optimized for native SVG vector output. State "clean vector logo, flat 2D graphic mark, isolated on white background, SVG vector format". Recraft is the premier vector generation model that eliminates raster-to-vector conversion. Describe the clean geometry, stroke weight, and palette colors.`;
+        case 'flux':
+          return `FLUX 2 dialect: natural language description with precise visual nouns and hex-color codes. Emphasize crisp vector silhouettes on solid white background. No negative prompt syntax.`;
+        case 'stable-diffusion':
+          return `STABLE DIFFUSION / SDXL dialect: dense keyword tokens with weighting syntax like (flat vector logo:1.2), (minimalist:1.1); negative prompt line starting with "Negative prompt:" (text artifacts, garbled letters, photorealistic background, 3d render); sampler line: "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras".`;
+        case 'ideogram':
+          return `IDEOGRAM 4.0 dialect: natural-language prompt optimized for legible typographic brand marks and emblems. Put exact wordmark in quotes, describe typeface weight and tracking, and state lockup geometry.`;
+        case 'seedream':
+          return `SEEDREAM 5.x dialect: high-contrast graphic design brief with precise layout and typography specification.`;
         default:
           return '';
       }

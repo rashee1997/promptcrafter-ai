@@ -143,8 +143,9 @@ export const COLOR_GRADE_PRESETS: ChipOption[] = [
   { id: 'infrared', label: 'Infrared', hint: 'Dreamlike false color, glowing foliage' },
 ];
 
-/** Output resolution — Gemini-native 1K/2K/4K; mapped to quality tags elsewhere. */
+/** Output resolution — Gemini-native 512px/1K/2K/4K; mapped to quality tags elsewhere. */
 export const RESOLUTION_OPTIONS: { id: string; label: string; hint: string }[] = [
+  { id: '512px', label: '512px', hint: 'Fast / volume draft (Nano Banana 2)' },
   { id: '1K', label: '1K', hint: 'Standard 1024px output' },
   { id: '2K', label: '2K', hint: 'High-res — large screens & prints' },
   { id: '4K', label: '4K', hint: 'Maximum detail — wallpapers & large print' },
@@ -157,16 +158,61 @@ export const PLATFORM_OPTIONS: {
   bestFor: string;
   color: string;
 }[] = [
-  { id: 'midjourney', label: 'Midjourney', hint: 'Parameters: --ar --style --stylize --no', bestFor: 'Best for mood, composition, and visual beauty — even weak prompts land in a strong place', color: 'text-[#8f8feb]' },
-  { id: 'dalle', label: 'DALL·E', hint: 'Conversational natural-language description', bestFor: 'Fast conversational iteration — quick drafts and creative exploration', color: 'text-[#7ec699]' },
-  { id: 'stable-diffusion', label: 'SD / Flux', hint: 'Weighted tokens + negative prompt', bestFor: 'Best for photorealism and large-batch generation — strong prompt adherence', color: 'text-[#e0a458]' },
-  { id: 'ideogram', label: 'Ideogram', hint: 'Text-in-image specialist', bestFor: 'Best when the image needs real, readable text — packaging, posters, signage, taglines', color: 'text-[#6fc3df]' },
+  {
+    id: 'midjourney',
+    label: 'Midjourney',
+    hint: 'V8.x / V7 --oref --ow --sref --style raw --ar',
+    bestFor: 'Best for composition, lighting & aesthetic beauty (Omni-ref --oref for character lock, --sref for style)',
+    color: 'text-[#8f8feb]',
+  },
+  {
+    id: 'gpt-image',
+    label: 'GPT Image 2',
+    hint: 'Reasoning image model · multilingual text · layout',
+    bestFor: 'Arena #1 reasoning model — unmatched in-image text, complex layout, infographics & typography',
+    color: 'text-[#7ec699]',
+  },
   {
     id: 'gemini',
     label: 'Gemini / Nano Banana',
-    hint: 'Natural-language creative brief · 2K/4K · sharp text',
-    bestFor: 'Best for complex scenes, diagrams, infographics, and reliable text rendering',
+    hint: 'Pro & 2 · 512px–4K · Web search grounding',
+    bestFor: 'Best for creative-director briefs, complex scenes, diagrams & real-time grounding',
     color: 'text-[#8ab4f8]',
+  },
+  {
+    id: 'flux',
+    label: 'Flux 2',
+    hint: 'Natural language · hex colors · multi-reference',
+    bestFor: 'Best for rapid prompt adherence, hex-color precision, and natural language scenes (no negative syntax)',
+    color: 'text-[#e879f9]',
+  },
+  {
+    id: 'stable-diffusion',
+    label: 'SDXL / SD',
+    hint: 'Weighted tokens + negative prompt + sampler',
+    bestFor: 'Best for local checkpoints, LoRAs, weighted token control & batch rendering',
+    color: 'text-[#e0a458]',
+  },
+  {
+    id: 'ideogram',
+    label: 'Ideogram 4.0',
+    hint: 'Typography specialist · posters · lettering',
+    bestFor: 'Best for stylized graphic design, typography, posters, packaging & signage',
+    color: 'text-[#6fc3df]',
+  },
+  {
+    id: 'recraft',
+    label: 'Recraft V4.1',
+    hint: 'Native vector / SVG · icon sets · clean line art',
+    bestFor: 'Best for clean SVG vector marks, flat line art, illustrations & logo design',
+    color: 'text-[#f59e0b]',
+  },
+  {
+    id: 'seedream',
+    label: 'Seedream 5.x',
+    hint: 'Fashion & portrait photorealism · multilingual',
+    bestFor: 'Leader for editorial, fashion, photorealistic portraits & multilingual text',
+    color: 'text-[#ec4899]',
   },
 ];
 
@@ -188,18 +234,61 @@ export interface PurposeOption {
 }
 
 export const PURPOSE_OPTIONS: PurposeOption[] = [
-  { id: 'mood-aesthetic', label: 'Mood & aesthetic', suggestPlatforms: ['midjourney'], reason: 'Midjourney — unmatched composition, lighting, and mood' },
-  { id: 'photorealism', label: 'Photorealism', suggestPlatforms: ['stable-diffusion'], reason: 'SD / Flux — strongest photorealism and prompt adherence' },
-  { id: 'text-readable', label: 'Text must be readable', suggestPlatforms: ['ideogram', 'gemini'], reason: 'Ideogram + Gemini — most reliable text rendering (90–95% accuracy)' },
-  { id: 'complex-scene', label: 'Complex scene or diagram', suggestPlatforms: ['gemini'], reason: 'Gemini / Nano Banana — reasons through logic, physics, and composition' },
-  { id: 'fast-iteration', label: 'Fast iteration', suggestPlatforms: ['dalle'], reason: 'DALL·E — fastest conversational creative loop' },
+  {
+    id: 'mood-aesthetic',
+    label: 'Mood & aesthetic',
+    suggestPlatforms: ['midjourney'],
+    reason: 'Midjourney — unmatched composition, lighting, and cinematic atmosphere',
+  },
+  {
+    id: 'photorealism',
+    label: 'Photorealism & portraits',
+    suggestPlatforms: ['gemini', 'seedream', 'stable-diffusion'],
+    reason: 'Gemini, Seedream & SD — authentic skin textures, photographic optics, and true-to-life lighting',
+  },
+  {
+    id: 'text-readable',
+    label: 'Text & typography',
+    suggestPlatforms: ['gpt-image', 'ideogram', 'gemini'],
+    reason: 'GPT Image 2, Ideogram 4 & Gemini — 95%+ legible lettering, slogans, packaging, and signs',
+  },
+  {
+    id: 'complex-scene',
+    label: 'Complex scene & reasoning',
+    suggestPlatforms: ['gemini', 'gpt-image'],
+    reason: 'Gemini Nano Banana & GPT Image 2 — reasons through multi-object physics, spatial logic, and infographics',
+  },
+  {
+    id: 'brand-vector',
+    label: 'Logo, vector & SVG',
+    suggestPlatforms: ['recraft', 'ideogram'],
+    reason: 'Recraft V4.1 & Ideogram — native SVG vector geometry, scalable brand marks, and clean iconography',
+  },
+  {
+    id: 'packaging-product',
+    label: 'Product & packaging',
+    suggestPlatforms: ['gpt-image', 'gemini', 'ideogram'],
+    reason: 'GPT Image 2 & Gemini — studio lighting, exact label typography, and photorealistic commercial surfaces',
+  },
+  {
+    id: 'character-consistency',
+    label: 'Character / asset consistency',
+    suggestPlatforms: ['midjourney', 'flux', 'gemini'],
+    reason: 'Midjourney (--oref / --ow), Flux 2 & Gemini — holds facial identity and styling across batches',
+  },
+  {
+    id: 'fast-iteration',
+    label: 'Fast exploration & draft',
+    suggestPlatforms: ['flux', 'gemini'],
+    reason: 'Flux 2 & Gemini Flash — fastest iteration cycle for quick creative exploration',
+  },
 ];
 
 export const DEFAULT_IMAGE_INPUT: ImagePromptInput = {
   subject: '',
   style: 'photorealistic',
   aspectRatio: '16:9',
-  platforms: ['gemini', 'midjourney', 'dalle', 'stable-diffusion'],
+  platforms: ['gemini', 'gpt-image', 'midjourney', 'flux'],
 };
 
 export const EXAMPLE_TOPICS = [
@@ -216,11 +305,14 @@ export const EXAMPLE_TOPICS = [
 /** Canonical `## ` section headers emitted by the model for each platform. */
 const PLATFORM_HEADERS: Record<ImagePlatform, string> = {
   midjourney: 'MIDJOURNEY',
-  dalle: 'DALL-E',
+  'gpt-image': 'GPT IMAGE 2',
+  dalle: 'GPT IMAGE 2',
   'stable-diffusion': 'STABLE DIFFUSION',
-  flux: 'FLUX',
+  flux: 'FLUX 2',
   ideogram: 'IDEOGRAM',
   gemini: 'GEMINI / NANO BANANA',
+  recraft: 'RECRAFT V4.1',
+  seedream: 'SEEDREAM',
 };
 
 export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
@@ -234,20 +326,30 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
   const hasInImageText = !!input.inImageText?.trim();
   const hasRefImages = !!input.referenceImages && input.referenceImages.length > 0;
   const refImages = input.referenceImages ?? [];
+  const includeJson = input.outputFormat === 'json' || input.outputFormat === 'both';
+  const purposeOpt = input.purpose ? PURPOSE_OPTIONS.find((o) => o.id === input.purpose) : undefined;
 
   // Build per-platform reference image dialect additions
   const refDialectGuide = hasRefImages
     ? platformList.map((p) => {
         switch (p.id) {
           case 'gemini':
-            return `GEMINI REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. Using the attached reference image(s) of [purpose], generate the image prompt. Describe the subject's key visual traits from the attached reference — its shape, color, texture, logo placement, proportions, and any distinguishing details — in words, so the image prompt captures the reference with precision. If the reference is a Subject/Product, describe its exact form and features. If the reference is a Style image, describe the mood, palette, and visual texture. If the reference is for Brand/Character consistency, describe the character's key visual identity markers (hair, outfit, expression, pose).`;          case 'midjourney':
-            return `MIDJOURNEY REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. Midjourney accepts character and style references via URL parameters. Instruct the user to use --cref <image_url> for character reference and --sref <image_url> for style reference. Use --cw 100 for maximum character fidelity, --cw 50 for moderate similarity, --cw 0 for style only. If the reference purpose is 'subject', use --cref; if 'style', use --sref; if 'brand-consistency', use --cref with --cw 80. Describe the subject's key traits in words for the text portion, so the prompt works even if the user pastes it without the image.`;
+            return `GEMINI REFERENCE IMAGES: The director attached ${refImages.length} reference image(s). Gemini Nano Banana accepts multimodal inputs natively. Describe the subject's key visual traits from the reference (shape, texture, logo placement, facial traits, styling) in words, and structure the brief so Nano Banana synthesizes or edits the reference with high fidelity.`;
+          case 'midjourney':
+            return `MIDJOURNEY REFERENCE IMAGES: Midjourney V7/V8 supports Omni Reference (--oref) for character/object lock and Style Reference (--sref) for aesthetic transfer. Instruct the user to use --oref <image_url> with --ow 100-400 for character/subject fidelity (default 100; use ~25 for subtle style, 300-400 for exact facial/outfit lock; note: --oref runs on Midjourney V7 / --v 7). For style reference, use --sref <image_url> --sw 100. Describe the key visual markers in words so the text prompt stands alone.`;
           case 'ideogram':
-            return `IDEOGRAM REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. Ideogram's Character Reference feature maintains visual identity across multiple generations. Reference the character's key visual identity markers by name (hair color/style, outfit, distinguishing marks) and instruct the user to upload the reference image when using Ideogram's Character Reference feature. Describe the subject's exact appearance in words so the text prompt stands alone.`;
+            return `IDEOGRAM REFERENCE IMAGES: Ideogram Character Reference maintains visual identity. Reference key visual traits (hair, outfit, geometry) and instruct the user to upload the reference image when using Character Reference.`;
+          case 'gpt-image':
           case 'dalle':
-            return `DALL-E REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. DALL·E does not have a first-class reference-image parameter. Describe the reference image's key visual traits explicitly in words — shape, color, texture, proportions, logo placement — so the text prompt alone captures the subject. Note in the section: "For DALL·E, describe the reference image's key visual traits explicitly in words, since this platform doesn't accept a separate reference-image parameter."`;
+            return `GPT IMAGE 2 REFERENCE IMAGES: GPT Image 2 performs deep visual reasoning. Describe the reference image's visual traits (shape, materials, lighting, typography placement) in natural language paragraphs.`;
+          case 'flux':
+            return `FLUX 2 REFERENCE IMAGES: Flux 2 supports multi-reference input. Describe the subject's exact form and hex-color references in descriptive natural language.`;
           case 'stable-diffusion':
-            return `STABLE DIFFUSION / FLUX REFERENCE IMAGES: The director attached ${refImages.length} reference image(s) for this brief. SD and Flux do not have a first-class reference-image prompt convention. Describe the reference's key visual traits (shape, color, texture, proportions) explicitly in weighted tokens and key phrases. Note: "For SD/Flux, describe the reference image's key visual traits explicitly in words, since these platforms don't accept a separate reference-image parameter."`;
+            return `STABLE DIFFUSION REFERENCE IMAGES: Describe visual traits in weighted tokens and key phrases. Note: "For SDXL/SD, describe visual traits explicitly in tokens, or use ControlNet/IP-Adapter."`;
+          case 'recraft':
+            return `RECRAFT REFERENCE IMAGES: Recraft supports clean vector and style references. Describe clean vector shapes, path strokes, and palette colors.`;
+          case 'seedream':
+            return `SEEDREAM REFERENCE IMAGES: Describe facial bone structure, skin tone, fabric weave, and lighting scheme in rich natural language.`;
           default:
             return '';
         }
@@ -258,15 +360,22 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
     .map((p) => {
       switch (p.id) {
         case 'midjourney':
-          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), the most important words first, and parameters appended at the very end with double dashes: --ar ${input.aspectRatio}; use --style raw for photorealistic or photographic styles; add --stylize 100-250 for a bit of house style or --stylize 0 for raw adherence; if a negative prompt is provided, express it as --no with the key exclusions; never wrap the prompt in quotes. Fold in the camera/lens and film-stock vocabulary from the brief as high-signal phrases (e.g. "35mm", "Kodak Portra", "anamorphic"); keep any in-image text to short labels — Midjourney mangles long text.${hasInImageText ? ` WARNING — Midjourney is not reliable for in-image text. Keep any text extremely short (1–2 words) or omit it entirely and recommend Ideogram or Gemini instead for text-accurate rendering.` : ''}`;
+          return `MIDJOURNEY dialect: concise comma-separated keyword phrases (not full sentences), most important visual tokens first, parameters at the end: --ar ${input.aspectRatio}; use --style raw for photorealistic or flat vector styles; add --stylize 100-250 for house aesthetic (note: high stylize competes with --ow reference weight); for negative prompt, use --no with key exclusions; never wrap the prompt in quotes. Fold in camera lens and film stock ("35mm", "Kodak Portra"). For character/object lock in Midjourney, use Omni Reference: --oref <url> --ow 100 (note: --oref requires --v 7). For cheap exploration, note Midjourney Draft Mode (512x512).`;
+        case 'gpt-image':
         case 'dalle':
-          return `DALL-E dialect: a single flowing natural-language paragraph (3-6 rich descriptive sentences) that reads like a creative brief; explicitly state the aspect ratio in words (e.g. "wide 16:9 cinematic frame"); no parameter flags, no comma-stacking, no negative-prompt syntax — exclusions are phrased as "without X" or "avoiding X". If in-image text is requested, put the exact wording in quotes and describe the typography; DALL·E handles short text well.${hasInImageText ? ` WARNING — DALL·E is not reliable for in-image text beyond very short words (1–2 words). For longer or typographically precise text, recommend Ideogram or Gemini instead.` : ''}`;
-        case 'stable-diffusion':
-          return `STABLE DIFFUSION / FLUX dialect: dense keyword tokens with emoji-free weighting syntax like (golden hour:1.2), (volumetric fog:1.1), and quality tags; put the negative prompt on its own line starting with "Negative prompt:" and list exclusions as comma-separated tokens (blurry, deformed hands, watermark, oversaturated); include sampler guidance only as a final line: "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras". Map the requested output resolution to restrained quality tags (e.g. "4k", "ultra-detailed" at most one or two); avoid rendering long in-image text — short labels only.`;
-        case 'ideogram':
-          return `IDEOGRAM dialect: natural-language prompt optimized for legible in-image text — describe the exact text/lettering to render in quotes and keep the design layout explicit (centered headline, poster composition); avoid anti-aliasing and cluttered backgrounds that would blur text.`;
+          return `GPT IMAGE 2 dialect: a structured natural-language creative brief (3-6 rich descriptive sentences) formatted for OpenAI's reasoning image model with Thinking mode. State the aspect ratio in natural language ("wide 16:9 frame"). If in-image text is requested, put the exact wording in quotes and describe typography, placement, and contrast ("centered bold serif text reading '...' with clean kerning"). GPT Image 2 is arena #1 for complex scenes, diagrams, maps, and multilingual typography. No double-dash flags, no negative prompt syntax.`;
         case 'gemini':
-          return `GEMINI / NANO BANANA dialect: a natural-language creative brief in full sentences — Nano Banana is a thinking model that reasons about intent, physics, and composition, so act like a creative director, not a keyword list. Open with a strong verb ("Capture", "Render", "Create", "Show") and follow the formula [Subject] + [Action] + [Location/context] + [Composition] + [Style], then layer in lighting, camera/lens, color grade, and mood as prose. State the aspect ratio in words (e.g. "a wide 16:9 frame") and explicitly request the output resolution (1K, 2K or 4K — e.g. "render at native 2K resolution"). Use positive framing: phrase exclusions as "without X" or "avoiding X" ("an empty street" not "no cars") — Nano Banana has no negative-prompt syntax. If in-image text is requested, put the exact wording in quotes and describe the typography ("bold, white, sans-serif", "hand-lettered script"); Gemini renders text better than any other dialect here, so give it the full text spec. Use photographic and cinematic vocabulary: lens (35mm, macro, wide-angle), camera feel (shot on medium-format film, GoPro), lighting design (three-point softbox, golden-hour backlighting, chiaroscuro), and film stock/color grade. If the subject involves real-time data or current events, add one line asking the model to ground the image in current information before rendering.`;
+          return `GEMINI / NANO BANANA dialect: a natural-language creative brief in full sentences. Nano Banana (Pro for complex reasoning/infographics, 2 for speed & web grounding) is a thinking model. Open with a strong operational verb ("Capture", "Render", "Create", "Design", "Transform", "Place"). Use concrete two-word phrases ("soft golden backlighting, shallow depth of field, 35mm film grain") over single buzzwords. State the aspect ratio in words and request resolution (512px, 1K, 2K, or 4K — e.g. "render at native ${input.resolution ?? '2K'} resolution"). If current events or real-time data are relevant, add a line instructing the model to ground the visual in current search information. Positive framing only — phrase exclusions as "without X". Put in-image text in quotes with typography direction.`;
+        case 'flux':
+          return `FLUX 2 dialect: natural language description with precise visual nouns, hex-color codes (e.g. #1E3A8A, #FF4D00), and crisp spatial placement. Flux 2 excels at prompt adherence and color precision. Do NOT use Stable Diffusion negative-prompt syntax ("Negative prompt:") or weighted token brackets (word:1.2). State aspect ratio in natural language.`;
+        case 'stable-diffusion':
+          return `STABLE DIFFUSION / SDXL dialect: dense keyword tokens with emoji-free weighting syntax like (golden hour:1.2), (volumetric fog:1.1), and quality tags; put the negative prompt on its own line starting with "Negative prompt:" with comma-separated exclusions (blurry, deformed, watermark); include a final sampler line: "Steps: 28, CFG: 5.5, Sampler: DPM++ 2M Karras".`;
+        case 'ideogram':
+          return `IDEOGRAM 4.0 dialect: natural-language prompt optimized for legible in-image text and graphic design. Describe exact text in quotes, typography layout (headline centered, subtext tracked, poster composition), and background contrast.`;
+        case 'recraft':
+          return `RECRAFT V4.1 dialect: prompt optimized for clean native vector / SVG output, icon sets, or illustrations. Specify stroke weight, geometry, clean path lines, and flat color fills. State "clean vector illustration on an isolated white background, scalable SVG structure".`;
+        case 'seedream':
+          return `SEEDREAM 5.x dialect: rich editorial description optimized for fashion, photorealistic human portraits, and multilingual text. Specify skin texture, fabric weave, lighting setup (key/fill/rim), and focal perspective.`;
         default:
           return '';
       }
@@ -276,7 +385,7 @@ export function buildImagePromptSystemPrompt(input: ImagePromptInput): string {
 
   const fullDialectGuide = dialectGuide + (refDialectGuide ? '\n\nREFERENCE IMAGE DIALECT RULES\n' + refDialectGuide : '');
 
-  return `You are PromptCrafter's Image Direction Studio: a world-class creative director, art buyer, and image-prompt engineer who has written prompts for Midjourney, DALL-E, Stable Diffusion, Flux, Ideogram, and Google's Nano Banana image models (Gemini Flash/Pro Image).
+  return `You are PromptCrafter's Image Direction Studio: a world-class creative director, art buyer, and prompt engineer who writes state-of-the-art prompts for Midjourney, GPT Image 2, Google Nano Banana (Gemini Pro/Flash Image), Flux 2, Stable Diffusion SDXL, Ideogram 4, Recraft V4.1, and Seedream 5.
 
 YOUR MISSION
 Take the user's subject and options and deliver an image-ready prompt set: a compact universal master prompt built on the full brief anatomy (subject, action, location, style, lighting, camera/lens, composition, mood, color grade, technical), then a tuned prompt for every requested platform dialect. Direct each scene like a film director briefing a studio: name what is in the frame, how it is lit, how it is shot, and how it feels.
@@ -284,29 +393,31 @@ Take the user's subject and options and deliver an image-ready prompt set: a com
 PROMPT WRITING RULES (apply to every prompt you output)
 1. Fill every slot explicitly: SUBJECT (specific noun + action, never "a woman"/"a scene"), ACTION (what is happening), LOCATION/CONTEXT (where and when), STYLE (one clear visual idiom: ${style?.label ?? 'chosen style'}${style ? ` — ${style.hint}` : ''}), LIGHTING (${lighting ? `${lighting.label} — ${lighting.hint}` : 'choose a deliberate light source, direction, quality, and time of day'}), CAMERA/LENS (${camera ? `${camera.label} — ${camera.hint}` : 'an explicit lens or camera feel'}), COMPOSITION (${composition ? `${composition.label} — ${composition.hint}` : 'explicit framing and camera angle'}), MOOD (${mood ? `${mood.label} — ${mood.hint}` : 'one honest mood word'}), COLOR GRADE (${colorGrade ? `${colorGrade.label} — ${colorGrade.hint}` : 'a deliberate palette or film-stock feel'}), TECHNICAL (aspect ratio ${input.aspectRatio}${input.resolution ? `, ${input.resolution} resolution` : ''}${input.inImageText ? ', in-image text' : ''}${input.negativePrompt ? ' + negative prompt' : ''}).
 2. Order matters: lead with the subject and the most important visual elements, then refine; put technical details (ratio, resolution, negative) last.
-3. Use strong visual signals ("35mm lens", "Rembrandt lighting", "Kodak Portra film", "matte painting", "isometric") and ban weak tokens: beautiful, stunning, amazing, masterpiece, breathtaking, highly detailed, 4k, 8k (unless the dialect genuinely needs quality tags — SD/Flux only).
-4. Be concrete: concrete nouns and materiality beat abstractions — "a navy blue tweed coat" not "a nice jacket"; "ornate elven plate armor etched with silver leaf" not "armor". Include textures, materials, and small authentic details.
-5. Positive framing: describe what you WANT, not what you don't want ("an empty street" not "no cars"). Rephrase negative-prompt exclusions as "without X" or "avoiding X" in prose dialects; only SD/Flux gets a dedicated negative prompt line.
+3. Use concrete visual signals ("35mm lens", "Rembrandt lighting", "Kodak Portra film", "matte painting", "isometric") and ban weak buzzwords: beautiful, stunning, amazing, masterpiece, breathtaking, highly detailed, 4k, 8k (unless SDXL quality tags apply).
+4. Be concrete: concrete nouns, materiality, and two-word descriptive phrases beat abstractions ("a navy blue tweed coat" not "a nice jacket"; "soft golden backlighting, shallow depth of field" not "moody cinematic").
+5. Positive framing: describe what you WANT, not what you don't want ("an empty street" not "no cars"). Rephrase negative-prompt exclusions as "without X" or "avoiding X" in prose dialects; only SD gets a dedicated negative prompt line.
 6. In-image text: when text must appear in the image, wrap the exact wording in quotes and describe the typography ("bold, white, sans-serif", "hand-lettered script"). Never invent in-image text the user didn't request.
 7. One visual direction: never stack conflicting styles (no "photorealistic anime oil painting"); commit to a single coherent idiom.
-8. Respect purpose: when additional notes give context (audience, brand, use case), let it shape composition, mood, and color.
-8a. Reference images: when the director attaches reference images, use the platform-specific reference-image conventions above. Describe the reference's key visual traits in words so the text prompt captures specificity even when the image isn't attached. Never copy the reference image verbatim — use it to make the subject, style, or character description concrete and precise.
+8. Purpose & end-use: ${purposeOpt ? `The user selected the purpose "${purposeOpt.label}" (${purposeOpt.reason}). Shape the framing, composition, typography, and crop specifically for this intent.` : 'Let any stated purpose shape composition, mood, and color.'}
+8a. Reference images: when the director attaches reference images, use the platform-specific reference-image conventions above. Describe the reference's key visual traits in words so the text prompt captures specificity even when the image isn't attached.
 9. Every prompt must be a single copy-paste-ready block — no commentary around it.
-10. Five-part brief anatomy: each prompt you produce must internally cover all five parts — Subject/Task Context (what and who), Style & Mood (visual tone), Reference Material (brand guides, reference images, product specs from the director), Constraints (negative prompt, platform limits, text rendering rules), and Core Visual Request (the deliverable). Even when a part is brief, name it — the structure is the signal. Do not collapse, rename, or skip any part.
-11. Evidence discipline: when the brief touches factual, branded, or infographic content — real-world text, logo shapes, specific brand marks, chart data, historical details — flag any detail you cannot visually ground from the director's input or attached reference images. Instead of confidently inventing exact logo proportions, specific text, or precise brand colors, mark uncertain specifics as [VERIFY: description]. This prevents the AI from hallucinating authoritative-looking but incorrect visual details — the same principle that governs the Logo Studio's placeholder-not-fake-logo rule.
-12. No cross-section duplication: every section must be a DIFFERENT prompt. The MASTER PROMPT is the compact universal version; each platform section re-expresses the same brief in its own dialect (keyword phrases, weighted tokens, parameters, or full prose). Never repeat the same text in two sections — in particular, the GEMINI / NANO BANANA section carries the full prose creative brief while the MASTER PROMPT stays short and distinct from it.
+10. Five-part brief anatomy: each prompt you produce must internally cover all five parts — Subject/Task Context, Style & Mood, Reference Material, Constraints, and Core Deliverable.
+11. Evidence discipline: when the brief touches factual, branded, or infographic content, flag any uncertain detail as [VERIFY: description] instead of hallucinating specifics.
+12. No cross-section duplication: every section must be a DIFFERENT prompt. The MASTER PROMPT is the compact universal version; each platform section re-expresses the same brief in its own dialect.
+${includeJson ? `13. Structured JSON Output: In the "## JSON PROMPT" section, emit a valid, compact JSON object with keys: "subject", "action", "setting", "composition", "camera", "lighting", "color", "style", "text", "constraints", "technical".` : ''}
 
 OUTPUT FORMAT — obey EXACTLY. Every section MUST start with a markdown "## " header on its own line — no bold labels, no numbering, no colons. Write these headers, in this order:
 ## MASTER PROMPT
-(A COMPACT universal prompt — 1–2 dense sentences of comma-separated slot phrases covering subject, action, location, style, lighting, camera/lens, composition, mood, color grade, and technical tags. No prose paragraphs, no dialect syntax, no parameters — the long description belongs only in the prose dialects below.)
+(A COMPACT universal prompt — 1–2 dense sentences of comma-separated slot phrases covering subject, action, location, style, lighting, camera/lens, composition, mood, color grade, and technical tags. No prose paragraphs, no dialect syntax, no parameters.)
 
 ${platformList.map((p) => `## ${PLATFORM_HEADERS[p.id]}\n(Tuned ${p.label} prompt.)`).join('\n\n')}
 
-${input.negativePrompt ? `## NEGATIVE PROMPT\n(Comma-separated exclusions derived from the user's request: ${input.negativePrompt}.)\n\n` : ''}PLATFORM DIALECT RULES
+${includeJson ? `## JSON PROMPT\n(Structured JSON schema prompt for batch reproducibility.)\n\n` : ''}${input.negativePrompt ? `## NEGATIVE PROMPT\n(Comma-separated exclusions derived from the user's request: ${input.negativePrompt}.)\n\n` : ''}PLATFORM DIALECT RULES
 ${fullDialectGuide}
 
 USER BRIEF
 - Subject: "${input.subject}"
+${input.purpose ? `- Purpose / End use: ${purposeOpt?.label ?? input.purpose} (${purposeOpt?.reason ?? 'shape composition and framing accordingly'})` : ''}
 - Style: ${style?.label ?? input.style}${style ? ` (${style.hint})` : ''}
 - Lighting: ${lighting?.label ?? (input.lighting ? `"${input.lighting}"` : 'director\u2019s choice')}
 - Camera / lens: ${camera?.label ?? (input.camera ? `"${input.camera}"` : 'director\u2019s choice')}
@@ -315,8 +426,9 @@ USER BRIEF
 - Color grade / film stock: ${colorGrade?.label ?? (input.colorGrade ? `"${input.colorGrade}"` : 'director\u2019s choice')}
 - Aspect ratio: ${input.aspectRatio}
 - Resolution: ${input.resolution ?? 'model default'}
-${input.inImageText ? `- In-image text: ${input.inImageText}` : ''}
+${input.inImageText ? `- In-image text: "${input.inImageText}"` : ''}
 - Platform dialects to emit: ${platformList.map((p) => p.label).join(', ') || 'master only'}
+${input.outputFormat ? `- Output format: ${input.outputFormat}` : ''}
 ${input.negativePrompt ? `- Negative guidance: ${input.negativePrompt}` : ''}
 ${hasRefImages ? `- Reference images: ${refImages.length} attached (${refImages.map((r) => r.purpose).join(', ')}). Use platform-specific reference conventions.` : ''}
 ${input.additionalNotes ? `- Additional notes: ${input.additionalNotes}` : ''}
@@ -326,6 +438,8 @@ Now write the prompts. Start directly with "## MASTER PROMPT".`;
 
 export function buildImagePromptUserMessage(input: ImagePromptInput): string {
   const extras = [
+    input.purpose && `Purpose: ${input.purpose}`,
+    input.outputFormat && `Output format: ${input.outputFormat}`,
     input.camera && `Camera: ${CAMERA_PRESETS.find((c) => c.id === input.camera)?.label ?? input.camera}`,
     input.colorGrade && `Color grade: ${COLOR_GRADE_PRESETS.find((c) => c.id === input.colorGrade)?.label ?? input.colorGrade}`,
     input.resolution && `Resolution: ${input.resolution}`,
@@ -346,11 +460,14 @@ export interface ImagePromptSections {
   research?: string;
   master?: string;
   midjourney?: string;
-  dalle?: string;
+  dalle?: string; // holds gpt-image / dalle
   'stable-diffusion'?: string;
   flux?: string;
   ideogram?: string;
   gemini?: string;
+  recraft?: string;
+  seedream?: string;
+  json?: string;
   negative?: string;
   /** Any text that appeared before the first recognized section header. */
   preamble?: string;
@@ -364,14 +481,26 @@ const SECTION_ALIASES: Record<string, keyof ImagePromptSections> = {
   'master prompt': 'master',
   'master': 'master',
   'midjourney': 'midjourney',
+  'midjourney v7': 'midjourney',
+  'midjourney v8': 'midjourney',
+  'gpt image 2': 'dalle',
+  'gpt image': 'dalle',
+  'gpt-image': 'dalle',
+  'dall-e 3': 'dalle',
   'dall-e': 'dalle',
   'dall e': 'dalle',
   'dalle': 'dalle',
   'stable diffusion': 'stable-diffusion',
   'stable diffusion / flux': 'stable-diffusion',
   'sdxl': 'stable-diffusion',
+  'sd / flux': 'stable-diffusion',
   'flux': 'flux',
+  'flux 2': 'flux',
+  'flux.1': 'flux',
+  'flux pro': 'flux',
   'ideogram': 'ideogram',
+  'ideogram 4.0': 'ideogram',
+  'ideogram 4': 'ideogram',
   'gemini': 'gemini',
   'gemini / nano banana': 'gemini',
   'gemini/nano banana': 'gemini',
@@ -389,13 +518,22 @@ const SECTION_ALIASES: Record<string, keyof ImagePromptSections> = {
   'gemini 3.1 flash image': 'gemini',
   'gemini pro image': 'gemini',
   'gemini flash image': 'gemini',
+  'recraft': 'recraft',
+  'recraft v4.1': 'recraft',
+  'recraft v4': 'recraft',
+  'seedream': 'seedream',
+  'seedream 5.x': 'seedream',
+  'seedream 5': 'seedream',
+  'json prompt': 'json',
+  'json': 'json',
+  'structured json': 'json',
   'negative prompt': 'negative',
   'negative': 'negative',
 };
 
 /** Lowercase a header title, stripping trailing colons and stray asterisks/spaces. */
 function normalizeHeaderTitle(title: string): string {
-  return title.replace(/:+$/, '').replace(/^[*\s]+|[*\s]+$/g, '').trim().toLowerCase();
+  return title.replace(/:+$/, '').replace(/^[*\s#]+|[*\s]+$/g, '').trim().toLowerCase();
 }
 
 export function parseImagePromptOutput(raw: string): ImagePromptSections {
@@ -408,15 +546,20 @@ export function parseImagePromptOutput(raw: string): ImagePromptSections {
   const flush = () => {
     if (currentKey && buffer.length > 0) {
       const text = buffer.join('\n').trim();
-      if (text && !(currentKey in sections)) {
-        sections[currentKey] = text;
+      if (text) {
+        // Fix D6: Append on duplicate headers rather than silently dropping content
+        if (currentKey in sections && typeof sections[currentKey] === 'string') {
+          sections[currentKey] = `${sections[currentKey]}\n\n${text}`;
+        } else {
+          sections[currentKey] = text;
+        }
       }
     }
     buffer.length = 0;
   };
 
   for (const line of lines) {
-    // 1. Markdown headers: ## MASTER PROMPT
+    // 1. Markdown headers: ## MASTER PROMPT or # MASTER PROMPT
     const md = line.match(/^#{1,3}\s+(.+)$/);
     // 2. Bold-only labels the model often uses instead: **GEMINI / NANO BANANA**
     const bold = line.match(/^\*\*(.+?)\*\*\s*:?\s*$/);
@@ -424,17 +567,19 @@ export function parseImagePromptOutput(raw: string): ImagePromptSections {
     if (md) title = md[1];
     else if (bold) title = bold[1];
     else {
-      // 3. Plain label headers ("MASTER PROMPT:") — only when the whole line
-      //    is a known section name so prose lines are never mistaken for headers.
+      // 3. Plain label headers ("MASTER PROMPT:")
       const stripped = line.trim().replace(/:+$/, '').replace(/^[*\s]+|[*\s]+$/g, '');
       if (stripped.length > 0 && stripped.length <= 48 && SECTION_ALIASES[normalizeHeaderTitle(stripped)]) {
         title = stripped;
       }
     }
     if (title) {
-      flush();
-      currentKey = SECTION_ALIASES[normalizeHeaderTitle(title)] ?? null;
-      continue;
+      const aliasKey = SECTION_ALIASES[normalizeHeaderTitle(title)];
+      if (aliasKey) {
+        flush();
+        currentKey = aliasKey;
+        continue;
+      }
     }
     if (currentKey) {
       buffer.push(line);
@@ -448,17 +593,35 @@ export function parseImagePromptOutput(raw: string): ImagePromptSections {
   return sections;
 }
 
+/** Check if any of the requested platforms did not return a section. */
+export function getMissingSections(
+  requestedPlatforms: ImagePlatform[],
+  sections: ImagePromptSections
+): ImagePlatform[] {
+  const missing: ImagePlatform[] = [];
+  for (const p of requestedPlatforms) {
+    const key = p === 'gpt-image' || p === 'dalle' ? 'dalle' : p;
+    if (!sections[key as keyof ImagePromptSections]) {
+      missing.push(p);
+    }
+  }
+  return missing;
+}
+
 /** Ordered display tabs for the output pane: label → section key. */
 export function buildOutputTabs(sections: ImagePromptSections): { key: keyof ImagePromptSections; label: string }[] {
   const tabs: { key: keyof ImagePromptSections; label: string }[] = [];
   if (sections.research) tabs.push({ key: 'research', label: 'Research brief' });
   if (sections.master) tabs.push({ key: 'master', label: 'Master prompt' });
   if (sections.midjourney) tabs.push({ key: 'midjourney', label: 'Midjourney' });
-  if (sections.dalle) tabs.push({ key: 'dalle', label: 'DALL·E' });
-  if (sections['stable-diffusion']) tabs.push({ key: 'stable-diffusion', label: 'SD / Flux' });
-  if (sections.flux) tabs.push({ key: 'flux', label: 'Flux' });
-  if (sections.ideogram) tabs.push({ key: 'ideogram', label: 'Ideogram' });
+  if (sections.dalle) tabs.push({ key: 'dalle', label: 'GPT Image 2' });
   if (sections.gemini) tabs.push({ key: 'gemini', label: 'Gemini / Nano Banana' });
+  if (sections.flux) tabs.push({ key: 'flux', label: 'Flux 2' });
+  if (sections['stable-diffusion']) tabs.push({ key: 'stable-diffusion', label: 'SDXL / SD' });
+  if (sections.ideogram) tabs.push({ key: 'ideogram', label: 'Ideogram' });
+  if (sections.recraft) tabs.push({ key: 'recraft', label: 'Recraft V4.1' });
+  if (sections.seedream) tabs.push({ key: 'seedream', label: 'Seedream 5.x' });
+  if (sections.json) tabs.push({ key: 'json', label: 'JSON Prompt' });
   if (sections.negative) tabs.push({ key: 'negative', label: 'Negative prompt' });
   return tabs;
 }

@@ -45,6 +45,7 @@ export interface StudioFormState {
   colorGrade: string | undefined;
   resolution: string | undefined;
   aspectRatio: string;
+  outputFormat: 'prose' | 'json' | 'both';
   platforms: ImagePlatform[];
   negativePrompt: string;
   inImageText: string;
@@ -86,6 +87,7 @@ export interface StudioFormHandlers {
   setColorGrade: (value: string | undefined) => void;
   setResolution: (value: string | undefined) => void;
   setAspectRatio: (value: string) => void;
+  setOutputFormat: (format: 'prose' | 'json' | 'both') => void;
   togglePlatform: (id: ImagePlatform) => void;
   setNegativePrompt: (value: string) => void;
   setInImageText: (value: string) => void;

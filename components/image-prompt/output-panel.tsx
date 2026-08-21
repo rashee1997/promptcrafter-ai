@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { BookOpenCheck, Check, ImagePlus, RefreshCw } from 'lucide-react';
 import { GlassCard } from '../glass-card';
 import { buildOutputTabs, ImagePromptSections } from '@/lib/image-prompts';
-import { ProviderConfig } from '@/types';
+import { ImagePlatform, ImagePromptInput, ProviderConfig } from '@/types';
 import { BriefViewer } from './brief-viewer';
 import { StudioMode } from './studio-types';
 
@@ -17,6 +17,10 @@ interface OutputPanelProps {
   activeProvider: ProviderConfig;
   /** Studio mode — drives the empty-state copy and remix suggestions. */
   mode: StudioMode;
+  /** Form input that produced this brief. */
+  input?: ImagePromptInput;
+  /** Requested platforms. */
+  requestedPlatforms?: ImagePlatform[];
   onUseExample: () => void;
   onSave: () => void;
   onNew: () => void;
@@ -24,6 +28,9 @@ interface OutputPanelProps {
   onRefineSuggestion?: (suggestion: string) => void;
   /** Per-section redo: regenerate just one platform prompt. */
   onRedoPlatform?: (platformKey: string) => void;
+  /** Conversational edit mode ("Edit, don't re-roll"). */
+  onEditPrompt?: (platformKey: string, basePrompt: string, instruction: string) => Promise<void>;
+  isEditing?: boolean;
   /** Previous sections snapshot for version comparison. */
   previousSections?: ImagePromptSections | null;
   /** Whether a per-section redo is in progress. */
@@ -39,11 +46,15 @@ export function OutputPanel({
   onTabChange,
   activeProvider,
   mode,
+  input,
+  requestedPlatforms,
   onUseExample,
   onSave,
   onNew,
   onRefineSuggestion,
   onRedoPlatform,
+  onEditPrompt,
+  isEditing,
   previousSections,
   isRedoing,
 }: OutputPanelProps) {
@@ -146,9 +157,13 @@ export function OutputPanel({
             onSave={onSave}
             onNew={onNew}
             mode={mode}
+            input={input}
+            requestedPlatforms={requestedPlatforms}
             onRefineSuggestion={onRefineSuggestion}
             isGenerating={isGenerating}
             onRedoPlatform={onRedoPlatform}
+            onEditPrompt={onEditPrompt}
+            isEditing={isEditing}
             previousSections={previousSections}
             isRedoing={isRedoing}
           />

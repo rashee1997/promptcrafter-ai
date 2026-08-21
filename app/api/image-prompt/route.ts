@@ -121,10 +121,21 @@ export async function POST(req: NextRequest) {
       return new Response(customStream, { headers: STREAM_HEADERS });
     }
 
-    // Custom OpenAI-compatible provider.
+    // Custom OpenAI-compatible provider with multimodal vision support.
+    const openAIUserContent: any =
+      hasRefImages && input.referenceImages
+        ? [
+            { type: 'text', text: userMessage },
+            ...input.referenceImages.map((img) => ({
+              type: 'image_url',
+              image_url: { url: img.dataUrl, detail: 'auto' },
+            })),
+          ]
+        : userMessage;
+
     return await handleOpenAIProviderRequest(provider, [
       { role: 'system', content: systemInstruction },
-      { role: 'user', content: userMessage },
+      { role: 'user', content: openAIUserContent },
     ]);
   } catch (error: any) {
     console.error('API /api/image-prompt Error:', error);

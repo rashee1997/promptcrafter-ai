@@ -16,11 +16,22 @@ import {
   PURPOSE_OPTIONS,
   STYLE_PRESETS,
 } from '@/lib/image-prompts';
-import { generateImagePromptStream, redoImagePromptStream } from '@/lib/ai-client';
+import {
+  editImagePrompt,
+  generateImagePromptStream,
+  redoImagePromptStream,
+  reverseEngineerImageToPrompt,
+} from '@/lib/ai-client';
 import { getProviderModelList } from '@/lib/storage';
 import { DEFAULT_LOGO_INPUT, LOGO_EXAMPLE_TOPICS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { getKits, saveKit, deleteKit, PromptKit } from '@/lib/image-prompt-kits';
-import { ImagePlatform, ImagePromptInput, ImagePromptReferenceImage, ProviderConfig } from '@/types';
+import {
+  ImagePlatform,
+  ImagePromptInput,
+  ImagePromptOutputFormat,
+  ImagePromptReferenceImage,
+  ProviderConfig,
+} from '@/types';
 import { OutputPanel } from './image-prompt/output-panel';
 import { PromptForm } from './image-prompt/prompt-form';
 import { SavedGallery } from './image-prompt/saved-gallery';
@@ -46,6 +57,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [style, setStyle] = useState(DEFAULT_IMAGE_INPUT.style);
   const [mode, setMode] = useState<StudioMode>('image');
   const [purpose, setPurpose] = useState<string | undefined>(undefined);
+  const [outputFormat, setOutputFormat] = useState<ImagePromptOutputFormat>('prose');
   const [logoType, setLogoType] = useState(DEFAULT_LOGO_INPUT.logoType);
   const [logoStyle, setLogoStyle] = useState(DEFAULT_LOGO_INPUT.logoStyle);
   const [palette, setPalette] = useState(DEFAULT_LOGO_INPUT.palette);
@@ -74,7 +86,9 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [referenceImages, setReferenceImages] = useState<ImagePromptReferenceImage[]>([]);
   const [keepRefImages, setKeepRefImages] = useState(false);
 
-
+  // ── Reverse-engineering state ──
+  const [isReverseEngineering, setIsReverseEngineering] = useState(false);
+  const [reverseEngineeringId, setReverseEngineeringId] = useState<string | null>(null);
 
   // ── Output state ──
   const [isGenerating, setIsGenerating] = useState(false);
@@ -89,6 +103,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   // ── Version history (last N sections snapshots for comparison) ──
   const [previousSections, setPreviousSections] = useState<ImagePromptSections | null>(null);
   const [isRedoing, setIsRedoing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const redoAbortRef = useRef<AbortController | null>(null);
 
   // ── Brand / Subject Kits ──
@@ -98,6 +113,12 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   useEffect(() => {
     setSavedPrompts(getSavedImagePrompts());
     setKits(getKits());
+
+    // Cleanup abort controllers on unmount (Fix D8)
+    return () => {
+      abortControllerRef.current?.abort();
+      redoAbortRef.current?.abort();
+    };
   }, []);
 
   /** Switching modes swaps the brief anatomy; logos are square-first artifacts. */
@@ -112,6 +133,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     style,
     mode,
     purpose,
+    outputFormat,
     logoType,
     logoStyle,
     palette,
@@ -146,6 +168,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setStyle,
     setMode: handleSetMode,
     setPurpose,
+    setOutputFormat,
     setLogoType,
     setLogoStyle,
     setPalette,
@@ -176,7 +199,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setShowRefine,
     addReferenceImage: (img) => setReferenceImages((prev) => [...prev, img]),
     removeReferenceImage: (id) => setReferenceImages((prev) => prev.filter((r) => r.id !== id)),
-    updateReferenceImagePurpose: (id, purpose) => setReferenceImages((prev) => prev.map((r) => r.id === id ? { ...r, purpose } : r)),
+    updateReferenceImagePurpose: (id, purpose) =>
+      setReferenceImages((prev) => prev.map((r) => (r.id === id ? { ...r, purpose } : r))),
     setKeepRefImages,
   };
 
@@ -184,6 +208,8 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     subject: subject.trim(),
     style,
     mode,
+    purpose,
+    outputFormat,
     logoType: mode === 'logo' ? logoType : undefined,
     logoStyle: mode === 'logo' ? logoStyle : undefined,
     palette: mode === 'logo' ? palette : undefined,
@@ -254,14 +280,15 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
         // Default to the purpose-matched platform tab when a purpose was selected
         const purposeOpt = purpose ? PURPOSE_OPTIONS.find((o) => o.id === purpose) : undefined;
         const purposePlatform = purposeOpt?.suggestPlatforms[0];
-        const purposeTab = purposePlatform && tabs.some((t) => t.key === purposePlatform) ? purposePlatform : 'master';
+        const purposeTab =
+          purposePlatform && tabs.some((t) => t.key === purposePlatform) ? purposePlatform : 'master';
         setActiveTab(purposeTab as keyof ImagePromptSections | 'raw');
         toast.success('Image prompts ready', 'Master + platform prompts are ready to copy.');
       },
       (error) => {
         setIsGenerating(false);
-        setStreamingText(`⚠️ Couldn't research this brief: ${error.message}`);
-        toast.error("Couldn't create the brief", error.message);
+        setStreamingText(`⚠️ Couldn't generate this brief: ${error.message}`);
+        toast.error("Couldn't generate this brief", error.message);
       },
       controller.signal
     );
@@ -312,12 +339,12 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const handleRestore = (item: SavedImagePrompt) => {
     const inp = item.input;
     const rawMode = inp?.mode ?? item.mode ?? 'image';
-    // Gracefully degrade old Toastmasters sessions to image mode
     const restoredMode: StudioMode = (rawMode as string) === 'toastmasters' ? 'image' : rawMode;
     setSubject(inp?.subject ?? item.subject);
     setStyle(inp?.style ?? DEFAULT_IMAGE_INPUT.style);
     setMode(restoredMode);
-    setPurpose(undefined); // purpose is transient, not persisted
+    setPurpose(inp?.purpose ?? undefined);
+    setOutputFormat(inp?.outputFormat ?? 'prose');
     setLogoType(inp?.logoType ?? DEFAULT_LOGO_INPUT.logoType);
     setLogoStyle(inp?.logoStyle ?? DEFAULT_LOGO_INPUT.logoStyle);
     setPalette(inp?.palette ?? DEFAULT_LOGO_INPUT.palette);
@@ -400,7 +427,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
         setIsRedoing(false);
         const trimmed = completedText.trim();
         if (trimmed) {
-          setSections((prev) => prev ? { ...prev, [platformKey]: trimmed } : prev);
+          setSections((prev) => (prev ? { ...prev, [platformKey]: trimmed } : prev));
           toast.success(`${platformKey} prompt regenerated`, 'Only this section was updated.');
         } else {
           toast.error('Redo returned empty', 'The model did not produce output for this section.');
@@ -414,7 +441,73 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     );
   };
 
-  /** Save the current form state as a reusable Brand/Subject Kit. */
+  /** Conversational Edit Mode ("Edit, don't re-roll"). */
+  const handleEditPrompt = async (platformKey: string, basePrompt: string, instruction: string) => {
+    if (isEditing) return;
+    setIsEditing(true);
+    try {
+      toast.info('Applying edit', `Iterating ${platformKey} prompt…`);
+      const result = await editImagePrompt({
+        provider: activeProvider,
+        basePrompt,
+        editInstruction: instruction,
+        platform: platformKey as ImagePlatform,
+        mode,
+      });
+      if (result?.editedPrompt) {
+        if (sections) {
+          setPreviousSections(sections);
+          setSections((prev) => (prev ? { ...prev, [platformKey]: result.editedPrompt } : prev));
+        }
+        toast.success('Prompt updated', result.deltaSummary || 'Conversational delta applied.');
+      }
+    } catch (err: any) {
+      toast.error('Edit failed', err.message || 'Could not apply conversational edit');
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  /** Image-to-Prompt (Reverse Engineering). */
+  const handleReverseEngineerImage = async (img: ImagePromptReferenceImage) => {
+    setIsReverseEngineering(true);
+    setReverseEngineeringId(img.id);
+    try {
+      toast.info('Analyzing image', 'Extracting subject, style, lighting, camera, and palette…');
+      const result = await reverseEngineerImageToPrompt({
+        provider: activeProvider,
+        image: img,
+        mode,
+      });
+      if (result?.extractedBrief) {
+        const b = result.extractedBrief;
+        if (b.subject) setSubject(b.subject);
+        if (b.style) {
+          if (mode === 'logo') setLogoStyle(b.style);
+          else setStyle(b.style);
+        }
+        if (b.lighting) setLighting(b.lighting);
+        if (b.camera) setCamera(b.camera);
+        if (b.composition) setComposition(b.composition);
+        if (b.mood) setMood(b.mood);
+        if (b.colorGrade) setColorGrade(b.colorGrade);
+        if (b.aspectRatio) setAspectRatio(b.aspectRatio);
+        if (b.palette) setPalette(b.palette);
+        if (b.inImageText) setInImageText(b.inImageText);
+        if (b.brandName) setBrandName(b.brandName);
+        if (b.logoType) setLogoType(b.logoType);
+        if (b.shapeLanguage) setShapeLanguage(b.shapeLanguage);
+        toast.success('Image reverse-engineered', 'The brief has been populated from your image.');
+      }
+    } catch (err: any) {
+      toast.error('Reverse engineering failed', err.message || 'Could not analyze image');
+    } finally {
+      setIsReverseEngineering(false);
+      setReverseEngineeringId(null);
+    }
+  };
+
+  /** Save the current form state as a reusable, lossless Brand/Subject Kit. */
   const handleSaveKit = () => {
     if (!subject.trim()) return;
     const kit: PromptKit = {
@@ -422,20 +515,32 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       name: subject.trim().slice(0, 40),
       subjectDescription: subject.trim(),
       stylePreset: mode === 'logo' ? logoStyle : style,
+      imageStyle: mode === 'image' ? style : undefined,
+      logoStyle: mode === 'logo' ? logoStyle : undefined,
       palette: mode === 'logo' ? palette : undefined,
       industry: mode === 'logo' ? industry : undefined,
       mode,
       brandName: mode === 'logo' ? brandName.trim() || undefined : undefined,
       logoType: mode === 'logo' ? logoType : undefined,
       concept: mode === 'logo' ? concept : undefined,
+      shapeLanguage: mode === 'logo' ? shapeLanguage : undefined,
+      typography: mode === 'logo' ? typography : undefined,
+      lockup: mode === 'logo' ? lockup : undefined,
+      hiddenMeaning: mode === 'logo' ? hiddenMeaning : undefined,
+      usage: mode === 'logo' && usage.length > 0 ? [...usage] : undefined,
+      boldness: mode === 'logo' ? boldness : undefined,
       lighting,
       mood,
       composition,
       camera,
       colorGrade,
+      resolution,
       aspectRatio,
+      outputFormat,
+      purpose,
       platforms: [...platforms],
       negativePrompt: negativePrompt.trim() || undefined,
+      inImageText: inImageText.trim() || undefined,
       additionalNotes: additionalNotes.trim() || undefined,
       createdAt: Date.now(),
     };
@@ -447,29 +552,41 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const handleLoadKit = (kit: PromptKit) => {
     setSubject(kit.subjectDescription);
     if (kit.mode) handleSetMode(kit.mode);
-    if (kit.stylePreset) {
-      if (kit.mode === 'logo') setLogoStyle(kit.stylePreset);
-      else setStyle(kit.stylePreset);
-    }
+    if (kit.imageStyle) setStyle(kit.imageStyle);
+    else if (kit.stylePreset && kit.mode !== 'logo') setStyle(kit.stylePreset);
+    if (kit.logoStyle) setLogoStyle(kit.logoStyle);
+    else if (kit.stylePreset && kit.mode === 'logo') setLogoStyle(kit.stylePreset);
     if (kit.palette) setPalette(kit.palette);
     if (kit.industry) setIndustry(kit.industry);
     if (kit.brandName) setBrandName(kit.brandName);
     if (kit.logoType) setLogoType(kit.logoType);
     if (kit.concept) setConcept(kit.concept);
+    if (kit.shapeLanguage) setShapeLanguage(kit.shapeLanguage);
+    if (kit.typography) setTypography(kit.typography);
+    if (kit.lockup) setLockup(kit.lockup);
+    if (kit.hiddenMeaning) setHiddenMeaning(kit.hiddenMeaning);
+    if (kit.usage) setUsage(kit.usage);
+    if (kit.boldness) setBoldness(kit.boldness);
     if (kit.lighting) setLighting(kit.lighting);
     if (kit.mood) setMood(kit.mood);
     if (kit.composition) setComposition(kit.composition);
     if (kit.camera) setCamera(kit.camera);
     if (kit.colorGrade) setColorGrade(kit.colorGrade);
+    if (kit.resolution) setResolution(kit.resolution);
     if (kit.aspectRatio) setAspectRatio(kit.aspectRatio);
+    if (kit.outputFormat) setOutputFormat(kit.outputFormat);
+    if (kit.purpose) setPurpose(kit.purpose);
     if (kit.platforms) setPlatforms(kit.platforms);
     if (kit.negativePrompt) setNegativePrompt(kit.negativePrompt);
+    if (kit.inImageText) setInImageText(kit.inImageText);
     if (kit.additionalNotes) setAdditionalNotes(kit.additionalNotes);
     setShowKitDropdown(false);
     toast.success('Kit loaded', `"${kit.name}" pre-filled into the form.`);
     try {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleDeleteKit = (id: string) => {
@@ -500,7 +617,9 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onDeleteKit={handleDeleteKit}
           showKitDropdown={showKitDropdown}
           onToggleKitDropdown={() => setShowKitDropdown(!showKitDropdown)}
-
+          onReverseEngineerImage={handleReverseEngineerImage}
+          isReverseEngineering={isReverseEngineering}
+          reverseEngineeringId={reverseEngineeringId}
         />
 
         {/* ── Right: Output & brief viewer ── */}
@@ -512,11 +631,15 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onTabChange={setActiveTab}
           activeProvider={activeProvider}
           mode={mode}
+          input={buildInput()}
+          requestedPlatforms={platforms}
           onUseExample={() => setSubject(mode === 'logo' ? LOGO_EXAMPLE_TOPICS[0] : EXAMPLE_TOPICS[0])}
           onSave={handleSave}
           onNew={handleNew}
           onRefineSuggestion={handleRefineSuggestion}
           onRedoPlatform={handleRedoPlatform}
+          onEditPrompt={handleEditPrompt}
+          isEditing={isEditing}
           previousSections={previousSections}
           isRedoing={isRedoing}
         />

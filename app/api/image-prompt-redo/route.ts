@@ -51,6 +51,21 @@ export async function POST(req: NextRequest) {
 
     const userMessage = `You are rewriting a SINGLE section of an image prompt set. Below is the full brief context and the existing sections for reference. Your ONLY job is to produce a NEW, REPLACEMENT prompt for the ${targetPlatform.toUpperCase()} section.\n\nRULES:\n1. Output ONLY the replacement prompt text — no markdown headers, no section labels, no commentary, no code fences.\n2. Preserve the subject, style, lighting, camera, composition, mood, and color grade from the brief.\n3. Match the quality and density of the other platform sections.\n4. Follow the platform-specific dialect rules from the system prompt.\n5. The replacement must be a complete, copy-paste-ready block — not a partial edit.${revisionClause}\n\nEXISTING SECTIONS (for context):\n${sectionContext}\n\nNow write ONLY the replacement ${targetPlatform.toUpperCase()} prompt. Start directly with the prompt text.`;
 
+    // Build multimodal content if reference images are attached (Fix D3)
+    const hasRefImages = !!input.referenceImages && input.referenceImages.length > 0;
+    const refImageParts = hasRefImages
+      ? input.referenceImages!.map((img) => {
+          const match = img.dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+          if (!match) return null;
+          return {
+            inlineData: {
+              mimeType: match[1],
+              data: match[2],
+            },
+          };
+        }).filter((p): p is { inlineData: { mimeType: string; data: string } } => p !== null)
+      : [];
+
     const isGemini =
       provider?.useBuiltInGemini || !provider?.baseUrl || provider?.baseUrl.includes('googleapis.com');
 
@@ -72,12 +87,17 @@ export async function POST(req: NextRequest) {
 
       const modelName = provider?.model || GEMINI_DEFAULT_MODEL;
 
+      // Pass reference image parts so the model does not hallucinate visual traits on redo
+      const multimodalContents = refImageParts.length > 0
+        ? [{ role: 'user' as const, parts: [{ text: userMessage }, ...refImageParts] }]
+        : userMessage;
+
       const responseStream = await withModelFallback(
         { ...provider, model: modelName },
         (model) =>
           ai.models.generateContentStream({
             model,
-            contents: userMessage,
+            contents: multimodalContents,
             config: {
               systemInstruction,
               temperature: provider?.temperature ?? 0.7,
@@ -106,9 +126,21 @@ export async function POST(req: NextRequest) {
       return new Response(customStream, { headers: STREAM_HEADERS });
     }
 
+    // Custom OpenAI-compatible provider with multimodal vision support
+    const openAIUserContent: any =
+      hasRefImages && input.referenceImages
+        ? [
+            { type: 'text', text: userMessage },
+            ...input.referenceImages.map((img) => ({
+              type: 'image_url',
+              image_url: { url: img.dataUrl, detail: 'auto' },
+            })),
+          ]
+        : userMessage;
+
     return await handleOpenAIProviderRequest(provider, [
       { role: 'system', content: systemInstruction },
-      { role: 'user', content: userMessage },
+      { role: 'user', content: openAIUserContent },
     ]);
   } catch (error: any) {
     console.error('API /api/image-prompt-redo Error:', error);

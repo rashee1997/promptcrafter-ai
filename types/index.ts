@@ -443,23 +443,32 @@ export interface HistoryItem {
 /**
  * Image-generation dialects the Image Studio can emit a tuned prompt for.
  * `gemini` targets Google's Nano Banana image models (Gemini Flash/Pro Image),
- * which are prompted as a natural-language creative brief rather than a tag soup.
+ * `gpt-image` targets OpenAI's GPT Image 2 reasoning image model (arena #1),
+ * `midjourney` targets Midjourney V8/V7 (Omni-reference `--oref` + style `--sref`),
+ * `flux` targets Flux 2 (Pro/Flex/Max with natural language and hex colors),
+ * `stable-diffusion` targets SDXL / SD with weighted tokens and negative prompts,
+ * `ideogram` targets Ideogram 4.0 text-in-image specialist,
+ * `recraft` targets Recraft V4.1 for native SVG and vector brand marks,
+ * `seedream` targets Seedream 5.x for fashion and photorealism.
+ * `dalle` is preserved as a backward-compatible alias for `gpt-image`.
  */
 export type ImagePlatform =
   | 'midjourney'
+  | 'gpt-image'
   | 'dalle'
   | 'stable-diffusion'
   | 'flux'
   | 'ideogram'
-  | 'gemini';
+  | 'gemini'
+  | 'recraft'
+  | 'seedream';
+
+/** Output format for image prompts: prose brief, structured JSON schema, or both. */
+export type ImagePromptOutputFormat = 'prose' | 'json' | 'both';
 
 /**
- * Input for the Image Prompt Studio — a multi-platform image generation
- * prompt built from a short description.
- */
-/**
  * A reference image uploaded for the Image Prompt Studio. Kept client-side
- * only (session scope) — not persisted to the gallery by default.
+ * only (session scope) — not persisted to the gallery by default unless opt-in.
  */
 export interface ImagePromptReferenceImage {
   id: string;
@@ -484,13 +493,17 @@ export interface ImagePromptInput {
   aspectRatio: string;
   /** Which platform dialects to generate a tuned prompt for. */
   platforms: ImagePlatform[];
+  /** High-level purpose / end-use signal that shapes composition, crop, and grade. */
+  purpose?: string;
+  /** Output format: prose, JSON schema, or both. */
+  outputFormat?: ImagePromptOutputFormat;
   /** Custom negative-prompt guidance (things to avoid in the image). */
   negativePrompt?: string;
   /** Camera / lens preset id (see CAMERA_PRESETS in lib/image-prompts.ts). */
   camera?: string;
   /** Color grading / film-stock preset id (see COLOR_GRADE_PRESETS). */
   colorGrade?: string;
-  /** Output resolution: '1K' | '2K' | '4K' (Gemini-native; quality tags elsewhere). */
+  /** Output resolution: '512px' | '1K' | '2K' | '4K' (Gemini-native; quality tags elsewhere). */
   resolution?: string;
   /** Exact in-image text to render, with typography guidance if desired. */
   inImageText?: string;
@@ -574,12 +587,56 @@ export interface ImagePromptGenerationRequest {
 export interface ImagePromptRedoRequest {
   provider: ProviderConfig;
   input: ImagePromptInput;
-  /** The section key to regenerate (e.g. 'midjourney', 'ideogram', 'gemini'). */
+  /** The section key to regenerate (e.g. 'midjourney', 'gpt-image', 'ideogram', 'gemini', 'flux', 'recraft'). */
   targetPlatform: string;
   /** The existing full parsed sections for context. */
   existingSections: Record<string, string>;
   /** Optional short text describing what to change (e.g. 'make the lighting warmer'). */
   revisionNote?: string;
+}
+
+/** Request contract for Image-to-Prompt (reverse engineering an image). */
+export interface ImageToPromptRequest {
+  provider: ProviderConfig;
+  image: {
+    dataUrl: string;
+    mimeType?: string;
+  };
+  mode?: 'image' | 'logo';
+}
+
+/** Response contract for Image-to-Prompt reverse engineering. */
+export interface ImageToPromptResult {
+  extractedBrief: {
+    subject: string;
+    style?: string;
+    lighting?: string;
+    camera?: string;
+    composition?: string;
+    mood?: string;
+    colorGrade?: string;
+    aspectRatio?: string;
+    palette?: string;
+    inImageText?: string;
+    summary: string;
+  };
+  suggestedPrompt: string;
+}
+
+/** Request contract for Image Edit ("Edit, don't re-roll"). */
+export interface ImageEditRequest {
+  provider: ProviderConfig;
+  basePrompt: string;
+  editInstruction: string;
+  platform?: ImagePlatform;
+  mode?: 'image' | 'logo';
+}
+
+/** Response contract for Image Edit instructions. */
+export interface ImageEditResult {
+  editedPrompt: string;
+  conversationalInstruction: string;
+  deltaSummary: string;
 }
 
 export interface GenerationRequest {
