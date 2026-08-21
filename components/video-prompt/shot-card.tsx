@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Copy, SquarePlay, Timer, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Copy, Sparkles, SquarePlay, Timer, Trash2, X } from 'lucide-react';
 import type { VideoCharacter, VideoShot, VideoTargetPlatform } from '@/types/video';
 import {
   formatShotForDialect,
@@ -302,6 +302,11 @@ export function ShotCard({
               </>
             )}
           </button>
+        </div>
+        {/* Phase F5 — prompt-enhancer awareness note */}
+        <div className="flex items-center gap-1.5 text-[10px] text-text-muted px-0.5">
+          <Sparkles className="w-3 h-3 text-brand shrink-0" aria-hidden="true" />
+          <span>Tip: Turn off platform prompt auto-enhancers (e.g. LTX enhancer) — this prompt is already calibrated and specific.</span>
         </div>
         {dragOver && (
           <p className="text-[10px] font-semibold text-brand">

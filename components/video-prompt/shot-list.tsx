@@ -6,6 +6,7 @@ import type { VideoProject, VideoShot } from '@/types/video';
 import { rebuildShotContinuity } from '@/lib/video/story-bible';
 import { saveVideoProject } from '@/lib/video-storage';
 import { ConfirmModal } from '@/components/confirm-modal';
+import { cn } from '@/lib/utils';
 import { ShotCard } from './shot-card';
 
 interface ShotListProps {
@@ -190,6 +191,44 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
           Reorder with the arrows — the chain renumbers and logs automatically.
         </p>
       </div>
+
+      {/* Phase F6 — Dramatic Arc / Function-tag strip across the storyboard */}
+      {shots.length > 0 && (
+        <div className="rounded-xl border border-border/70 bg-surface-muted/50 p-2.5 space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-text-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" aria-hidden="true" />
+              Dramatic Arc (Function Strip)
+            </span>
+            <span className="text-[9px] font-semibold text-text-muted">
+              {shots.filter((s) => s.shotFunction).length}/{shots.length} tagged
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 scrollbar-thin">
+            {shots.map((shot, idx) => (
+              <div key={shot.id} className="flex items-center gap-1.5 shrink-0">
+                {idx > 0 && (
+                  <span className="text-text-muted/40 text-[10px] font-mono" aria-hidden="true">
+                    →
+                  </span>
+                )}
+                <div
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border transition-colors',
+                    shot.shotFunction
+                      ? 'bg-accent/15 text-accent border-accent/30'
+                      : 'bg-surface-card text-text-muted border-border'
+                  )}
+                  title={`Shot ${shot.shotNumber}: ${shot.shotFunction || 'Untagged'} — ${shot.description || shot.promptText.slice(0, 60)}`}
+                >
+                  <span className="text-text-muted font-mono">S{shot.shotNumber}</span>
+                  <span className="uppercase tracking-wider">{shot.shotFunction || '—'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Chain */}
       <div className="lg:max-h-[70vh] lg:overflow-y-auto scrollbar-thin pr-1">

@@ -38,7 +38,11 @@ export interface CharacterImageRef {
 const DIRECTOR_RULES = `DIRECTOR CRAFT:
 - Every shot needs: one environmental-pressure detail (rain, flickering light, a cramped hallway — something in the space pushing on the character), one physical micro-action (a hand gripping something, a jaw tightening — not just "he moves"), and one sound/visual motif (something that recurs or means something). Missing all three = rewrite the shot.
 - Before finishing a shot, check: does it change something emotionally, reveal new story info, move the plot, or justify a camera move? If none of these are true, cut or rework it.
-- Tag the shot's function: Establish / Reveal / Power / Pressure / Detail / Reaction / Shift / Impact / Aftermath / Exit — so the whole storyboard has a shape, not just each shot in isolation.`;
+- Tag the shot's function: Establish / Reveal / Power / Pressure / Detail / Reaction / Shift / Impact / Aftermath / Exit — so the whole storyboard has a shape, not just each shot in isolation.
+- Motion specificity: Every camera movement and subject movement MUST state concrete direction and speed (e.g. "the camera pushes in slowly, 30cm over the full clip", "drifting slowly left to right", "sharp whip pan left", "rapid vertical ascent"). Reject generic movement like "the camera moves in" or "she moves across the room".
+- Emotion through physical cues: NEVER name an abstract emotion or feeling in promptText (e.g. do NOT write "she looks sad", "he is angry", "anxious expression"). Express emotion exclusively through concrete physical cues, micro-actions, and body language (e.g. "her jaw tightens", "his knuckles whiten gripping the glass", "rapid shallow breathing", "avoiding eye contact"). Store the emotional intent in the structured \`emotion\` field only.
+- Single-take dialogue discipline: Shots containing dialogue MUST be drafted as a single continuous take with no internal cuts or implied perspective shifts. For continuous dialogue takes, write a single flowing paragraph in present tense with 4–8 descriptive sentences that keep framing and performance unbroken.
+- Detail scaling with shot size: Description detail scales with shot scale. Close-ups and extreme close-ups require high-density micro-action, facial tension, skin texture, breath, and focal falloff details. Wide shots prioritize spatial geography, architectural depth, blocking, and silhouette.`;
 
 const SIX_PART_ARCHITECTURE = `Every drafted shot prompt MUST be written as one complete, copy-ready shot prompt covering the 6-part universal architecture, each part on its own labeled line:
 1. SUBJECT: who/what is in frame — always the exact character name(s) from the Story Bible, never a paraphrase or invented description.
@@ -81,17 +85,18 @@ const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
 - Never re-number existing confirmed shots and never draft a shot that reuses an earlier shotNumber already confirmed in the storyboard.
 - \`dialogue\` is a SEPARATE structured field: spoken lines NEVER go inside promptText. An empty array means the shot is silent (ambience + score carry it).
 - \`negativePrompt\` is a SEPARATE structured field: "no X" clauses NEVER go inside promptText.
-- \`emotion\` captures what the viewer should feel in this shot — it drives the emotional arc. Leave empty only if the shot is pure function (e.g. a pure Establish with no emotional weight).
+- \`emotion\` captures what the viewer should feel in this shot — it drives the emotional arc. Store the emotion tag here only; NEVER write emotion words in promptText.
 - \`shotFunction\` is the dramatic role this shot plays in the sequence — it ensures the whole storyboard has a shape instead of repeating the same beat.`;
 
-const DIALOGUE_RULES = `DIALOGUE RULES (Rule 6):
+const DIALOGUE_RULES = `DIALOGUE RULES (Rule 11):
 - dialogue is a SEPARATE structured field — never write spoken lines inside promptText.
+- Shots containing dialogue MUST be drafted as a single continuous take: write promptText as a single flowing present-tense paragraph (4–8 sentences) without implied internal cuts or perspective switching.
 - Every line's speaker must be an exact Story Bible character name (identity lock) — never invent a speaker.
 - Keep each line short enough to be spoken within this shot's durationSeconds (~2–3 words per second is a safe ceiling); a line that reads longer than the shot will produce rushed or gibberish speech.
 - Leave dialogue as an empty array for a silent shot — do not force dialogue that isn't motivated by the beat.
 - For shots with 2+ speaking characters, make each speaker distinguishable by their locked Story Bible appearance, not just by name, since multi-character scenes are the most common source of crossed/misattributed lines.`;
 
-const NEGATIVE_PROMPT_RULES = `NEGATIVE PROMPT RULES (Rule 7):
+const NEGATIVE_PROMPT_RULES = `NEGATIVE PROMPT RULES (Rule 12):
 - negativePrompt is a SEPARATE field — never write "no X" clauses inside promptText.
 - 3–5 short terms, comma-separated. Fewer under-constrains the model; more causes over-constraint artifacts.
 - Order terms by how much each would ruin THIS shot — put the most damaging risk first.
@@ -180,10 +185,13 @@ export function buildShotDraftingSystemPrompt(
 3. Clip ceiling: every shot is ${durationFloor}–${durationMax} seconds. Compose the action so it fits the chosen duration; never draft a shot that implies longer.
 4. Keep visual style + VFX direction locked: shots may not change color grade, film stock, aspect ratio, particle density, or pacing.
 5. Continuity: each shot's continuityHandoff describes where the subject and camera end AND any scene-condition changes (wardrobe, weather, time-of-day) with the reason they changed, so the next shot can pick up without drift.
-6. Anchor every hand/prop interaction to a concrete object — never describe a hand or limb moving in empty space; give it something specific to hold, touch, or rest on (jittery/floating limbs are the #1 single-shot glitch).
-7. Do not stack contradictory descriptors in one section (e.g. "gritty realism" + "pristine, flawless skin") — pick one register per shot and hold it.
-8. ${DIALOGUE_RULES}
-9. ${NEGATIVE_PROMPT_RULES}${styleNegativeBlock}`,
+6. Motion specificity: Every camera movement and subject movement MUST state concrete direction and speed (e.g. "the camera pushes in slowly, 30cm over the full clip", "drifting slowly left to right", "sharp whip pan left", "rapid vertical ascent"). Reject generic movement verbs like "the camera moves in" or "she walks across".
+7. Physicalized emotion: NEVER name emotion words (e.g. "sad", "angry", "nervous") in promptText. Render emotion exclusively through physical cues, micro-actions, and body language (e.g. "her jaw tightens", "knuckles whiten gripping the edge").
+8. Detail scaling: Calibrate descriptive detail to shot framing scale. Close-ups require dense micro-action, facial micro-expressions, texture, and breath; wide shots focus on spatial geography, blocking, and silhouette.
+9. Anchor every hand/prop interaction to a concrete object — never describe a hand or limb moving in empty space; give it something specific to hold, touch, or rest on (jittery/floating limbs are the #1 single-shot glitch).
+10. Do not stack contradictory descriptors in one section (e.g. "gritty realism" + "pristine, flawless skin") — pick one register per shot and hold it.
+11. ${DIALOGUE_RULES}
+12. ${NEGATIVE_PROMPT_RULES}${styleNegativeBlock}`,
     durationFloor,
     durationMax,
   );
@@ -261,6 +269,42 @@ ${formatIdentityAnchors(bible)}`;
   const finalIdentityBlock = isSceneScoped ? `IDENTITY LOCK — reuse these EXACT strings every time, never change them:
 ${identityContent}` : identityBlock;
 
+  // Phase F1 — inject DirectionPlan into every shot draft (above generic DIRECTOR_RULES).
+  let directorialApproachBlock = '';
+  if (project.directionPlan) {
+    const plan = project.directionPlan;
+    const lensLine =
+      cameraVocab === 'cinematic' && plan.lensPhilosophy
+        ? `\n- Lens philosophy: ${plan.lensPhilosophy}`
+        : '';
+
+    let sceneApproachLine = '';
+    let shotFunctionLine = '';
+    if (shotContext?.sceneNumber && plan.perSceneNotes?.length) {
+      const sceneNote = plan.perSceneNotes.find(
+        (n) => n.sceneNumber === shotContext.sceneNumber
+      );
+      if (sceneNote) {
+        if (sceneNote.approach) {
+          sceneApproachLine = `\n\nTHIS SCENE'S APPROACH: ${sceneNote.approach}`;
+        }
+        if (sceneNote.shotFunction) {
+          shotFunctionLine = `\nTHIS SHOT'S FUNCTION: ${sceneNote.shotFunction}`;
+        }
+      }
+    }
+
+    directorialApproachBlock = `DIRECTORIAL APPROACH (locked in the Direction stage — every shot must express this):
+- Camera language: ${plan.cameraLanguage}${lensLine}
+- Colour palette: ${plan.colourPalette}
+- Lighting: ${plan.lightingApproach}
+- Sound: ${plan.soundDesign}
+- Recurring visual motif: ${plan.visualMotif}
+- Pacing: ${plan.pacingRhythm}${sceneApproachLine}${shotFunctionLine}
+
+`;
+  }
+
   return `You are the shot drafter on a short-form video production. You work inside the director's multi-turn drafting thread: you propose ONE sequential shot per turn, the director approves it into the storyboard or asks for a revision, and you keep character, setting, and visual style anchors perfectly stable across every shot.
 
 DIRECTORIAL BRIEF:
@@ -277,7 +321,7 @@ ${sceneDefaultsContent}${wardrobeNote}
 CONTINUITY HANDOFF FROM THE STORYBOARD:
 ${calculateShotHandoff(lastShot)}
 
-${DIRECTOR_RULES}
+${directorialApproachBlock}${DIRECTOR_RULES}
 
 ${rules}${platformBlock}
 ${withNextShot(withDuration(OUTPUT_CONTRACT, durationFloor, durationMax), nextShot)}`;
