@@ -9,7 +9,7 @@ interface CharacterFormProps {
   onCancel: () => void;
 }
 
-const FIELDS: { key: keyof VideoCharacter; label: string; placeholder: string; lines?: number }[] = [
+const FIELDS: { key: 'name' | 'role' | 'appearance' | 'wardrobe' | 'voiceTone'; label: string; placeholder: string; lines?: number }[] = [
   { key: 'name', label: 'Name', placeholder: 'Character name' },
   { key: 'role', label: 'Role', placeholder: 'Role in the story' },
   { key: 'appearance', label: 'Fixed appearance', placeholder: 'Age, build, face, hair, marks', lines: 2 },

@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { Clapperboard, Sparkles, Square } from 'lucide-react';
+import { Clapperboard, Eye, EyeOff, Sparkles, Square } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
-import type { ChatMessage, DraftedShot, ThinkingOrbState, VideoProject, VideoShot } from '@/types/video';
+import type { ChatMessage, DraftedShot, StoryBibleCharacterImage, ThinkingOrbState, VideoProject, VideoShot } from '@/types/video';
 import {
   Conversation,
   ConversationContent,
@@ -15,6 +15,8 @@ import {
 import { Message, MessageContent, MessageResponse, MessageToolbar } from '@/components/ai-elements/message';
 import { saveVideoProject } from '@/lib/video-storage';
 import { parseDraftedShot } from '@/lib/video/story-bible';
+import { useStoryBible } from '@/lib/video/story-bible-context';
+import { blobToDataUrl } from '@/lib/compression';
 import { ThinkingOrb } from './thinking-orb';
 import { ShotDraftCard } from './shot-draft-card';
 import { ChatInput } from './chat-input';
@@ -61,6 +63,37 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
   const onProjectUpdateRef = useRef(onProjectUpdate);
   onProjectUpdateRef.current = onProjectUpdate;
 
+  // C1 — Story Bible image context for auto-attaching character references
+  const { entries } = useStoryBible();
+  /**
+   * Resolves the primary (or newest) reference image for each character id.
+   * Returns data-URL-equipped entries ready to send as file parts.
+   */
+  const resolveCharacterImages = useCallback(
+    async (characterIds: string[]): Promise<StoryBibleCharacterImage[]> => {
+      const resolved: StoryBibleCharacterImage[] = [];
+      for (const id of characterIds) {
+        const entry =
+          entries.find((e) => e.characterId === id && e.isPrimary) ??
+          entries.find((e) => e.characterId === id);
+        if (!entry) continue;
+        // Ensure we have a data URL (IndexedDB entries may only have a Blob)
+        if (!entry.imageDataUrl && entry.imageBlob) {
+          try {
+            const dataUrl = await blobToDataUrl(entry.imageBlob);
+            resolved.push({ ...entry, imageDataUrl: dataUrl });
+          } catch {
+            // Skip — blob couldn't be serialized
+          }
+        } else if (entry.imageDataUrl) {
+          resolved.push(entry);
+        }
+      }
+      return resolved;
+    },
+    [entries]
+  );
+
   const [seed] = useState<UIMessage[]>(() => seedFromHistory(project));
   const [transport] = useState(
     () =>
@@ -90,6 +123,12 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
   const streaming = status === 'submitted' || status === 'streaming';
   const orbState: ThinkingOrbState =
     status === 'submitted' ? 'searching' : status === 'streaming' ? 'working' : 'breathing';
+
+  /**
+   * C5 — tracks whether the last request used the text-only pre-pass route.
+   * Visible to the director so they know the vision analysis ran.
+   */
+  const [lastRoutingNote, setLastRoutingNote] = useState<string | null>(null);
 
   /** Writes the thread into project.chatHistory and hands it up. A stream the
    *  director stopped is tagged so the next turn never treats a cut-off draft
@@ -159,11 +198,29 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
 
   /** Explicit "Draft Next Shot" — the director asks for shot N+1 when ready;
    *  it never fires as a side effect of Approve. */
-  const handleDraftNext = () => {
+  const handleDraftNext = async () => {
     if (streaming || approving) return;
-    void sendMessage({
-      text: 'Draft the next shot, continuing the scene from the last approved shot.',
-    });
+    // C1 — auto-attach character reference images
+    const allCharIds = project.storyBible?.characters?.map((c) => c.id) ?? [];
+    const images = await resolveCharacterImages(allCharIds);
+    const charImageFiles = images
+      .filter((e) => e.imageDataUrl)
+      .map((e) => ({
+        type: 'file' as const,
+        mediaType: 'image/webp',
+        url: e.imageDataUrl!,
+        filename: `${e.characterName}-reference.webp`,
+      }));
+    if (charImageFiles.length > 0) {
+      void sendMessage({
+        text: 'Draft the next shot, continuing the scene from the last approved shot.',
+        files: charImageFiles,
+      });
+    } else {
+      void sendMessage({
+        text: 'Draft the next shot, continuing the scene from the last approved shot.',
+      });
+    }
   };
 
   /** Stop marks the stream as interrupted so persistence tags it (A8). */
@@ -172,11 +229,25 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
     stop();
   };
 
-  const handleRevise = (draft: DraftedShot) => {
+  const handleRevise = async (draft: DraftedShot) => {
     if (streaming) return;
-    void sendMessage({
-      text: `Revise your last shot draft (Shot ${draft.shotNumber}): "${draft.description}". Improve it while keeping the same subject, setting, and visual style anchors — re-emit the same shot number.`,
-    });
+    // C1 — auto-attach character reference images
+    const allCharIds = project.storyBible?.characters?.map((c) => c.id) ?? [];
+    const images = await resolveCharacterImages(allCharIds);
+    const charImageFiles = images
+      .filter((e) => e.imageDataUrl)
+      .map((e) => ({
+        type: 'file' as const,
+        mediaType: 'image/webp',
+        url: e.imageDataUrl!,
+        filename: `${e.characterName}-reference.webp`,
+      }));
+    const text = `Revise your last shot draft (Shot ${draft.shotNumber}): "${draft.description}". Improve it while keeping the same subject, setting, and visual style anchors — re-emit the same shot number.`;
+    if (charImageFiles.length > 0) {
+      void sendMessage({ text, files: charImageFiles });
+    } else {
+      void sendMessage({ text });
+    }
   };
 
   const starters = useMemo(() => {
@@ -326,12 +397,58 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         </div>
       )}
 
+      {/* C5 — visible routing note when text-only pre-pass ran */}
+      {lastRoutingNote && (
+        <div className="flex items-start gap-1.5 px-1">
+          {lastRoutingNote.includes('vision pre-pass') ? (
+            <Eye className="w-3 h-3 text-brand mt-0.5 shrink-0" aria-hidden="true" />
+          ) : (
+            <EyeOff className="w-3 h-3 text-text-muted mt-0.5 shrink-0" aria-hidden="true" />
+          )}
+          <span className="text-[9px] text-text-muted leading-relaxed">
+            {lastRoutingNote}
+          </span>
+        </div>
+      )}
+
       <ChatInput
         project={project}
         busy={streaming}
-        onSend={(text, files) => {
-          const attachments = files && files.length > 0 ? files : undefined;
-          void sendMessage(attachments ? { text, files: attachments } : { text });
+        onSend={async (text, files) => {
+          // C1 — merge director-attached files with auto-attached character images
+          const allCharIds = project.storyBible?.characters?.map((c) => c.id) ?? [];
+          const charImages = await resolveCharacterImages(allCharIds);
+          const charImageFiles = charImages
+            .filter((e) => e.imageDataUrl)
+            .map((e) => ({
+              type: 'file' as const,
+              mediaType: 'image/webp',
+              url: e.imageDataUrl!,
+              filename: `${e.characterName}-reference.webp`,
+            }));
+          // Merge: character images first, then director's manual attachments
+          const allFiles = [...charImageFiles, ...(files ?? [])];
+          const hasFiles = allFiles.length > 0;
+          void sendMessage(hasFiles ? { text, files: allFiles } : { text });
+          // C5 — set routing note after send (server determines the route)
+          if (charImages.length > 0) {
+            const modelId =
+              providerConfig.activeModel?.trim() ||
+              providerConfig.model?.trim() ||
+              providerConfig.models?.[0]?.trim() || '';
+            const isTextOnly = !/(gemini|gpt-4o|gpt-4\.1|gpt-5|claude-3|claude-4|o3|o4)/i.test(modelId);
+            if (isTextOnly) {
+              setLastRoutingNote(
+                `${charImages.length} character reference${charImages.length === 1 ? '' : 's'} attached — vision pre-pass ran before drafting (text-only model: ${modelId || 'unknown'}).`
+              );
+            } else {
+              setLastRoutingNote(
+                `${charImages.length} character reference${charImages.length === 1 ? '' : 's'} attached and sent to the drafting model.`
+              );
+            }
+          } else {
+            setLastRoutingNote(null);
+          }
         }}
       />
     </div>

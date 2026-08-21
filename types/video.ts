@@ -121,6 +121,13 @@ export interface DirectionPlan {
   perSceneNotes: { sceneNumber: number; approach: string; shotFunction: string }[];
 }
 
+export interface CharacterWardrobeLook {
+  id: string;
+  label: string;              // "Act 1 — work uniform", "Act 3 — rain-soaked"
+  description: string;        // specific, verbatim wardrobe detail
+  referenceImageId?: string;  // optional look-specific image (StoryBibleCharacterImage.id)
+}
+
 export interface VideoCharacter {
   id: string;
   name: string;
@@ -128,6 +135,15 @@ export interface VideoCharacter {
   appearance: string;
   wardrobe: string;
   voiceTone: string;
+  /**
+   * Wardrobe variants — selectable per shot. Identity (face/build) stays
+   * locked to the character's reference image; only clothing changes.
+   * Optional for backward compat: characters without looks use the top-level
+   * `wardrobe` field as-is.
+   */
+  wardrobeLooks?: CharacterWardrobeLook[];
+  /** The look active when no shot-level override is set. */
+  defaultLookId?: string;
   /**
    * Copy-ready character-sheet image prompt for EXTERNAL image models
    * (Midjourney, Imagen UI, …): "[Subject]. 360-degree character sheet
@@ -139,6 +155,26 @@ export interface VideoCharacter {
   imagePrompt?: string;
   /** Director-facing narrative description of the character (1–2 sentences). */
   narrativeDescription?: string;
+}
+
+/**
+ * Structured result from vision analysis of a character reference image.
+ * Returned by the analyze-character-image server function and optionally
+ * auto-filled onto the VideoCharacter fields after upload.
+ */
+export interface CharacterImageAnalysis {
+  /** Concise appearance summary: age range, build, face shape, skin tone. */
+  appearance: string;
+  /** Build details: height impression, body type. */
+  build: string;
+  /** Hair detail: color, length, style. */
+  hairDetail: string;
+  /** Distinguishing features: scars, tattoos, glasses, accessories. */
+  distinguishingFeatures: string;
+  /** Wardrobe visible in the reference image. */
+  apparentWardrobe: string;
+  /** Overall quality assessment of the reference image. */
+  imageQualityNote?: string;
 }
 
 export interface VideoLocation {

@@ -359,6 +359,17 @@ export function SidebarCharactersPanel({ project, provider, onUpdate }: SidebarC
                     onRegeneratePrompt={async () => {
                       await handleRegenerateImagePrompt();
                     }}
+                    onAnalysisComplete={(analysis) => {
+                      setEditing((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              appearance: analysis.appearance,
+                              wardrobe: analysis.apparentWardrobe,
+                            }
+                          : prev
+                      );
+                    }}
                   />
                 </div>
               )}

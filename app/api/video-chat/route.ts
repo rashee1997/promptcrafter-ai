@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { streamText } from 'ai';
 import type { ProviderConfig } from '@/types';
 import type { VideoChatFile, VideoProject } from '@/types/video';
-import { resolveVideoModel } from '@/lib/video-ai';
-import { buildShotDraftingSystemPrompt } from '@/lib/video/system-prompt';
-import { routeMultimodalContext } from '@/lib/model-fallback';
+import { resolveVideoModel, resolveModelId } from '@/lib/video-ai';
+import { buildShotDraftingSystemPrompt, type CharacterImageRef } from '@/lib/video/system-prompt';
+import { routeMultimodalContext, modelSupportsVision } from '@/lib/model-fallback';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -127,9 +127,37 @@ export async function POST(req: NextRequest) {
         : '';
     const routing = await routeMultimodalContext(lastUserText, files, providerConfig);
 
-    let system = buildShotDraftingSystemPrompt(project);
+    // ── C1 — identify character reference images among attached files ──
+    // Character images are sent with filenames like "<name>-reference.webp".
+    // We extract them so the system prompt can inject identity-by-reference
+    // rules (C2) instead of verbatim re-description.
+    const charImageFiles: VideoChatFile[] = [];
+    const charImageRefs: CharacterImageRef[] = [];
+    const chars = project.storyBible?.characters ?? [];
+    let charImgIdx = 0;
+    for (const file of files) {
+      if (file.filename?.endsWith('-reference.webp') && file.mediaType?.startsWith('image/')) {
+        charImgIdx++;
+        charImageFiles.push(file);
+        // Try to match to a character by name prefix
+        const namePrefix = file.filename.replace(/-reference\.webp$/i, '');
+        const matchedChar = chars.find(
+          (c) => c.name.trim().toLowerCase() === namePrefix.toLowerCase()
+        );
+        if (matchedChar) {
+          charImageRefs.push({ characterId: matchedChar.id, imageIndex: charImgIdx });
+        }
+      }
+    }
+
+    let system = buildShotDraftingSystemPrompt(project, charImageRefs.length > 0 ? charImageRefs : undefined);
+
+    // C5 — visible routing note injected into the system prompt
+    const modelId = resolveModelId(providerConfig);
+    const isVisionCapable = modelSupportsVision(modelId);
 
     if (routing.mode === 'direct') {
+      // Vision-capable model: images ride directly
       system += `\n\nThe director attached ${routing.images.length} reference image${routing.images.length === 1 ? '' : 's'} to this message — study them and honor any character, wardrobe, location, or style details they show.`;
       const last = modelMessages[modelMessages.length - 1];
       if (last && last.role === 'user') {
@@ -146,7 +174,21 @@ export async function POST(req: NextRequest) {
         ];
       }
     } else if (routing.mode === 'extracted') {
-      system += `\n\nREFERENCE MATERIAL EXTRACTED FROM UPLOADED FILES (extracted via ${routing.viaModel}):\n${routing.context}`;
+      // C5 — text-only model: vision pre-pass ran, inject the text digest
+      system += `\n\n[VISION PRE-PASS — ${routing.viaModel} analyzed ${files.length} attachment(s)]\nREFERENCE MATERIAL EXTRACTED FROM UPLOADED FILES:${'\n'}${routing.context}`;
+    } else if (charImageFiles.length > 0 && !isVisionCapable) {
+      // C5 fallback: character images attached but model can't see them.
+      // The routeMultimodalContext already returned 'none' because there were
+      // no non-character files, but we still need to handle the character images.
+      // Re-run extraction with just the character images.
+      const charRouting = await routeMultimodalContext(
+        lastUserText,
+        charImageFiles,
+        providerConfig,
+      );
+      if (charRouting.mode === 'extracted') {
+        system += `\n\n[VISION PRE-PASS — ${charRouting.viaModel} analyzed ${charImageFiles.length} character reference image(s)]\nCHARACTER REFERENCE ANALYSIS:${'\n'}${charRouting.context}`;
+      }
     }
 
     const result = streamText({

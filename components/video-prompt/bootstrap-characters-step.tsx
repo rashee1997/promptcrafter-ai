@@ -19,7 +19,7 @@ interface BootstrapCharactersStepProps {
   onRegenerateCharacter: (character: VideoCharacter) => Promise<VideoCharacter | null>;
 }
 
-const FIELDS: { key: keyof VideoCharacter; label: string; placeholder: string; lines?: number }[] = [
+const FIELDS: { key: 'name' | 'role' | 'appearance' | 'wardrobe' | 'voiceTone'; label: string; placeholder: string; lines?: number }[] = [
   { key: 'name', label: 'Name', placeholder: 'Character name' },
   { key: 'role', label: 'Role', placeholder: 'Role in the story' },
   { key: 'appearance', label: 'Fixed appearance', placeholder: 'Age, build, face, hair, marks', lines: 2 },
@@ -131,6 +131,12 @@ function CharacterCard({
         onRegeneratePrompt={async () => {
           const next = await onRegenerateImagePrompt(character);
           if (next) onChange({ imagePrompt: next });
+        }}
+        onAnalysisComplete={(analysis) => {
+          onChange({
+            appearance: analysis.appearance,
+            wardrobe: analysis.apparentWardrobe,
+          });
         }}
       />
     </div>

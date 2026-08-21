@@ -20,6 +20,16 @@ import {
 } from './story-bible';
 import { getPlatformSpec } from './platforms';
 
+/**
+ * Maps character id → 1-based image index in the attached reference set.
+ * When a character has an image, the identity anchor switches from
+ * verbatim re-description to a short pointer (C2 — identity by reference).
+ */
+export interface CharacterImageRef {
+  characterId: string;
+  imageIndex: number; // 1-based, matches "image 1", "image 2", etc.
+}
+
 const DIRECTOR_RULES = `DIRECTOR CRAFT:
 - Every shot needs: one environmental-pressure detail (rain, flickering light, a cramped hallway — something in the space pushing on the character), one physical micro-action (a hand gripping something, a jaw tightening — not just "he moves"), and one sound/visual motif (something that recurs or means something). Missing all three = rewrite the shot.
 - Before finishing a shot, check: does it change something emotionally, reveal new story info, move the plot, or justify a camera move? If none of these are true, cut or rework it.
@@ -77,6 +87,12 @@ const NEGATIVE_PROMPT_RULES = `NEGATIVE PROMPT RULES (Rule 7):
 - If this shot has dialogue, also include: lip-sync misalignment, garbled speech, audio desync.
 - If this shot has hands/props in frame, also include: floating hands, extra fingers, morphing objects.`;
 
+/** Truncates context so long bible fields never bloat the system prompt. */
+function clip(text: string | null | undefined, max = 600): string {
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+}
+
 /** Injects the next sequential shot number into the output contract. */
 function withNextShot(contract: string, nextShot: number): string {
   return contract.replace('__NEXT_SHOT__', String(nextShot));
@@ -100,7 +116,10 @@ function withDuration(text: string, min: number, max: number): string {
  * draftingSystemPromptBlock replaces the generic duration rule and injects
  * platform-specific dialogue/negative-prompt syntax.
  */
-export function buildShotDraftingSystemPrompt(project: VideoProject): string {
+export function buildShotDraftingSystemPrompt(
+  project: VideoProject,
+  imageRefs?: CharacterImageRef[],
+): string {
   const bible = project.storyBible ?? { characters: [], locations: [], continuityLog: [] };
   const brief = project.customInstructions?.trim() || project.name || '(No brief supplied)';
   const nextShot = nextShotNumber(project);
@@ -132,6 +151,54 @@ export function buildShotDraftingSystemPrompt(project: VideoProject): string {
     durationMax,
   );
 
+  // ── C2: identity-by-reference vs. verbatim re-description ──
+  // When reference images are attached, characters with images get a
+  // pointer rule instead of a verbatim appearance string — shorter,
+  // more specific, and lets the model anchor identity to the image.
+  const imageRefMap = new Map(imageRefs?.map((r) => [r.characterId, r.imageIndex]) ?? []);
+  const charsWithImages = bible.characters?.filter((c) => imageRefMap.has(c.id)) ?? [];
+  const charsWithoutImages = bible.characters?.filter((c) => !imageRefMap.has(c.id)) ?? [];
+
+  let identityBlock: string;
+  if (charsWithImages.length > 0) {
+    // Mixed: some characters have images, some don't
+    const imagePointers = charsWithImages
+      .map((c) => {
+        const idx = imageRefMap.get(c.id)!;
+        return [
+          `${c.name} (image ${idx}): IDENTITY BY REFERENCE — ${c.name} has an attached reference image (image ${idx}). Refer to them by name and point to the image for face, hair and build. Do NOT re-describe their facial features in the prompt text — the reference governs identity. Describe only what changes in THIS shot: action, expression, wardrobe state, and position in frame.`,
+        ].join('\n');
+      })
+      .join('\n\n');
+
+    const textAnchors = charsWithoutImages.length > 0
+      ? `VERBATIM RE-DESCRIPTION (no reference image available):\n${charsWithoutImages
+          .map((c) => `${c.name} = "${clip(c.appearance, 240)}"`)
+          .join('; ')}`
+      : '';
+
+    identityBlock = `IDENTITY LOCK — reference images govern identity where attached:
+${imagePointers}
+
+${textAnchors}`;
+  } else {
+    // No images attached — use the original verbatim anchors
+    identityBlock = `IDENTITY LOCK — reuse these EXACT strings every time, never change them:
+${formatIdentityAnchors(bible)}`;
+  }
+
+  // Wardrobe variants — when a character has wardrobeLooks, inject the
+  // active look's description instead of the top-level wardrobe field.
+  let wardrobeNote = '';
+  const charsLooks = bible.characters?.filter((c) => c.wardrobeLooks && c.wardrobeLooks.length > 0) ?? [];
+  if (charsLooks.length > 0) {
+    const lookLines = charsLooks.map((c) => {
+      const activeLook = c.wardrobeLooks!.find((l) => l.id === c.defaultLookId) ?? c.wardrobeLooks![0];
+      return `${c.name} wardrobe (active look "${activeLook.label}"): "${clip(activeLook.description, 240)}"`;
+    });
+    wardrobeNote = `\nWARDROBE VARIANTS — identity (face/build) stays locked; only clothing changes:\n${lookLines.join('; ')}\nWhen a shot requires a wardrobe change, pick a different look from the character's wardrobeLooks and note the switch in continuityHandoff.`;
+  }
+
   return `You are the shot drafter on a short-form video production. You work inside the director's multi-turn drafting thread: you propose ONE sequential shot per turn, the director approves it into the storyboard or asks for a revision, and you keep character, setting, and visual style anchors perfectly stable across every shot.
 
 DIRECTORIAL BRIEF:
@@ -140,11 +207,10 @@ ${brief}
 STORY BIBLE:
 ${buildStoryBibleDigest(bible)}
 
-IDENTITY LOCK — reuse these EXACT strings every time, never change them:
-${formatIdentityAnchors(bible)}
+${identityBlock}
 
 SCENE DEFAULTS — starting point for wardrobe and location conditions. You may evolve these across shots ONLY when the story motivates it (new day, after an event, weather turning for dramatic pressure). When you do, say so out loud in continuityHandoff so the next shot inherits the change instead of reverting:
-${formatSceneDefaults(bible)}
+${formatSceneDefaults(bible)}${wardrobeNote}
 
 CONTINUITY HANDOFF FROM THE STORYBOARD:
 ${calculateShotHandoff(lastShot)}

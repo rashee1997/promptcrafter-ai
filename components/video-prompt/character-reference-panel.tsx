@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Check, Copy, ImagePlus, RefreshCw, Star, Trash2 } from 'lucide-react';
-import type { VideoCharacter } from '@/types/video';
-import { compressToWebP } from '@/lib/compression';
+import { Check, Copy, ImagePlus, Info, RefreshCw, Star, Trash2 } from 'lucide-react';
+import type { VideoCharacter, CharacterImageAnalysis } from '@/types/video';
+import { blobToDataUrl, compressToWebP } from '@/lib/compression';
 import { useStoryBible } from '@/lib/video/story-bible-context';
 import { useInlineCopy } from '@/lib/use-inline-copy';
 import { toast } from '@/components/toast';
@@ -20,6 +20,8 @@ interface CharacterReferencePanelProps {
   onRegeneratePrompt: () => Promise<void>;
   /** Persists a manually-edited imagePrompt on the character. */
   onEditPrompt: (text: string) => void;
+  /** Called when vision analysis completes — auto-fills appearance fields. */
+  onAnalysisComplete?: (analysis: CharacterImageAnalysis) => void;
 }
 
 /**
@@ -37,11 +39,13 @@ export function CharacterReferencePanel({
   busy = false,
   onRegeneratePrompt,
   onEditPrompt,
+  onAnalysisComplete,
 }: CharacterReferencePanelProps) {
   const { entries, saveCharacterImage, deleteCharacterImage, setPrimaryCharacterImage } = useStoryBible();
   const { copiedKey, copy } = useInlineCopy(1400);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
   const saved = entries
@@ -49,7 +53,7 @@ export function CharacterReferencePanel({
     .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
   const copied = copiedKey === `char-${character.id}-prompt`;
 
-  /** Compresses the uploaded image to WebP and saves it to the Story Bible store. */
+  /** Compresses the uploaded image to WebP, saves it, and runs vision analysis. */
   const handleUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Image required', `${file.name} is not an image.`);
@@ -67,6 +71,28 @@ export function CharacterReferencePanel({
       });
       if (savedEntry) {
         toast.success('Character image saved', `${savedEntry.characterName}'s reference is now in the Story Bible.`);
+        // Run vision analysis to auto-fill appearance fields (C4)
+        setAnalyzing(true);
+        try {
+          const dataUrl = await blobToDataUrl(blob);
+          const { analyzeCharacterImage } = await import('@/lib/video/bootstrap/analyze-character-image');
+          const analysis = await analyzeCharacterImage(
+            dataUrl,
+            character.name.trim() || 'Character',
+            character.appearance,
+          );
+          onAnalysisComplete?.(analysis);
+          toast.success('Analysis complete', 'Reference image analyzed — appearance fields updated.');
+        } catch (analysisErr) {
+          // Non-fatal: upload succeeded, analysis is a bonus
+          console.warn('Character image analysis failed:', analysisErr);
+          toast.info(
+            'Image saved without analysis',
+            analysisErr instanceof Error ? analysisErr.message : 'Could not analyze the image automatically.',
+          );
+        } finally {
+          setAnalyzing(false);
+        }
       } else {
         toast.error('Save failed', 'The image could not be stored locally.');
       }
@@ -187,10 +213,33 @@ export function CharacterReferencePanel({
           />
           <ImagePlus className="w-4 h-4 text-accent" aria-hidden="true" />
           <span className="text-[10px] font-semibold text-text-secondary">
-            {uploading ? 'Compressing & saving…' : 'Upload Generated Character Image'}
+            {uploading ? 'Compressing & saving…' : analyzing ? 'Analyzing reference…' : 'Upload Generated Character Image'}
           </span>
           <span className="text-[9px] text-text-muted">PNG / JPG / WebP — auto-compressed to WebP</span>
+          {analyzing && (
+            <span className="text-[9px] text-brand animate-pulse">AI analyzing appearance…</span>
+          )}
         </label>
+      </div>
+
+      {/* C6 — Reference image guidance hints */}
+      <div className="rounded-xl border border-brand/15 bg-brand/5 p-2.5 space-y-1">
+        <div className="flex items-start gap-1.5">
+          <Info className="w-3 h-3 text-brand mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="space-y-1">
+            <p className="text-[9px] font-semibold text-brand">Reference image tips</p>
+            <ul className="text-[9px] text-text-muted leading-relaxed space-y-0.5 list-disc list-inside">
+              <li>
+                A <strong className="text-text-secondary">clear, well-lit 1024×1024</strong> image often works
+                better than a blurry 4K photo — focus on clarity and lighting over raw resolution.
+              </li>
+              <li>
+                Add a <strong className="text-text-secondary">three-quarter angle</strong> variant (not just
+                a front portrait) to reduce guesswork when the camera shows a new angle.
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       {/* Saved candidates — each gets delete + explicit Set-as-primary */}
