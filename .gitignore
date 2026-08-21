@@ -6,3 +6,8 @@ coverage/
 .env*
 !.env.example
 *.tsbuildinfo
+.agents/
+.spectre/
+.gjc/
+.claude/
+skills-lock.json
