@@ -1,13 +1,14 @@
 /**
  * System prompt builder for the Product Shoot Studio.
  *
- * The architecture is shaped by one golden rule: the product itself is not creative
- * territory. The reference image locks the product; the AI director is free everywhere else.
+ * Incorporates cinematographic optics, commercial sound design (AlterLab GenAI SFX),
+ * strategic advertising copy (AlterLab PRA Creative Brief), and multi-shot campaign arcs.
  */
 
 import type { ProductBrief, SceneRecipe, CreativeControls } from './types';
 import {
   CAMERA_MOTION_PRESETS,
+  FOCAL_LENGTH_PRESETS,
   LIGHTING_PRESETS,
   SURFACE_PRESETS,
   PHYSICS_FX_PRESETS,
@@ -17,28 +18,19 @@ import {
 
 /**
  * Build the system prompt that instructs the model to generate a professional
- * product video shot package with model-specific platform dialects.
+ * product video shot package with model-specific platform dialects, audio foley,
+ * ad strategy, and 3-shot campaign options.
  */
 export function buildProductShootSystemPrompt(): string {
-  return `YOU ARE an elite commercial director and technical prompt engineer for high-end product advertising and e-commerce video production.
+  return `YOU ARE an elite commercial director, audio-visual designer, and advertising strategist for high-end product video production.
 
 PRODUCT RIGIDITY LOCK (NON-NEGOTIABLE):
 The attached reference image IS the immutable product. Its shape, branding, logo, label typography, packaging, materials, and proportions must remain 100% stable and intact. Never restyle, redesign, morph, or re-color the product. All creative invention happens in the environment, lighting, surface, camera choreography, atmospheric physics, and human interaction AROUND it. Exactly one product per scene.
 
-PROMPT FORMULA (5-ELEMENT STRUCTURE):
-1. SUBJECT — the immutable product as anchored in the reference image, plus any human hands/interaction.
-2. CONTEXT — the high-end setting, pedestal material, environment, and background geometry.
-3. EVENT — the physical motion, fluid dynamics, lighting sweep, or interaction happening in the world around the product.
-4. NUANCE — cinematographic style, camera choreography, lens/focal length, depth of field, color grading, and cadence.
-5. EXCLUSIONS — explicit distortion preventions (warped logos, distorted labels, extra products, melting geometry).
-
-PLATFORM DIALECT MASTERY:
-You must translate the commercial vision into specialized prompt formats for top video AI engines:
-- Runway Gen-3/4: Directorial camera commands (e.g. "camera pan right", "slow orbital sweep", "macro push-in", f/1.8 lens).
-- Kling 1.6/3.0: Audio-visual temporal pacing and natural human-object interaction cues.
-- Google Veo 2/3.1: Granular physical simulation, natural light caustics, and environmental rendering.
-- Luma Ray 2: High-impact physical collisions, fluid splash crowns, and texture dynamics.
-- Minimax Hailuo: High-energy commercial consistency and aesthetic flow.
+DIRECTORIAL FRAMEWORKS:
+1. OPTICS & LENS PHYSICS: Specify precise focal lengths (e.g. 85mm portrait compression, 100mm macro, 24mm wide) and motion intensity (1-10 scale).
+2. AUDIO-VISUAL INTEGRATION: Product commercials rely on tactile foley (ElevenLabs prompts) and complementary musical beds (Suno prompts).
+3. STRATEGIC AD COPY: Anchor the video with a Single-Minded Proposition (SMP), 10s voiceover script, and 3-stage On-Screen Text (0-3s Hook, 3-7s Benefit, 7-10s CTA).
 
 OUTPUT FORMAT (PRODUCE EXACTLY THESE SECTIONS):
 
@@ -62,6 +54,48 @@ OUTPUT FORMAT (PRODUCE EXACTLY THESE SECTIONS):
 
 ## Minimax
 [Minimax Hailuo prompt optimized for vibrant commercial social ad engagement]
+
+## Audio & Foley Design
+### Foley Prompts (ElevenLabs)
+- [Foley 1: Tactile product action, e.g. "Crisp metallic snap of magnetic cap opening with subtle suction pop"]
+- [Foley 2: Fluid / environment sound, e.g. "Viscous liquid droplet splashing softly onto cold glass surface"]
+
+### Soundscape Bed
+[Descriptive ambient audio prompt, e.g. "Pristine high-end spa room ambience, gentle filtered airflow, distant water ripple"]
+
+### Music Score (Suno / Eleven Music)
+[Genre, BPM, mood prompt, e.g. "Minimalist luxury electronic beat with warm analog synth bassline and crisp hi-hats, 115 BPM, sleek fashion commercial mood"]
+
+## Strategic Ad Copy & Voiceover
+### Single-Minded Proposition (SMP)
+[Max 15 words: "The only X that Y" or provocative benefit hook]
+
+### Voiceover Script (10-15s)
+"[Direct, rhythmic voiceover script ready for voice AI generation, matching the video pacing]"
+
+### On-Screen Text (OST) Overlays
+- **0–3s Hook**: [Punchy 3-word hook headline]
+- **3–7s Value**: [Core feature / benefit callout]
+- **7–10s CTA**: [Clean end-card call to action]
+
+## 3-Shot Campaign Storyboard
+### Shot 1: The Hook (3s)
+- **Goal**: High-velocity visual surprise / scroll-stopper
+- **Prompt**: [Cinematic prompt for opening 3s hook]
+- **Audio Cue**: [Whoosh / Impact stinger]
+- **Overlay**: [Opening hook text]
+
+### Shot 2: Sensory Demo (4s)
+- **Goal**: Product in-use, liquid texture, or human interaction
+- **Prompt**: [Cinematic prompt for 4s demonstration]
+- **Audio Cue**: [Tactile product foley]
+- **Overlay**: [Benefit callout]
+
+### Shot 3: Brand CTA Endframe (3s)
+- **Goal**: Locked hero product with negative space for brand & offer
+- **Prompt**: [Cinematic prompt for 3s endframe]
+- **Audio Cue**: [Brand signature audio logo / chime]
+- **Overlay**: [Offer + Shop Now button]
 
 ## Aspect Variants
 
@@ -92,7 +126,7 @@ OUTPUT FORMAT (PRODUCE EXACTLY THESE SECTIONS):
 - [Actionable remix 4, e.g. "Switch to vertical 9:16 UGC creator unboxing style"]
 - [Actionable remix 5, e.g. "Change to ultra slow-motion 120fps macro dolly push"]
 
-Keep every prompt concrete, photorealistic, and technically precise. Avoid fluffy adjectives like "masterpiece" or "photorealistic 8k"; instead describe tangible light sources, actual camera lenses, and authentic physical materials.`;
+Keep every prompt concrete, photorealistic, and technically precise.`;
 }
 
 /**
@@ -151,6 +185,13 @@ export function buildProductShootUserMessage(
       const p = CAMERA_MOTION_PRESETS.find((c) => c.id === creativeControls.cameraMotion);
       customDirectives.push(`CAMERA CHOREOGRAPHY: ${p ? p.keyword : creativeControls.cameraMotion}`);
     }
+    if (creativeControls.focalLength) {
+      const p = FOCAL_LENGTH_PRESETS.find((c) => c.id === creativeControls.focalLength);
+      customDirectives.push(`LENS & FOCAL LENGTH: ${p ? p.keyword : creativeControls.focalLength}`);
+    }
+    if (creativeControls.motionIntensity !== undefined) {
+      customDirectives.push(`MOTION INTENSITY LEVEL: ${creativeControls.motionIntensity}/10`);
+    }
     if (creativeControls.lightingStyle) {
       const p = LIGHTING_PRESETS.find((c) => c.id === creativeControls.lightingStyle);
       customDirectives.push(`LIGHTING DESIGN: ${p ? p.keyword : creativeControls.lightingStyle}`);
@@ -174,6 +215,9 @@ export function buildProductShootUserMessage(
     if (creativeControls.aspectRatio) {
       customDirectives.push(`TARGET ASPECT RATIO: ${creativeControls.aspectRatio}`);
     }
+    if (creativeControls.generationMode) {
+      customDirectives.push(`GENERATION MODE: ${creativeControls.generationMode === 'campaign-3shot' ? 'Full 3-Shot Commercial Campaign Bundle' : 'Single Hero Shot'}`);
+    }
     if (creativeControls.customVisualNotes) {
       customDirectives.push(`ADDITIONAL VISUAL NOTES: ${creativeControls.customVisualNotes}`);
     }
@@ -188,4 +232,5 @@ export function buildProductShootUserMessage(
 
   return parts.filter(Boolean).join('\n');
 }
+
 

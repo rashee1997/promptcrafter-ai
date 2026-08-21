@@ -89,7 +89,7 @@ export function OutputPanel({
   const autoScrollRef = useRef(true);
 
   // Tab & View state
-  const [activeTab, setActiveTab] = useState<VideoPlatformDialect | 'aspects' | 'alternatives' | 'negative'>('master');
+  const [activeTab, setActiveTab] = useState<VideoPlatformDialect | 'audio' | 'adcopy' | 'campaign' | 'aspects' | 'alternatives' | 'negative'>('master');
   const [viewMode, setViewMode] = useState<'tabs' | 'grid'>('tabs');
 
   // Parse structured sections
@@ -220,7 +220,7 @@ export function OutputPanel({
             Commercial Director Ready
           </h4>
           <p className="text-xs text-text-secondary max-w-sm leading-relaxed">
-            Upload your product reference image, specify your brief & creative controls, and click <strong className="text-brand">Generate Shot Package</strong> to produce tailored prompts for Runway, Kling, Veo, Luma, and Minimax.
+            Upload your product reference image, specify your brief & creative controls, and click <strong className="text-brand">Generate Shot Package</strong> to produce tailored prompts for Runway, Kling, Veo, Luma, Minimax, Foley SFX, and Ad Copy.
           </p>
         </div>
       )}
@@ -263,6 +263,53 @@ export function OutputPanel({
                       </button>
                     );
                   })}
+
+                  {/* Audio & Foley Tab */}
+                  {sections.audioDesign && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('audio')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                        activeTab === 'audio'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
+                      }`}
+                    >
+                      <Sparkles className="w-3 h-3 text-accent" />
+                      <span>Audio & Foley</span>
+                    </button>
+                  )}
+
+                  {/* Ad Copy & Voiceover Tab */}
+                  {sections.adStrategy && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('adcopy')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                        activeTab === 'adcopy'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
+                      }`}
+                    >
+                      <span>Ad Copy & Script</span>
+                    </button>
+                  )}
+
+                  {/* 3-Shot Campaign Storyboard Tab */}
+                  {sections.threeShotCampaign && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('campaign')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                        activeTab === 'campaign'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
+                      }`}
+                    >
+                      <Clapperboard className="w-3 h-3" />
+                      <span>3-Shot Storyboard</span>
+                    </button>
+                  )}
 
                   {sections.aspectVariants.length > 0 && (
                     <button
@@ -363,6 +410,156 @@ export function OutputPanel({
                       </div>
                     );
                   })}
+
+                  {/* Audio & Foley Tab */}
+                  {activeTab === 'audio' && sections.audioDesign && (
+                    <div className="space-y-4">
+                      {/* Foley Prompts */}
+                      <div className="rounded-2xl border border-border bg-surface-card p-5 space-y-3 shadow-sm">
+                        <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                          <div>
+                            <h3 className="text-sm font-bold text-text-primary">
+                              Tactile Product Foley Prompts (ElevenLabs SFX)
+                            </h3>
+                            <p className="text-[11px] text-text-muted">
+                              Isolated physical audio cues synced to visual product action
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {sections.audioDesign.foleyPrompts.map((foley, idx) => (
+                            <div key={idx} className="flex items-start justify-between gap-2 p-3 rounded-xl bg-surface-code border border-border">
+                              <span className="text-xs font-mono text-text-primary">{foley}</span>
+                              <CopyButton text={foley} compact />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Ambient Bed & Music Score */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-2xl border border-border bg-surface-card p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold text-text-primary">Ambient Soundscape Bed</h4>
+                            <CopyButton text={sections.audioDesign.soundscapeBed} compact />
+                          </div>
+                          <div className="rounded-xl bg-surface-code border border-border p-3">
+                            <p className="text-xs font-mono text-text-primary leading-relaxed">
+                              {sections.audioDesign.soundscapeBed}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-surface-card p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold text-text-primary">Music Score (Suno / Udio)</h4>
+                            <CopyButton text={sections.audioDesign.musicScore} compact />
+                          </div>
+                          <div className="rounded-xl bg-surface-code border border-border p-3">
+                            <p className="text-xs font-mono text-text-primary leading-relaxed">
+                              {sections.audioDesign.musicScore}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ad Strategy & Voiceover Tab */}
+                  {activeTab === 'adcopy' && sections.adStrategy && (
+                    <div className="space-y-4">
+                      {/* SMP */}
+                      <div className="rounded-2xl border border-brand/30 bg-brand/5 p-4 space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-brand">
+                          Single-Minded Proposition (SMP)
+                        </span>
+                        <p className="text-sm font-semibold text-text-primary italic">
+                          &ldquo;{sections.adStrategy.smp}&rdquo;
+                        </p>
+                      </div>
+
+                      {/* Voiceover Script */}
+                      {sections.adStrategy.voiceoverScript && (
+                        <div className="rounded-2xl border border-border bg-surface-card p-5 space-y-3">
+                          <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                            <h3 className="text-sm font-bold text-text-primary">10–15s Voiceover Script</h3>
+                            <CopyButton text={sections.adStrategy.voiceoverScript} />
+                          </div>
+                          <div className="rounded-xl bg-surface-code border border-border p-4">
+                            <p className="text-xs font-mono text-text-primary leading-relaxed whitespace-pre-wrap">
+                              {sections.adStrategy.voiceoverScript}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3-Stage On-Screen Captions */}
+                      <div className="rounded-2xl border border-border bg-surface-card p-5 space-y-3">
+                        <h3 className="text-sm font-bold text-text-primary pb-2 border-b border-border/50">
+                          On-Screen Text (OST) Flow
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="p-3 rounded-xl bg-surface-code border border-border">
+                            <div className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1">0–3s Hook</div>
+                            <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.hook}</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-surface-code border border-border">
+                            <div className="text-[10px] font-bold text-brand uppercase tracking-wider mb-1">3–7s Value</div>
+                            <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.benefit}</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-surface-code border border-border">
+                            <div className="text-[10px] font-bold text-success uppercase tracking-wider mb-1">7–10s CTA</div>
+                            <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.cta}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3-Shot Campaign Storyboard Tab */}
+                  {activeTab === 'campaign' && sections.threeShotCampaign && (
+                    <div className="space-y-4">
+                      {[
+                        sections.threeShotCampaign.shot1Hook,
+                        sections.threeShotCampaign.shot2SensoryDemo,
+                        sections.threeShotCampaign.shot3BrandCta,
+                      ].map((shot) => (
+                        <div key={shot.shotNumber} className="rounded-2xl border border-border bg-surface-card p-4 space-y-3">
+                          <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">
+                                {shot.shotNumber}
+                              </span>
+                              <h4 className="text-xs font-bold text-text-primary">
+                                Shot {shot.shotNumber}: {shot.title} ({shot.durationSeconds}s)
+                              </h4>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-muted text-text-muted font-mono">
+                                {shot.goal}
+                              </span>
+                            </div>
+                            <CopyButton text={shot.prompt} compact />
+                          </div>
+
+                          <div className="rounded-xl bg-surface-code border border-border p-3">
+                            <pre className="text-xs font-mono text-text-primary whitespace-pre-wrap leading-relaxed">
+                              {shot.prompt}
+                            </pre>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                            <div className="p-2 rounded-lg bg-surface-muted/50 border border-border/50">
+                              <strong className="text-accent font-semibold">Audio Cue: </strong>
+                              <span className="text-text-secondary">{shot.foleyCue}</span>
+                            </div>
+                            <div className="p-2 rounded-lg bg-surface-muted/50 border border-border/50">
+                              <strong className="text-brand font-semibold">On-Screen Text: </strong>
+                              <span className="text-text-secondary">{shot.onScreenText}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Aspects Tab */}
                   {activeTab === 'aspects' && (

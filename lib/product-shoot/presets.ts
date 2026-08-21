@@ -390,14 +390,93 @@ export const EXAMPLE_PRODUCT_BRIEFS: ExampleProductBrief[] = [
   },
 ];
 
+// ── Focal Length & Optical Presets (from alterlab-genai-camera-director) ─
+
+export const FOCAL_LENGTH_PRESETS: OptionPreset[] = [
+  {
+    id: '24mm-wide',
+    label: '24mm Wide',
+    description: 'Environmental dominance, grand architectural scale and deep perspective',
+    keyword: 'shot on 24mm wide-angle cine prime lens, deep spatial depth of field',
+  },
+  {
+    id: '35mm-commercial',
+    label: '35mm Commercial',
+    description: 'Versatile cinematic commercial standard with balanced proportions',
+    keyword: 'shot on 35mm master prime lens with pristine rectilinear optics and gentle natural depth',
+  },
+  {
+    id: '50mm-natural',
+    label: '50mm Natural',
+    description: 'Human-eye truth, zero optical distortion, honest product geometry',
+    keyword: 'shot on 50mm normal lens matching human-eye focal perspective with neutral distortion',
+  },
+  {
+    id: '85mm-portrait',
+    label: '85mm Portrait / Hero',
+    description: 'Flattering subject isolation, creamy background bokeh, f/1.8 aperture',
+    keyword: 'shot on 85mm f/1.8 portrait prime lens, creamy shallow depth of field bokeh isolating product',
+  },
+  {
+    id: '100mm-macro',
+    label: '100mm True Macro',
+    description: 'Extreme microscopic texture, liquid caustics, and droplet reflections',
+    keyword: 'shot on 100mm true 2:1 macro lens with razor-thin focal plane on surface texture',
+  },
+];
+
+// ── Motion Intensity Presets (1-10 Scale) ──────────────────────────────
+
+export interface MotionIntensityPreset {
+  value: number;
+  label: string;
+  category: string;
+  description: string;
+  keyword: string;
+}
+
+export const MOTION_INTENSITY_PRESETS: MotionIntensityPreset[] = [
+  {
+    value: 2,
+    label: '2 · Minimalist Drift',
+    category: 'Subtle',
+    description: 'Subtle micro-movement for luxury goods, watches, and perfumes',
+    keyword: 'motion intensity level 2 (ultra-subtle micro-drift, stable product anchor)',
+  },
+  {
+    value: 4,
+    label: '4 · Smooth Commercial',
+    category: 'Balanced',
+    description: 'Standard elegant camera glide for e-commerce and hero reveals',
+    keyword: 'motion intensity level 4 (smooth fluid commercial cadence)',
+  },
+  {
+    value: 6,
+    label: '6 · Dynamic Reveal',
+    category: 'Energetic',
+    description: 'Moderate energy with noticeable fluid and lighting sweeps',
+    keyword: 'motion intensity level 6 (dynamic pacing with active environmental movement)',
+  },
+  {
+    value: 8,
+    label: '8 · High-Velocity Hook',
+    category: 'Kinetic',
+    description: 'Fast-paced kinetic motion for sports ads, viral TikTok hooks',
+    keyword: 'motion intensity level 8 (high-velocity kinetic camera snap and fast-action physics)',
+  },
+];
+
 export const DEFAULT_CREATIVE_CONTROLS: CreativeControls = {
   cameraMotion: 'orbit-360',
+  focalLength: '85mm-portrait',
+  motionIntensity: 4,
   lightingStyle: 'luxury-chiaroscuro',
   surfaceMaterial: 'carrara-marble',
   physicsFX: 'none',
   motionPace: 'slow-mo-120fps',
   humanInteraction: 'none-pure-product',
   aspectRatio: '9:16',
+  generationMode: 'single',
   negativeConstraints: '',
   customVisualNotes: '',
 };

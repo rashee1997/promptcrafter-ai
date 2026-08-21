@@ -25,6 +25,11 @@ export type {
   VideoPlatformDialect,
   PlatformPrompt,
   SavedProductShoot,
+  GenerationMode,
+  AudioDesignPackage,
+  AdStrategyPackage,
+  CampaignShot,
+  ThreeShotCampaign,
 } from './types';
 
 export {
@@ -36,6 +41,8 @@ export {
 export {
   PRODUCT_CATEGORIES,
   CAMERA_MOTION_PRESETS,
+  FOCAL_LENGTH_PRESETS,
+  MOTION_INTENSITY_PRESETS,
   LIGHTING_PRESETS,
   SURFACE_PRESETS,
   PHYSICS_FX_PRESETS,
@@ -46,7 +53,7 @@ export {
   DEFAULT_CREATIVE_CONTROLS,
 } from './presets';
 
-export type { OptionPreset, ExampleProductBrief } from './presets';
+export type { OptionPreset, MotionIntensityPreset, ExampleProductBrief } from './presets';
 
 export {
   getSavedProductShoots,

@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   SlidersHorizontal,
@@ -13,10 +11,15 @@ import {
   User,
   Ratio,
   Info,
+  Focus,
+  Film,
+  Zap,
 } from 'lucide-react';
-import type { CreativeControls, VideoAspectRatio } from '@/lib/product-shoot/types';
+import type { CreativeControls, VideoAspectRatio, GenerationMode } from '@/lib/product-shoot/types';
 import {
   CAMERA_MOTION_PRESETS,
+  FOCAL_LENGTH_PRESETS,
+  MOTION_INTENSITY_PRESETS,
   LIGHTING_PRESETS,
   SURFACE_PRESETS,
   PHYSICS_FX_PRESETS,
@@ -96,11 +99,14 @@ export function CreativeControlsPanel({
   // Count active overrides
   const activeCount = [
     controls.cameraMotion,
+    controls.focalLength,
+    controls.motionIntensity && controls.motionIntensity !== 4 ? 'intensity' : null,
     controls.lightingStyle,
     controls.surfaceMaterial,
     controls.physicsFX && controls.physicsFX !== 'none' ? controls.physicsFX : null,
     controls.motionPace,
     controls.humanInteraction && controls.humanInteraction !== 'none-pure-product' ? controls.humanInteraction : null,
+    controls.generationMode === 'campaign-3shot' ? '3shot' : null,
     controls.customVisualNotes?.trim() ? 'notes' : null,
     controls.negativeConstraints?.trim() ? 'neg' : null,
   ].filter(Boolean).length;
@@ -121,7 +127,7 @@ export function CreativeControlsPanel({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
-                Art Direction & Directorial Controls
+                Directorial Controls & Cine Optics
               </span>
               {activeCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand text-white">
@@ -130,7 +136,7 @@ export function CreativeControlsPanel({
               )}
             </div>
             <p className="text-[11px] text-text-muted">
-              Customize camera choreography, surface materials, lighting, physics FX & pacing
+              Lenses, camera choreography, motion intensity scale, lighting, sound & 3-shot campaign arc
             </p>
           </div>
         </div>
@@ -154,6 +160,90 @@ export function CreativeControlsPanel({
             transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
             className="border-t border-border/60 p-4 space-y-4"
           >
+            {/* Commercial Production Mode: Single Shot vs 3-Shot Campaign Storyboard */}
+            <div className="space-y-1.5 p-3 rounded-xl bg-surface-muted/30 border border-border">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+                  <Film className="w-3.5 h-3.5 text-brand" />
+                  Commercial Production Mode
+                </label>
+                <span className="text-[10px] text-brand font-mono uppercase">
+                  {controls.generationMode === 'campaign-3shot' ? '3-Shot Multi-Arc' : 'Single Hero Shot'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => update('generationMode', 'single')}
+                  className={`p-2.5 rounded-lg border text-left transition-all ${
+                    (controls.generationMode || 'single') === 'single'
+                      ? 'border-brand bg-brand/10 ring-2 ring-brand/30'
+                      : 'border-border bg-surface-input hover:border-brand/40'
+                  }`}
+                >
+                  <div className="text-xs font-semibold text-text-primary">Single Hero Shot</div>
+                  <div className="text-[10px] text-text-muted mt-0.5">1-Shot multi-platform master prompt with audio & dialects</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => update('generationMode', 'campaign-3shot')}
+                  className={`p-2.5 rounded-lg border text-left transition-all ${
+                    controls.generationMode === 'campaign-3shot'
+                      ? 'border-brand bg-brand/10 ring-2 ring-brand/30'
+                      : 'border-border bg-surface-input hover:border-brand/40'
+                  }`}
+                >
+                  <div className="text-xs font-semibold text-text-primary">3-Shot Campaign Bundle</div>
+                  <div className="text-[10px] text-text-muted mt-0.5">Sequential 10s ad storyboard (Hook 3s → Demo 4s → CTA 3s)</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Lens & Cine Focal Length */}
+            <ChipSelector
+              label="Lens & Focal Length (Optics)"
+              icon={Focus}
+              presets={FOCAL_LENGTH_PRESETS}
+              selectedId={controls.focalLength}
+              onSelect={(id) => update('focalLength', id)}
+            />
+
+            {/* Motion Intensity Scale (1-10) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+                  <Zap className="w-3.5 h-3.5 text-brand" />
+                  Motion Intensity & Velocity Scale
+                </label>
+                <span className="text-[10px] font-mono text-brand">
+                  Level {controls.motionIntensity || 4} / 10
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {MOTION_INTENSITY_PRESETS.map((mip) => {
+                  const isSelected = (controls.motionIntensity || 4) === mip.value;
+                  return (
+                    <button
+                      key={mip.value}
+                      type="button"
+                      onClick={() => update('motionIntensity', mip.value)}
+                      title={mip.description}
+                      className={`p-2 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold">{mip.label}</div>
+                      <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-text-muted'}`}>
+                        {mip.category}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Aspect Ratio Selector */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
@@ -276,3 +366,4 @@ export function CreativeControlsPanel({
     </div>
   );
 }
+

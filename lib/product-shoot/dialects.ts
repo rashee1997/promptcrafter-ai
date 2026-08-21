@@ -116,7 +116,93 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
     }
   }
 
-  // 6. Extract Remix Suggestions
+  // 7. Extract Audio & Foley Design (ElevenLabs / Suno)
+  let audioDesign = undefined;
+  const audioRaw = extractSection(raw, 'Audio & Foley Design', ['Strategic Ad Copy', '3-Shot Campaign', 'Aspect Variants', 'Alternative Concepts']);
+  if (audioRaw) {
+    const foleyPrompts: string[] = [];
+    const foleyMatches = audioRaw.matchAll(/-\s*(?:\[Foley\s*\d*:\s*)?([^\n\r]+)/gi);
+    for (const m of foleyMatches) {
+      const line = m[1].replace(/\]$/, '').trim();
+      if (line && line.length > 5) foleyPrompts.push(line);
+    }
+
+    const soundscapeBed = extractSection(audioRaw, 'Soundscape Bed', ['Music Score', '###', '##']) || 'Ambient luxury room atmosphere, subtle air circulation, gentle acoustic depth';
+    const musicScore = extractSection(audioRaw, 'Music Score', ['###', '##']) || 'Warm minimalist ambient electronic beat, 115 BPM, sleek modern commercial vibe';
+
+    audioDesign = {
+      foleyPrompts: foleyPrompts.length > 0 ? foleyPrompts : [
+        'Crisp tactile snap of product cap opening with subtle vacuum release sound',
+        'Viscous liquid droplet landing smoothly onto glass surface in slow motion'
+      ],
+      soundscapeBed,
+      musicScore,
+    };
+  }
+
+  // 8. Extract Strategic Ad Copy & Voiceover
+  let adStrategy = undefined;
+  const adRaw = extractSection(raw, 'Strategic Ad Copy & Voiceover', ['3-Shot Campaign', 'Audio & Foley', 'Aspect Variants', 'Alternative Concepts']);
+  if (adRaw) {
+    const smp = extractSection(adRaw, 'Single-Minded Proposition (SMP)', ['###', '##']) || extractSection(adRaw, 'Single-Minded Proposition', ['###', '##']);
+    const voiceoverScript = extractSection(adRaw, 'Voiceover Script', ['###', '##']);
+    const hookCaption = extractSection(adRaw, '0–3s Hook', ['3–7s', '7–10s', '###']) || extractSection(adRaw, 'Hook', ['Value', 'CTA', '###']);
+    const valueCaption = extractSection(adRaw, '3–7s Value', ['7–10s', '###']) || extractSection(adRaw, 'Value', ['CTA', '###']);
+    const ctaCaption = extractSection(adRaw, '7–10s CTA', ['###', '##']) || extractSection(adRaw, 'CTA', ['###', '##']);
+
+    adStrategy = {
+      smp: smp.replace(/^["']|["']$/g, '').trim() || 'The only product engineered for uncompromising daily perfection.',
+      voiceoverScript: voiceoverScript.replace(/^["']|["']$/g, '').trim(),
+      onScreenCaptions: {
+        hook: hookCaption.replace(/^[*:\-\s]+/, '').trim() || 'Experience the difference.',
+        benefit: valueCaption.replace(/^[*:\-\s]+/, '').trim() || 'Engineered with pure active ingredients.',
+        cta: ctaCaption.replace(/^[*:\-\s]+/, '').trim() || 'Available Now · Shop Online',
+      },
+    };
+  }
+
+  // 9. Extract 3-Shot Campaign Storyboard
+  let threeShotCampaign = undefined;
+  const campaignRaw = extractSection(raw, '3-Shot Campaign Storyboard', ['Aspect Variants', 'Alternative Concepts', 'Remix Suggestions']);
+  if (campaignRaw) {
+    const shot1Raw = extractSection(campaignRaw, 'Shot 1: The Hook', ['Shot 2:', '###', '##']);
+    const shot2Raw = extractSection(campaignRaw, 'Shot 2: Sensory Demo', ['Shot 3:', '###', '##']);
+    const shot3Raw = extractSection(campaignRaw, 'Shot 3: Brand CTA Endframe', ['###', '##']);
+
+    if (shot1Raw || shot2Raw || shot3Raw) {
+      threeShotCampaign = {
+        shot1Hook: {
+          shotNumber: 1,
+          title: 'The Hook',
+          goal: 'Visual Surprise & Attention Stop',
+          durationSeconds: 3,
+          prompt: extractSection(shot1Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot1Raw.slice(0, 200),
+          foleyCue: extractSection(shot1Raw, 'Audio Cue:', ['Overlay:', '###']) || 'Dynamic whoosh stinger on impact',
+          onScreenText: extractSection(shot1Raw, 'Overlay:', ['###', '##']) || 'Look closer.',
+        },
+        shot2SensoryDemo: {
+          shotNumber: 2,
+          title: 'Sensory Demo',
+          goal: 'Product in Action & Texture Reveal',
+          durationSeconds: 4,
+          prompt: extractSection(shot2Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot2Raw.slice(0, 200),
+          foleyCue: extractSection(shot2Raw, 'Audio Cue:', ['Overlay:', '###']) || 'Crisp tactile product dispensing sound',
+          onScreenText: extractSection(shot2Raw, 'Overlay:', ['###', '##']) || 'Instant transformation.',
+        },
+        shot3BrandCta: {
+          shotNumber: 3,
+          title: 'Brand CTA Endframe',
+          goal: 'Brand Memorability & Conversion',
+          durationSeconds: 3,
+          prompt: extractSection(shot3Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot3Raw.slice(0, 200),
+          foleyCue: extractSection(shot3Raw, 'Audio Cue:', ['Overlay:', '###']) || 'Brand signature audio chime',
+          onScreenText: extractSection(shot3Raw, 'Overlay:', ['###', '##']) || 'Shop Now · Free Shipping',
+        },
+      };
+    }
+  }
+
+  // 10. Extract Remix Suggestions
   const remixSuggestions: string[] = [];
   const remixRaw = extractSection(raw, 'Remix Suggestions', ['## ']);
   if (remixRaw) {
@@ -129,7 +215,6 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
     }
   }
 
-  // Fallback default remix suggestions if model didn't output any
   if (remixSuggestions.length === 0 && mainPrompt) {
     remixSuggestions.push(
       'Switch to dramatic chiaroscuro rim lighting with deep shadows',
@@ -151,6 +236,9 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
     aspectVariants,
     alternativeConcepts,
     remixSuggestions,
+    audioDesign,
+    adStrategy,
+    threeShotCampaign,
   };
 }
 

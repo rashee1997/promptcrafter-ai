@@ -94,16 +94,60 @@ export type HumanInteraction =
 
 export type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:5';
 
+export type GenerationMode = 'single' | 'campaign-3shot';
+
 export interface CreativeControls {
   cameraMotion?: string;
+  focalLength?: string;
+  motionIntensity?: number; // 1 - 10
   lightingStyle?: string;
   surfaceMaterial?: string;
   physicsFX?: string;
   motionPace?: string;
   humanInteraction?: string;
   aspectRatio: VideoAspectRatio;
+  generationMode?: GenerationMode;
   negativeConstraints?: string;
   customVisualNotes?: string;
+}
+
+// ── Audio-Visual Sound Design & Foley ──────────────────────────────────
+
+export interface AudioDesignPackage {
+  foleyPrompts: string[];
+  soundscapeBed: string;
+  musicScore: string;
+  audioVisualMap?: { timecode: string; visualCue: string; audioAction: string }[];
+}
+
+// ── Strategic Ad Copy & Voiceover ──────────────────────────────────────
+
+export interface AdStrategyPackage {
+  smp: string; // Single-Minded Proposition (e.g. "The only X that Y")
+  voiceoverScript: string;
+  onScreenCaptions: {
+    hook: string; // 0-3s
+    benefit: string; // 3-7s
+    cta: string; // 7-10s
+  };
+}
+
+// ── 3-Shot Commercial Campaign Storyboard ──────────────────────────────
+
+export interface CampaignShot {
+  shotNumber: number;
+  title: string;
+  goal: string;
+  durationSeconds: number;
+  prompt: string;
+  foleyCue: string;
+  onScreenText: string;
+}
+
+export interface ThreeShotCampaign {
+  shot1Hook: CampaignShot;
+  shot2SensoryDemo: CampaignShot;
+  shot3BrandCta: CampaignShot;
 }
 
 // ── Scene recipe ────────────────────────────────────────────────────────
@@ -180,6 +224,9 @@ export interface ProductShootSections {
   aspectVariants: { ratio: string; prompt: string }[];
   alternativeConcepts: ShotConcept[];
   remixSuggestions: string[];
+  audioDesign?: AudioDesignPackage;
+  adStrategy?: AdStrategyPackage;
+  threeShotCampaign?: ThreeShotCampaign;
 }
 
 /** The full generation output structure. */
