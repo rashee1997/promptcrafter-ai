@@ -17,6 +17,8 @@ import { StyleRecipePicker } from './style-recipe-picker';
 import { StudioFormHandlers, StudioFormState, StudioMode } from './studio-types';
 import { CustomChipEditor, useCustomChipEntry } from './use-custom-chip-entry';
 import { PromptKit } from '@/lib/image-prompt-kits';
+import { runBrandStrategist } from '@/lib/ai-client';
+import { toast } from '../toast';
 
 interface PromptFormProps {
   state: StudioFormState;
@@ -79,6 +81,7 @@ export function PromptForm({
   };
 
   const isLogo = state.mode === 'logo';
+  const [styleTab, setStyleTab] = useState<'recipes' | 'styles'>('recipes');
 
   const exampleTopics = isLogo ? LOGO_EXAMPLE_TOPICS : EXAMPLE_TOPICS;
   // Pre-flight cliché check — client-side keyword scan before generation
@@ -94,6 +97,42 @@ export function PromptForm({
   const styleOptions = isLogo ? LOGO_STYLE_PRESETS : STYLE_PRESETS;
   const activeStyle = isLogo ? state.logoStyle : state.style;
   const selectStyle = (id: string) => (isLogo ? handlers.setLogoStyle(id) : handlers.setStyle(id));
+
+  // Custom value entry + saved presets for the bespoke (non-ChipRow) rows.
+  const [isStrategizing, setIsStrategizing] = useState(false);
+
+  const handleAutoDirectBrand = async () => {
+    if (!state.brandName.trim() && !state.subject.trim()) {
+      toast.error('Brand info needed', 'Please enter a brand name or subject description first.');
+      return;
+    }
+    setIsStrategizing(true);
+    try {
+      const res = await runBrandStrategist({
+        provider: activeProvider,
+        brandName: state.brandName.trim() || state.subject.trim(),
+        description: state.subject.trim() || state.brandName.trim(),
+      });
+      if (res) {
+        if (res.industry) handlers.setIndustry(res.industry);
+        if (res.concept) handlers.setConcept(res.concept);
+        if (res.logoType) handlers.setLogoType(res.logoType);
+        if (res.logoStyle) handlers.setLogoStyle(res.logoStyle);
+        if (res.palette) handlers.setPalette(res.palette);
+        if (res.shapeLanguage) handlers.setShapeLanguage(res.shapeLanguage);
+        if (res.typography) handlers.setTypography(res.typography);
+        if (res.lockup) handlers.setLockup(res.lockup);
+        if (res.hiddenMeaning) handlers.setHiddenMeaning(res.hiddenMeaning);
+        if (res.boldness) handlers.setBoldness(res.boldness);
+        if (res.usage?.length) handlers.setUsage(res.usage);
+        toast.success('Brand Architecture Configured', 'AI Strategist configured optimal geometry and palette.');
+      }
+    } catch (err: any) {
+      toast.error('Brand Strategist failed', err.message || 'Could not analyze brand.');
+    } finally {
+      setIsStrategizing(false);
+    }
+  };
 
   // Custom value entry + saved presets for the bespoke (non-ChipRow) rows.
   // The style grid is shared across modes; palette is logo-only; platforms are
@@ -385,9 +424,45 @@ export function PromptForm({
           )}
         </div>
 
-        {/* Predefined Scene Recipes / Brand Archetypes Deck */}
-        {(onSelectImageRecipe || onSelectLogoArchetype) && (
-          <div className="pt-1 pb-1">
+        {/* Style & Direction Section — Segmented Switcher (Curated Recipes vs Custom Styles) */}
+        <div className="space-y-2.5 pt-0.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="inline-flex p-0.5 rounded-lg bg-surface-input border border-border text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setStyleTab('recipes')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all text-[11px]',
+                  styleTab === 'recipes'
+                    ? 'bg-brand text-white shadow-xs font-bold'
+                    : 'text-text-muted hover:text-text-primary'
+                )}
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>{isLogo ? 'Brand Archetypes' : 'Scene Recipes'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStyleTab('styles')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all text-[11px]',
+                  styleTab === 'styles'
+                    ? 'bg-brand text-white shadow-xs font-bold'
+                    : 'text-text-muted hover:text-text-primary'
+                )}
+              >
+                <LayoutGrid className="w-3 h-3" />
+                <span>{isLogo ? 'Custom Style Grid' : 'Individual Styles'}</span>
+              </button>
+            </div>
+            {state.selectedRecipeId && styleTab === 'recipes' && (
+              <span className="text-[10px] text-brand font-mono font-medium truncate max-w-[120px]">
+                ● Preset Active
+              </span>
+            )}
+          </div>
+
+          {styleTab === 'recipes' ? (
             <StyleRecipePicker
               mode={state.mode}
               selectedRecipeId={state.selectedRecipeId || null}
@@ -395,111 +470,103 @@ export function PromptForm({
               onSelectLogoArchetype={onSelectLogoArchetype || (() => {})}
               onOpenAiGenerator={onOpenAiGenerator || (() => {})}
             />
-          </div>
-        )}
+          ) : (
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-[300px] overflow-y-auto pr-0.5 scrollbar-thin">
+                {styleOptions.map((s, i) => {
+                  const selected = activeStyle === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => selectStyle(s.id)}
+                      title={s.hint}
+                      aria-pressed={selected}
+                      className={cn(
+                        'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left',
+                        selected
+                          ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-xs'
+                          : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                      )}
+                    >
+                      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', CHIP_DOTS[i % CHIP_DOTS.length])} />
+                      <span className="truncate">{s.label}</span>
+                      {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
+                    </button>
+                  );
+                })}
 
-        {/* Style presets (image styles or logo styles) */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-              <LayoutGrid className="w-3.5 h-3.5 text-brand" />
-              {isLogo ? 'Fine-tune logo style' : 'Fine-tune visual style'}
-            </span>
-            <span className="text-[10px] text-text-muted">Individual Style Override</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-            {styleOptions.map((s, i) => {
-              const selected = activeStyle === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => selectStyle(s.id)}
-                  title={s.hint}
-                  aria-pressed={selected}
-                  className={cn(
-                    'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left',
-                    selected
-                      ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
-                      : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
-                  )}
-                >
-                  <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', CHIP_DOTS[i % CHIP_DOTS.length])} />
-                  <span className="truncate">{s.label}</span>
-                  {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
-                </button>
-              );
-            })}
+                {/* Saved custom style presets — bookmarked chips, deletable on hover. */}
+                {styleCustom.saved.map((entry) => {
+                  const selected = activeStyle === entry.value;
+                  return (
+                    <div key={entry.id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => selectStyle(entry.value)}
+                        title={`Saved: ${entry.label}`}
+                        aria-pressed={selected}
+                        className={cn(
+                          'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left w-full',
+                          selected
+                            ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-xs'
+                            : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
+                        )}
+                      >
+                        <Bookmark className="w-3 h-3 shrink-0 text-warning" />
+                        <span className="truncate">{entry.label}</span>
+                        {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => styleCustom.remove(entry.id)}
+                        title="Delete saved value"
+                        aria-label={`Delete saved value ${entry.label}`}
+                        className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-surface-elevated border border-border text-text-muted hover:text-danger shadow-xs transition-colors"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  );
+                })}
 
-            {/* Saved custom style presets — bookmarked chips, deletable on hover. */}
-            {styleCustom.saved.map((entry) => {
-              const selected = activeStyle === entry.value;
-              return (
-                <div key={entry.id} className="relative group">
+                {/* Trailing cell: selected custom value, the inline editor, or the trigger. */}
+                {styleIsCustom ? (
                   <button
                     type="button"
-                    onClick={() => selectStyle(entry.value)}
-                    title={`Saved: ${entry.label}`}
-                    aria-pressed={selected}
-                    className={cn(
-                      'flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border transition-all text-left w-full',
-                      selected
-                        ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
-                        : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
-                    )}
+                    onClick={() => selectStyle(activeStyle)}
+                    title="Custom value"
+                    aria-pressed
+                    className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-xs text-left"
                   >
-                    <Bookmark className="w-3 h-3 shrink-0 text-warning" />
-                    <span className="truncate">{entry.label}</span>
-                    {selected && <Check className="w-3 h-3 text-brand ml-auto shrink-0" />}
+                    <Plus className="w-3 h-3 text-brand shrink-0" />
+                    <span className="truncate">{activeStyle}</span>
+                    <Check className="w-3 h-3 text-brand ml-auto shrink-0" />
                   </button>
+                ) : styleCustom.entering ? (
+                  <div className="col-span-2 sm:col-span-3">
+                    <CustomChipEditor
+                      draft={styleCustom.draft}
+                      onDraftChange={styleCustom.changeDraft}
+                      onConfirm={handleStyleConfirm}
+                      onSave={handleStyleSave}
+                      onCancel={styleCustom.cancel}
+                    />
+                  </div>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => styleCustom.remove(entry.id)}
-                    title="Delete saved value"
-                    aria-label={`Delete saved value ${entry.label}`}
-                    className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-surface-elevated border border-border text-text-muted hover:text-danger shadow-sm transition-colors"
+                    onClick={styleCustom.begin}
+                    aria-label="Add a custom style value"
+                    className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border border-dashed border-border text-text-muted hover:text-brand hover:border-brand/40 transition-all text-left"
                   >
-                    <X className="w-2.5 h-2.5" />
+                    <Plus className="w-3 h-3 shrink-0" />
+                    Custom
                   </button>
-                </div>
-              );
-            })}
-
-            {/* Trailing cell: selected custom value, the inline editor, or the trigger. */}
-            {styleIsCustom ? (
-              <button
-                type="button"
-                onClick={() => selectStyle(activeStyle)}
-                title="Custom value"
-                aria-pressed
-                className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm text-left"
-              >
-                <Plus className="w-3 h-3 text-brand shrink-0" />
-                <span className="truncate">{activeStyle}</span>
-                <Check className="w-3 h-3 text-brand ml-auto shrink-0" />
-              </button>
-            ) : styleCustom.entering ? (
-              <div className="col-span-2 sm:col-span-3">
-                <CustomChipEditor
-                  draft={styleCustom.draft}
-                  onDraftChange={styleCustom.changeDraft}
-                  onConfirm={handleStyleConfirm}
-                  onSave={handleStyleSave}
-                  onCancel={styleCustom.cancel}
-                />
+                )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={styleCustom.begin}
-                aria-label="Add a custom style value"
-                className="flex items-center gap-1.5 p-2 rounded-lg text-[11px] font-medium border border-dashed border-border text-text-muted hover:text-brand hover:border-brand/40 transition-all text-left"
-              >
-                <Plus className="w-3 h-3 shrink-0" />
-                Custom
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Aspect ratio */}
@@ -636,10 +703,22 @@ export function PromptForm({
                 grouped in one visually bounded block instead of five top-level sections. */}
             {isLogo && (
               <div className="p-4 rounded-xl bg-surface-muted/60 border border-border space-y-4">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-                  <PenTool className="w-3.5 h-3.5 text-warning" />
-                  Brand
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-text-secondary">
+                    <PenTool className="w-3.5 h-3.5 text-warning" />
+                    Brand Identity Architecture
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleAutoDirectBrand}
+                    disabled={isStrategizing}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gradient-to-r from-brand/20 to-accent/20 hover:from-brand/30 hover:to-accent/30 text-brand border border-brand/35 shadow-xs transition-all disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3 h-3 text-brand animate-pulse" />
+                    <span>{isStrategizing ? 'Analyzing...' : 'AI Auto-Direct'}</span>
+                  </button>
+                </div>
 
                 <ChipRow
                   label="Industry & audience"

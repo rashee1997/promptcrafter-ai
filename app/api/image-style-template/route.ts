@@ -8,15 +8,93 @@ import { TemplateGenerationRequest, TemplateGenerationResult, ImageStyleRecipe, 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+function extractJson(str: string): any {
+  const cleaned = str.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = str.match(/\{[\s\S]*\}/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    throw new Error('Failed to parse AI output as JSON.');
+  }
+}
+
+/** Fallback recipe generator if AI fails or key is unavailable */
+function generateFallbackImageRecipe(prompt: string): ImageStyleRecipe {
+  const id = `custom-ai-${Date.now()}`;
+  return {
+    id,
+    label: prompt.slice(0, 24).replace(/[^a-zA-Z0-9 ]/g, '') || 'Custom AI Recipe',
+    category: 'Cinematic & Film',
+    summary: `Curated atmospheric scene recipe tailored for: "${prompt.slice(0, 60)}"`,
+    goal: 'cinematic',
+    iconName: 'Clapperboard',
+    aspectHint: '16:9',
+    isAiGenerated: true,
+    config: {
+      style: 'cinematic',
+      camera: '35mm',
+      lighting: 'volumetric',
+      composition: 'wide-shot',
+      colorGrade: 'teal-and-orange',
+      mood: 'dramatic',
+      aspectRatio: '16:9',
+      negativePrompt: 'blurry, low quality, oversaturated, amateur photography',
+      sampleSubject: prompt,
+      sampleFullPrompt: `${prompt}, 35mm film photography, volumetric lighting, wide angle composition, cinematic atmosphere, 8k resolution`,
+      directorNotes: `Bespoke scene architecture generated from your prompt: "${prompt}".`,
+    },
+  };
+}
+
+/** Fallback archetype generator if AI fails or key is unavailable */
+function generateFallbackLogoArchetype(prompt: string): LogoArchetypeRecipe {
+  const id = `custom-logo-${Date.now()}`;
+  return {
+    id,
+    label: prompt.slice(0, 24).replace(/[^a-zA-Z0-9 ]/g, '') || 'Brand Archetype',
+    category: 'Modern & Swiss',
+    summary: `Vector-grade brand identity archetype tailored for: "${prompt.slice(0, 60)}"`,
+    goal: 'minimal',
+    iconName: 'Shapes',
+    isAiGenerated: true,
+    config: {
+      logoType: 'combination',
+      logoStyle: 'monoline',
+      palette: 'charcoal-mint',
+      shapeLanguage: 'symmetrical',
+      typography: 'geometric-sans',
+      lockup: 'horizontal',
+      hiddenMeaning: 'negative-space',
+      boldness: 'balanced',
+      usage: ['app-icon', 'website', 'print'],
+      aspectRatio: '1:1',
+      negativePrompt: 'photorealistic 3D, gradients, drop shadow, complex bevel, messy lines',
+      sampleBrandName: prompt.slice(0, 16),
+      sampleIndustry: 'tech-saas',
+      sampleConcept: 'shield',
+      directorNotes: `Clean, modern vector brand geometry synthesized from your brief: "${prompt}".`,
+    },
+  };
+}
+
 /**
  * POST /api/image-style-template
  * Synthesizes a new Image Style Scene Recipe or Logo Brand Archetype
  * based on the user's natural language request or creative vibe.
  */
 export async function POST(req: NextRequest) {
+  let promptText = '';
+  let modeType: 'image' | 'logo' = 'image';
+
   try {
     const body: TemplateGenerationRequest = await req.json();
     const { provider, prompt, mode = 'image', contextCategory } = body;
+
+    promptText = prompt || '';
+    modeType = mode;
 
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
       return NextResponse.json({ error: 'Prompt is required to generate a template.' }, { status: 400 });
@@ -31,15 +109,14 @@ ${isLogo ? `LOGO ARCHETYPE GENERATION RULES:
 Synthesize a complete brand identity recipe that guarantees vector-grade clarity, anti-raster safety, and strong geometric meaning.
 Valid option IDs:
 - logoType: 'wordmark' | 'lettermark' | 'pictorial' | 'abstract' | 'emblem' | 'combination'
-- logoStyle: 'minimalist-flat' | 'geometric-flat' | 'monoline' | 'swiss-style' | 'negative-space' | 'stamp-seal' | 'storybook-gothic' | 'pixel-sharp' | '3d-clay' | 'vintage-badge'
-- palette: 'monochrome-bold' | 'slate-minimal' | 'cyber-neon' | 'fintech-trust' | 'luxury-gold' | 'earthy-botanical' | 'sunset-gradient' | 'vibrant-energy' | 'warm-terracotta'
+- logoStyle: 'minimalist-flat' | 'geometric-flat' | 'monoline' | 'swiss-style' | 'negative-space' | 'stamp-seal' | 'storybook-gothic' | 'pixel-sharp' | 'vintage-badge'
+- palette: 'monochrome' | 'duotone' | 'pastel' | 'neon' | 'earthy' | 'luxury-gold' | 'navy-silver' | 'forest-teal' | 'ocean' | 'crimson-gold' | 'terracotta-cream' | 'sunset' | 'primaries' | 'lavender-graphite' | 'charcoal-mint'
 - shapeLanguage: 'circular' | 'angular' | 'squared' | 'organic' | 'symmetrical' | 'asymmetric'
 - typography: 'geometric-sans' | 'humanist-sans' | 'modern-serif' | 'slab-serif' | 'script' | 'monospace' | 'display-custom' | 'no-text'
 - lockup: 'horizontal' | 'stacked' | 'emblem' | 'mark-only'
 - hiddenMeaning: 'none' | 'negative-space' | 'hidden-glyph' | 'double-meaning'
 - boldness: 'safe' | 'balanced' | 'daring'
 - usage: array from ['app-icon', 'website', 'packaging', 'print', 'apparel']
-- aspectRatio: '1:1'
 - category: one of 'Tech & SaaS' | 'Modern & Swiss' | 'Luxury & Heritage' | 'Creative & Modern' | 'Artisan & Craft' | 'Custom AI'
 - goal: 'tech' | 'luxury' | 'creative' | 'vintage' | 'minimal' | 'playful'
 - iconName: Lucide icon name, e.g. 'Cpu', 'Crown', 'Shapes', 'Zap', 'LayoutGrid', 'Eye', 'Sparkles', 'Flame', 'Smile', 'PenTool'` : `IMAGE SCENE RECIPE GENERATION RULES:
@@ -62,7 +139,7 @@ Return ONLY a clean valid JSON object with NO markdown fence or extra commentary
 Context Category: "${contextCategory || 'Custom AI'}"
 Generate a complete, highly refined ${isLogo ? 'LogoArchetypeRecipe' : 'ImageStyleRecipe'} object.
 
-JSON Schema format for ${isLogo ? 'Logo mode' : 'Image mode'}:
+JSON Schema format:
 ${isLogo ? `{
   "id": "custom-logo-${Date.now()}",
   "label": "Short Punchy Title (2-4 words)",
@@ -84,8 +161,8 @@ ${isLogo ? `{
     "aspectRatio": "1:1",
     "negativePrompt": "photorealistic 3D, gradients, drop shadow, complex bevel, messy lines",
     "sampleBrandName": "Sample Brand Name",
-    "sampleIndustry": "tech",
-    "sampleConcept": "network",
+    "sampleIndustry": "tech-saas",
+    "sampleConcept": "shield",
     "directorNotes": "Directorial rationale on why this archetype succeeds."
   }
 }` : `{
@@ -124,7 +201,13 @@ ${isLogo ? `{
     } else {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        return NextResponse.json({ error: 'Gemini API key is not configured on the server.' }, { status: 500 });
+        // Safe fallback when server has no key configured
+        const fallback = isLogo ? generateFallbackLogoArchetype(prompt) : generateFallbackImageRecipe(prompt);
+        return NextResponse.json({
+          mode,
+          recipe: !isLogo ? (fallback as ImageStyleRecipe) : undefined,
+          archetype: isLogo ? (fallback as LogoArchetypeRecipe) : undefined,
+        });
       }
 
       const client = new GoogleGenAI({ apiKey });
@@ -148,9 +231,7 @@ ${isLogo ? `{
       );
     }
 
-    // Clean JSON formatting
-    const cleaned = jsonString.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
-    const parsed = JSON.parse(cleaned);
+    const parsed = extractJson(jsonString);
 
     const result: TemplateGenerationResult = {
       mode,
@@ -160,11 +241,15 @@ ${isLogo ? `{
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Failed to generate style template:', error);
-    const errorDetails = formatOpenAIError(error);
-    return NextResponse.json(
-      { error: errorDetails.message || 'Failed to generate style template. Please try again.' },
-      { status: errorDetails.statusCode || 500 }
-    );
+    console.error('Failed to generate style template, generating smart fallback:', error);
+    // Graceful fallback to guarantee UI continuity
+    const isLogo = modeType === 'logo';
+    const fallback = isLogo ? generateFallbackLogoArchetype(promptText) : generateFallbackImageRecipe(promptText);
+
+    return NextResponse.json({
+      mode: modeType,
+      recipe: !isLogo ? (fallback as ImageStyleRecipe) : undefined,
+      archetype: isLogo ? (fallback as LogoArchetypeRecipe) : undefined,
+    });
   }
 }

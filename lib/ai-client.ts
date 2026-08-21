@@ -476,3 +476,26 @@ export async function generateStyleTemplate(
   return await res.json();
 }
 
+/** Logo Prompt Studio — Smart Brand Autopilot Strategist */
+export async function runBrandStrategist(
+  request: {
+    provider: ProviderConfig;
+    brandName: string;
+    description: string;
+  },
+  signal?: AbortSignal
+): Promise<any> {
+  const res = await fetch('/api/brand-strategist', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: `Server HTTP ${res.status}` }));
+    throw new Error(errData.error || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+

@@ -31,6 +31,9 @@ import { auditImagePromptQuality, ImagePromptScorecard } from '@/lib/image-promp
 import { useInlineCopy } from '@/lib/use-inline-copy';
 import { ImagePlatform, ImagePromptInput } from '@/types';
 import { StudioMode } from './studio-types';
+import { BrandGuidelinesCard } from './brand-guidelines-card';
+import { LogoMockupDeck } from './logo-mockup-deck';
+import { FaviconSimulator } from './favicon-simulator';
 
 interface BriefViewerProps {
   sections: ImagePromptSections;
@@ -592,6 +595,20 @@ export function BriefViewer({
               {s.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ── Logo Studio 2.0 Companion Suite (Favicon Simulator, Mockup Deck, Brand Guidelines) ── */}
+      {mode === 'logo' && input && (
+        <div className="space-y-4 pt-2">
+          {/* Favicon & Scalability Simulator */}
+          <FaviconSimulator input={input} />
+
+          {/* Commercial Brand Mockup Prompts */}
+          <LogoMockupDeck input={input} />
+
+          {/* Brand Identity Spec Sheet & Guidelines */}
+          <BrandGuidelinesCard input={input} />
         </div>
       )}
     </div>

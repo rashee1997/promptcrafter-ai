@@ -24,6 +24,7 @@ import {
   Monitor,
   Smartphone,
   Layers,
+  Dices,
 } from 'lucide-react';
 import {
   IMAGE_SCENE_RECIPES,
@@ -145,40 +146,38 @@ export function StyleRecipePicker({
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <label className="block text-xs font-semibold tracking-wider uppercase text-text-secondary">
-            {isLogo ? 'Brand Identity Archetype' : 'Visual Scene Recipe'}
-          </label>
-          <span className="text-[10px] text-text-muted">
-            (Predefined Directorial Configs)
-          </span>
-        </div>
+    <div className="space-y-2.5">
+      {/* Top Action Bar: Randomize & AI Generator */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={handleSurpriseMe}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-surface-card border border-border/70 hover:border-brand/40 text-text-secondary hover:text-text-primary transition-colors shrink-0"
+        >
+          <Dices className="w-3.5 h-3.5 text-brand" />
+          <span>Director's Pick</span>
+        </button>
 
-        <div className="flex items-center gap-1.5">
-          {/* AI Generator Trigger */}
-          <button
-            type="button"
-            onClick={onOpenAiGenerator}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand/20 to-accent/20 hover:from-brand/30 hover:to-accent/30 text-brand border border-brand/40 shadow-[0_2px_8px_var(--shadow-glow)] transition-all"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-brand animate-pulse" />
-            <span>AI Template Architect</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenAiGenerator}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gradient-to-r from-brand/15 to-accent/15 hover:from-brand/25 hover:to-accent/25 text-brand border border-brand/35 shadow-sm transition-all shrink-0"
+        >
+          <Sparkles className="w-3 h-3 text-brand animate-pulse" />
+          <span>+ AI Template</span>
+        </button>
       </div>
 
-      {/* Category filters */}
+      {/* Category filter pills */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full no-scrollbar scroll-smooth">
         {categories.map((cat) => (
           <button
             key={cat}
             type="button"
             onClick={() => setFilterCategory(cat)}
-            className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors whitespace-nowrap shrink-0 ${
+            className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors whitespace-nowrap shrink-0 ${
               filterCategory === cat
-                ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                ? 'bg-brand text-white shadow-xs font-semibold'
                 : 'bg-surface-input text-text-muted hover:text-text-primary border border-border/60'
             }`}
           >
@@ -187,74 +186,29 @@ export function StyleRecipePicker({
         ))}
       </div>
 
-      {/* Grid of recipes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
-        {/* Surprise Me / Director's Choice card */}
-        <motion.button
-          type="button"
-          onClick={handleSurpriseMe}
-          whileHover={{ scale: 1.015 }}
-          whileTap={{ scale: 0.985 }}
-          className={`
-            relative rounded-xl border p-3 text-left transition-all duration-200 flex flex-col justify-between
-            ${
-              selectedRecipeId === (isLogo ? SURPRISE_LOGO_ARCHETYPE_ID : SURPRISE_IMAGE_RECIPE_ID)
-                ? 'border-brand bg-gradient-to-br from-brand/15 to-accent/10 ring-2 ring-brand/30 shadow-[0_4px_16px_var(--shadow-glow)]'
-                : 'border-border bg-surface-card hover:border-brand/40 hover:bg-surface-muted/30'
-            }
-          `}
-        >
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-brand" />
-                <span className="text-xs font-bold text-text-primary">
-                  Director's Pick
-                </span>
-              </div>
-              <span className="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/25">
-                Randomize
-              </span>
-            </div>
-            <p className="text-[11px] text-text-muted leading-relaxed">
-              {isLogo
-                ? 'Selects a cohesive brand archetype (mark structure, geometry, and palette) tailored for modern vectors.'
-                : 'Selects a balanced photographic or artistic recipe with matching optics, lighting, and film science.'}
-            </p>
-          </div>
-          <div className="mt-2.5 pt-1.5 border-t border-border/40 flex items-center justify-between text-[10px] text-text-muted font-mono">
-            <span>Adaptive Style</span>
-            <span>·</span>
-            <span>Multi-Dialect</span>
-          </div>
-        </motion.button>
-
+      {/* Grid of clean, compact recipe cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-0.5 scrollbar-thin">
         {/* Dynamic Image Mode Cards */}
         {!isLogo &&
-          filteredImageRecipes.map((recipe, i) => {
+          filteredImageRecipes.map((recipe) => {
             const isSelected = selectedRecipeId === recipe.id;
             return (
-              <motion.button
+              <button
                 key={recipe.id}
                 type="button"
                 onClick={() => onSelectImageRecipe(isSelected ? null : recipe)}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.015, duration: 0.15 }}
-                whileHover={{ scale: 1.015 }}
-                whileTap={{ scale: 0.985 }}
                 className={`
-                  relative rounded-xl border p-3 text-left transition-all duration-200 flex flex-col justify-between group
+                  relative rounded-lg border p-2.5 text-left transition-all duration-150 flex flex-col justify-between group
                   ${
                     isSelected
-                      ? 'border-brand bg-brand/10 ring-2 ring-brand/30 shadow-[0_4px_16px_var(--shadow-glow)]'
-                      : 'border-border bg-surface-card hover:border-brand/40 hover:bg-surface-muted/30'
+                      ? 'border-brand bg-brand/10 ring-1 ring-brand/40 shadow-xs'
+                      : 'border-border/80 bg-surface-card/60 hover:border-brand/40 hover:bg-surface-hover'
                   }
                 `}
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-1.5 truncate">
+                  <div className="flex items-center justify-between gap-1.5 mb-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <RecipeIcon name={recipe.iconName} />
                       <span className="text-xs font-bold text-text-primary truncate">
                         {recipe.label}
@@ -262,68 +216,69 @@ export function StyleRecipePicker({
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {recipe.isAiGenerated && (
-                        <button
-                          type="button"
+                        <span
+                          role="button"
+                          tabIndex={0}
                           onClick={(e) => handleDeleteCustom(e, recipe.id)}
-                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-error text-text-muted transition-opacity"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              handleDeleteCustom(e as any, recipe.id);
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-error text-text-muted transition-opacity cursor-pointer"
                           title="Delete custom recipe"
                         >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                          <Trash2 className="w-2.5 h-2.5" />
+                        </span>
                       )}
-                      <span className="text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded-full bg-surface-muted text-text-secondary border border-border/60">
+                      <span className="text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.2 rounded-full bg-surface-muted text-text-secondary border border-border/50">
                         {recipe.goal}
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-text-muted leading-relaxed line-clamp-2">
+                  <p className="text-[10px] text-text-muted leading-snug line-clamp-1 mb-2">
                     {recipe.summary}
                   </p>
                 </div>
 
-                <div className="mt-2.5 pt-1.5 border-t border-border/40 flex items-center justify-between text-[10px] text-text-muted font-mono">
+                <div className="pt-1.5 border-t border-border/40 flex items-center justify-between text-[9px] text-text-muted font-mono">
                   <span className="flex items-center gap-1">
                     <AspectIcon ratio={recipe.aspectHint} />
                     {recipe.aspectHint}
                   </span>
-                  <span className="truncate max-w-[120px] text-[10px]">
-                    {recipe.config.style || 'photo'} · {recipe.config.camera || '35mm'}
+                  <span className="truncate max-w-[90px]">
+                    {recipe.config.style || 'photo'}
                   </span>
-                  <span className="text-text-muted/70 truncate max-w-[70px]">
+                  <span className="text-text-muted/60 truncate max-w-[65px]">
                     {recipe.category}
                   </span>
                 </div>
-              </motion.button>
+              </button>
             );
           })}
 
         {/* Dynamic Logo Mode Cards */}
         {isLogo &&
-          filteredLogoArchetypes.map((archetype, i) => {
+          filteredLogoArchetypes.map((archetype) => {
             const isSelected = selectedRecipeId === archetype.id;
             return (
-              <motion.button
+              <button
                 key={archetype.id}
                 type="button"
                 onClick={() => onSelectLogoArchetype(isSelected ? null : archetype)}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.015, duration: 0.15 }}
-                whileHover={{ scale: 1.015 }}
-                whileTap={{ scale: 0.985 }}
                 className={`
-                  relative rounded-xl border p-3 text-left transition-all duration-200 flex flex-col justify-between group
+                  relative rounded-lg border p-2.5 text-left transition-all duration-150 flex flex-col justify-between group
                   ${
                     isSelected
-                      ? 'border-brand bg-brand/10 ring-2 ring-brand/30 shadow-[0_4px_16px_var(--shadow-glow)]'
-                      : 'border-border bg-surface-card hover:border-brand/40 hover:bg-surface-muted/30'
+                      ? 'border-brand bg-brand/10 ring-1 ring-brand/40 shadow-xs'
+                      : 'border-border/80 bg-surface-card/60 hover:border-brand/40 hover:bg-surface-hover'
                   }
                 `}
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-1.5 truncate">
+                  <div className="flex items-center justify-between gap-1.5 mb-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <RecipeIcon name={archetype.iconName} />
                       <span className="text-xs font-bold text-text-primary truncate">
                         {archetype.label}
@@ -331,38 +286,44 @@ export function StyleRecipePicker({
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {archetype.isAiGenerated && (
-                        <button
-                          type="button"
+                        <span
+                          role="button"
+                          tabIndex={0}
                           onClick={(e) => handleDeleteCustom(e, archetype.id)}
-                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-error text-text-muted transition-opacity"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              handleDeleteCustom(e as any, archetype.id);
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-error text-text-muted transition-opacity cursor-pointer"
                           title="Delete custom archetype"
                         >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                          <Trash2 className="w-2.5 h-2.5" />
+                        </span>
                       )}
-                      <span className="text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded-full bg-surface-muted text-text-secondary border border-border/60">
+                      <span className="text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.2 rounded-full bg-surface-muted text-text-secondary border border-border/50">
                         {archetype.goal}
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-text-muted leading-relaxed line-clamp-2">
+                  <p className="text-[10px] text-text-muted leading-snug line-clamp-1 mb-2">
                     {archetype.summary}
                   </p>
                 </div>
 
-                <div className="mt-2.5 pt-1.5 border-t border-border/40 flex items-center justify-between text-[10px] text-text-muted font-mono">
-                  <span className="truncate max-w-[100px]">
+                <div className="pt-1.5 border-t border-border/40 flex items-center justify-between text-[9px] text-text-muted font-mono">
+                  <span className="truncate max-w-[80px]">
                     {archetype.config.logoType}
                   </span>
-                  <span className="truncate max-w-[120px] text-[10px]">
+                  <span className="truncate max-w-[80px]">
                     {archetype.config.palette}
                   </span>
-                  <span className="text-text-muted/70 truncate max-w-[70px]">
+                  <span className="text-text-muted/60 truncate max-w-[65px]">
                     {archetype.category}
                   </span>
                 </div>
-              </motion.button>
+              </button>
             );
           })}
       </div>
