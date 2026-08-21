@@ -26,6 +26,9 @@ export type {
   PlatformPrompt,
   SavedProductShoot,
   GenerationMode,
+  TargetDuration,
+  ExtensionBeat,
+  ChainedExtensionPackage,
   AudioDesignPackage,
   AdStrategyPackage,
   CampaignShot,
@@ -43,6 +46,7 @@ export {
   CAMERA_MOTION_PRESETS,
   FOCAL_LENGTH_PRESETS,
   MOTION_INTENSITY_PRESETS,
+  TARGET_DURATION_PRESETS,
   LIGHTING_PRESETS,
   SURFACE_PRESETS,
   PHYSICS_FX_PRESETS,
@@ -53,7 +57,12 @@ export {
   DEFAULT_CREATIVE_CONTROLS,
 } from './presets';
 
-export type { OptionPreset, MotionIntensityPreset, ExampleProductBrief } from './presets';
+export type {
+  OptionPreset,
+  MotionIntensityPreset,
+  DurationPreset,
+  ExampleProductBrief,
+} from './presets';
 
 export {
   getSavedProductShoots,

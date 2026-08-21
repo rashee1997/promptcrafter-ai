@@ -202,7 +202,57 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
     }
   }
 
-  // 10. Extract Remix Suggestions
+  // 10. Extract Sequential Clip Extensions & Continuity Handoffs
+  let chainedExtensions = undefined;
+  const extensionRaw = extractSection(raw, 'Sequential Clip Extensions', ['Audio & Foley', 'Strategic Ad Copy', '3-Shot Campaign', 'Aspect Variants', 'Alternative Concepts']);
+  if (extensionRaw) {
+    const beats = [];
+    const beat1Raw = extractSection(extensionRaw, 'Beat 1', ['Beat 2', '###', '##']);
+    const beat2Raw = extractSection(extensionRaw, 'Beat 2', ['Beat 3', '###', '##']);
+    const beat3Raw = extractSection(extensionRaw, 'Beat 3', ['Beat 4', '###', '##']);
+
+    if (beat1Raw) {
+      beats.push({
+        beatNumber: 1,
+        timecodeRange: '0s–5s',
+        beatTitle: 'Initial Hook & Approach',
+        continuityAnchor: 'Frame 0 Anchor: Reference Image Product Position',
+        extensionPrompt: extractSection(beat1Raw, 'Prompt:', ['End-Frame State:', 'Instruction:', '###']) || beat1Raw.slice(0, 250),
+        modelInstruction: extractSection(beat1Raw, 'Instruction:', ['###', '##']) || 'Standard Initial Generation (Duration: 5s)',
+      });
+    }
+
+    if (beat2Raw) {
+      beats.push({
+        beatNumber: 2,
+        timecodeRange: '5s–10s',
+        beatTitle: 'Extension & Fluid Evolution',
+        continuityAnchor: extractSection(beat2Raw, 'Continuity Anchor:', ['Prompt:', '###']) || 'Lock product position & lighting from second 5',
+        extensionPrompt: extractSection(beat2Raw, 'Prompt:', ['Instruction:', '###']) || beat2Raw.slice(0, 250),
+        modelInstruction: extractSection(beat2Raw, 'Instruction:', ['###', '##']) || 'Runway / Luma: Select Extend from last frame. Kling: Prompt 2.',
+      });
+    }
+
+    if (beat3Raw) {
+      beats.push({
+        beatNumber: 3,
+        timecodeRange: '10s–15s',
+        beatTitle: 'Resolution & Hero Hold',
+        continuityAnchor: extractSection(beat3Raw, 'Continuity Anchor:', ['Prompt:', '###']) || 'Smooth deceleration into final locked frame',
+        extensionPrompt: extractSection(beat3Raw, 'Prompt:', ['Instruction:', '###']) || beat3Raw.slice(0, 250),
+        modelInstruction: extractSection(beat3Raw, 'Instruction:', ['###', '##']) || 'Final extension pass with stabilized framing.',
+      });
+    }
+
+    if (beats.length > 0) {
+      chainedExtensions = {
+        totalDurationSeconds: beats.length * 5,
+        beats,
+      };
+    }
+  }
+
+  // 11. Extract Remix Suggestions
   const remixSuggestions: string[] = [];
   const remixRaw = extractSection(raw, 'Remix Suggestions', ['## ']);
   if (remixRaw) {
@@ -239,6 +289,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
     audioDesign,
     adStrategy,
     threeShotCampaign,
+    chainedExtensions,
   };
 }
 

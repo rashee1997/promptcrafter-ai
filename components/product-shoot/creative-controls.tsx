@@ -14,12 +14,14 @@ import {
   Focus,
   Film,
   Zap,
+  Timer,
 } from 'lucide-react';
 import type { CreativeControls, VideoAspectRatio, GenerationMode } from '@/lib/product-shoot/types';
 import {
   CAMERA_MOTION_PRESETS,
   FOCAL_LENGTH_PRESETS,
   MOTION_INTENSITY_PRESETS,
+  TARGET_DURATION_PRESETS,
   LIGHTING_PRESETS,
   SURFACE_PRESETS,
   PHYSICS_FX_PRESETS,
@@ -237,6 +239,42 @@ export function CreativeControlsPanel({
                       <div className="text-xs font-semibold">{mip.label}</div>
                       <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-text-muted'}`}>
                         {mip.category}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Target Duration & Temporal Chaining */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+                  <Timer className="w-3.5 h-3.5 text-brand" />
+                  Target Clip Duration & Chaining
+                </label>
+                <span className="text-[10px] font-mono text-text-muted">
+                  Avoids model 10s hallucination
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {TARGET_DURATION_PRESETS.map((dp) => {
+                  const isSelected = (controls.targetDuration || '5s-single') === dp.id;
+                  return (
+                    <button
+                      key={dp.id}
+                      type="button"
+                      onClick={() => update('targetDuration', dp.id)}
+                      title={dp.description}
+                      className={`p-2 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold">{dp.label}</div>
+                      <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-text-muted'}`}>
+                        {dp.badge}
                       </div>
                     </button>
                   );

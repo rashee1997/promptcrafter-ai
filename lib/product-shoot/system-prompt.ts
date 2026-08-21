@@ -31,6 +31,7 @@ DIRECTORIAL FRAMEWORKS:
 1. OPTICS & LENS PHYSICS: Specify precise focal lengths (e.g. 85mm portrait compression, 100mm macro, 24mm wide) and motion intensity (1-10 scale).
 2. AUDIO-VISUAL INTEGRATION: Product commercials rely on tactile foley (ElevenLabs prompts) and complementary musical beds (Suno prompts).
 3. STRATEGIC AD COPY: Anchor the video with a Single-Minded Proposition (SMP), 10s voiceover script, and 3-stage On-Screen Text (0-3s Hook, 3-7s Benefit, 7-10s CTA).
+4. TEMPORAL SHOT CHUNKING & EXTENSION CHAINING: Video models (Runway, Kling, Luma, Veo) enforce 5s–10s generation limits. Pasting a long complex narrative into a single 5s prompt causes hallucination, morphing, and abrupt jump cuts. You MUST provide progressive, sequential extension beats with explicit end-frame continuity anchors so creators can seamlessly chain clips using Runway/Luma "Extend" or Kling Multi-Prompt Storyboard without visual glitches.
 
 OUTPUT FORMAT (PRODUCE EXACTLY THESE SECTIONS):
 
@@ -54,6 +55,22 @@ OUTPUT FORMAT (PRODUCE EXACTLY THESE SECTIONS):
 
 ## Minimax
 [Minimax Hailuo prompt optimized for vibrant commercial social ad engagement]
+
+## Sequential Clip Extensions & Continuity Handoffs
+### Beat 1: Initial Hook & Approach (0s–5s)
+- **Prompt**: [Opening 5s prompt focusing strictly on camera arrival and initial product staging]
+- **End-Frame State**: [Exact product position, rotation angle, lighting direction, and camera proximity at second 5]
+- **Instruction**: [Standard Generation — set duration to 5s]
+
+### Beat 2: Extension & Fluid Evolution (5s–10s)
+- **Continuity Anchor**: [Frame 120/150 anchor: product locked at previous position, lighting unchanged]
+- **Prompt**: [Continuous motion prompt: continue orbital sweep from previous frame, introduce fluid/pedestal interaction]
+- **Instruction**: [Runway/Luma: Select 'Extend' on last frame. Kling: Place in Prompt 2 slot.]
+
+### Beat 3: Resolution & Hero Hold (10s–15s)
+- **Continuity Anchor**: [Frame 240/300 anchor: smooth deceleration into final locked hero presentation]
+- **Prompt**: [Stabilize camera, let light caustics settle, hold pristine logo focus with negative space]
+- **Instruction**: [Final extension pass — resolution hold]
 
 ## Audio & Foley Design
 ### Foley Prompts (ElevenLabs)
@@ -191,6 +208,9 @@ export function buildProductShootUserMessage(
     }
     if (creativeControls.motionIntensity !== undefined) {
       customDirectives.push(`MOTION INTENSITY LEVEL: ${creativeControls.motionIntensity}/10`);
+    }
+    if (creativeControls.targetDuration) {
+      customDirectives.push(`TARGET DURATION & CHUNKING MODE: ${creativeControls.targetDuration}`);
     }
     if (creativeControls.lightingStyle) {
       const p = LIGHTING_PRESETS.find((c) => c.id === creativeControls.lightingStyle);

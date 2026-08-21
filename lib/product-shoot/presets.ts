@@ -10,6 +10,7 @@ import type {
   ProductBrief,
   CreativeControls,
   VideoAspectRatio,
+  TargetDuration,
 } from './types';
 
 // ── Product Categories ──────────────────────────────────────────────────
@@ -466,10 +467,52 @@ export const MOTION_INTENSITY_PRESETS: MotionIntensityPreset[] = [
   },
 ];
 
+// ── Target Duration & Temporal Chaining Presets ────────────────────────
+
+export interface DurationPreset {
+  id: TargetDuration;
+  label: string;
+  badge: string;
+  description: string;
+  clipCount: number;
+}
+
+export const TARGET_DURATION_PRESETS: DurationPreset[] = [
+  {
+    id: '5s-single',
+    label: '5s Quick Clip',
+    badge: 'Single Beat',
+    description: 'Single prompt, maximum fidelity, zero hallucination risk',
+    clipCount: 1,
+  },
+  {
+    id: '10s-extended',
+    label: '10s Standard Clip',
+    badge: 'Single Extended',
+    description: 'Standard single generation limit for Runway/Kling/Veo',
+    clipCount: 1,
+  },
+  {
+    id: '15s-chained',
+    label: '15s (2-Clip Chain)',
+    badge: 'Seamless Extension',
+    description: '0-5s Opening + 5-10s Extension from last frame with continuity anchor',
+    clipCount: 2,
+  },
+  {
+    id: '20s-chained',
+    label: '20s (3-Clip Chain)',
+    badge: 'Multi-Beat Arc',
+    description: '3-Part progressive chain with explicit frame anchors preventing jumps',
+    clipCount: 3,
+  },
+];
+
 export const DEFAULT_CREATIVE_CONTROLS: CreativeControls = {
   cameraMotion: 'orbit-360',
   focalLength: '85mm-portrait',
   motionIntensity: 4,
+  targetDuration: '5s-single',
   lightingStyle: 'luxury-chiaroscuro',
   surfaceMaterial: 'carrara-marble',
   physicsFX: 'none',

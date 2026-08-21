@@ -96,10 +96,13 @@ export type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:5';
 
 export type GenerationMode = 'single' | 'campaign-3shot';
 
+export type TargetDuration = '5s-single' | '10s-extended' | '15s-chained' | '20s-chained';
+
 export interface CreativeControls {
   cameraMotion?: string;
   focalLength?: string;
   motionIntensity?: number; // 1 - 10
+  targetDuration?: TargetDuration;
   lightingStyle?: string;
   surfaceMaterial?: string;
   physicsFX?: string;
@@ -109,6 +112,22 @@ export interface CreativeControls {
   generationMode?: GenerationMode;
   negativeConstraints?: string;
   customVisualNotes?: string;
+}
+
+// ── Multi-Beat Shot Extension & Temporal Chaining ───────────────────────
+
+export interface ExtensionBeat {
+  beatNumber: number;
+  timecodeRange: string; // e.g. "0s–5s", "5s–10s", "10s–15s"
+  beatTitle: string; // e.g. "Initial Camera Approach", "Mid-Motion Evolution", "Resolution & Brand Lock"
+  continuityAnchor: string; // Explicit last-frame anchor to prevent lighting/pose jumps
+  extensionPrompt: string; // The exact prompt to feed the model for this specific clip/extension
+  modelInstruction: string; // Instructions for Runway Extend / Kling Storyboard / Luma Keyframe
+}
+
+export interface ChainedExtensionPackage {
+  totalDurationSeconds: number;
+  beats: ExtensionBeat[];
 }
 
 // ── Audio-Visual Sound Design & Foley ──────────────────────────────────
@@ -227,6 +246,7 @@ export interface ProductShootSections {
   audioDesign?: AudioDesignPackage;
   adStrategy?: AdStrategyPackage;
   threeShotCampaign?: ThreeShotCampaign;
+  chainedExtensions?: ChainedExtensionPackage;
 }
 
 /** The full generation output structure. */

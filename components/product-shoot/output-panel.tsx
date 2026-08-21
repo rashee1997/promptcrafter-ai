@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   Clapperboard,
   Sliders,
+  Timer,
+  ArrowRight,
 } from 'lucide-react';
 import type { ProductShootSections, VideoPlatformDialect } from '@/lib/product-shoot/types';
 import { parseProductShootOutput, PLATFORM_METAS } from '@/lib/product-shoot/dialects';
@@ -89,7 +91,7 @@ export function OutputPanel({
   const autoScrollRef = useRef(true);
 
   // Tab & View state
-  const [activeTab, setActiveTab] = useState<VideoPlatformDialect | 'audio' | 'adcopy' | 'campaign' | 'aspects' | 'alternatives' | 'negative'>('master');
+  const [activeTab, setActiveTab] = useState<VideoPlatformDialect | 'audio' | 'adcopy' | 'campaign' | 'extensions' | 'aspects' | 'alternatives' | 'negative'>('master');
   const [viewMode, setViewMode] = useState<'tabs' | 'grid'>('tabs');
 
   // Parse structured sections
@@ -308,6 +310,22 @@ export function OutputPanel({
                     >
                       <Clapperboard className="w-3 h-3" />
                       <span>3-Shot Storyboard</span>
+                    </button>
+                  )}
+
+                  {/* Sequential Clip Extensions Tab */}
+                  {sections.chainedExtensions && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('extensions')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                        activeTab === 'extensions'
+                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                          : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
+                      }`}
+                    >
+                      <Timer className="w-3 h-3 text-accent" />
+                      <span>Extensions ({sections.chainedExtensions.beats.length} Beats)</span>
                     </button>
                   )}
 
@@ -558,6 +576,60 @@ export function OutputPanel({
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Sequential Clip Extensions Tab */}
+                  {activeTab === 'extensions' && sections.chainedExtensions && (
+                    <div className="space-y-4">
+                      {/* Explanatory Banner */}
+                      <div className="rounded-2xl border border-brand/25 bg-brand/5 p-4 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-4 h-4 text-brand" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-brand">
+                            Multi-Beat Temporal Chaining (Seamless Model Extension)
+                          </h3>
+                        </div>
+                        <p className="text-xs text-text-secondary leading-relaxed">
+                          Video models (Runway, Kling, Luma, Veo) enforce 5s–10s limits. Use these sequential prompts with explicit last-frame anchors to chain continuous camera movement and fluid action without morphing or hallucinations.
+                        </p>
+                      </div>
+
+                      {/* Beats List */}
+                      <div className="space-y-3">
+                        {sections.chainedExtensions.beats.map((beat) => (
+                          <div key={beat.beatNumber} className="rounded-2xl border border-border bg-surface-card p-4 space-y-3">
+                            <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-brand text-white text-xs font-bold font-mono">
+                                  {beat.timecodeRange}
+                                </span>
+                                <h4 className="text-xs font-bold text-text-primary">
+                                  Beat {beat.beatNumber}: {beat.beatTitle}
+                                </h4>
+                              </div>
+                              <CopyButton text={beat.extensionPrompt} compact />
+                            </div>
+
+                            <div className="rounded-xl bg-surface-code border border-border p-3">
+                              <pre className="text-xs font-mono text-text-primary whitespace-pre-wrap leading-relaxed">
+                                {beat.extensionPrompt}
+                              </pre>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                              <div className="p-2 rounded-lg bg-surface-muted/50 border border-border/50">
+                                <strong className="text-accent font-semibold">Continuity Anchor: </strong>
+                                <span className="text-text-secondary">{beat.continuityAnchor}</span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-surface-muted/50 border border-border/50">
+                                <strong className="text-brand font-semibold">Model Workflow: </strong>
+                                <span className="text-text-secondary">{beat.modelInstruction}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
