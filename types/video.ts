@@ -183,6 +183,20 @@ export interface VideoLocation {
   description: string;
 }
 
+/**
+ * Phase D4 — per-shot environmental conditions. A location's geography is
+ * fixed; its conditions (time-of-day, weather, lighting, occupancy) are
+ * shot-level overrides. Same rooftop bar at golden hour in shot 3 and in a
+ * storm at night in shot 19 — one location record, two condition sets.
+ */
+export interface ShotLocationConditions {
+  timeOfDay?: string;
+  weather?: string;
+  lightingMood?: string;
+  /** empty / sparse / crowded */
+  occupancy?: string;
+}
+
 export interface VideoStyle {
   lookAndMood: string;
   colorGrade: string;
@@ -213,6 +227,28 @@ export interface VideoShot {
   durationSeconds: number;
   confirmed: boolean;
   createdAt: number;
+  /**
+   * Phase D1 — the screenplay scene this shot belongs to. Links the shot
+   * back to the scene's location and present characters so the drafting
+   * system prompt can scope the Story Bible digest per-shot.
+   */
+  sceneNumber?: number;
+  /**
+   * Phase D1 — the location for THIS shot. Derived from the scene's
+   * locationId; overridable when a shot cuts elsewhere.
+   */
+  locationId?: string;
+  /**
+   * Phase D1 — per-shot location conditions (time-of-day, weather, etc.).
+   * The location's geography is fixed; these are shot-level overrides.
+   */
+  locationConditions?: ShotLocationConditions;
+  /**
+   * Phase D1 — per-character wardrobe look for this shot. Maps
+   * characterId → CharacterWardrobeLook.id. Defaults to the character's
+   * defaultLookId when absent.
+   */
+  wardrobeLookIds?: Record<string, string>;
   /**
    * Story Bible character ids explicitly locked to this shot (drag a cast
    * member from the sidebar onto a shot). Dialect adapters use these to inject
@@ -319,6 +355,24 @@ export interface DraftedShot {
   shotNumber: number;
   /** One-line storyboard summary. */
   description: string;
+  /**
+   * Phase D1 — the screenplay scene this shot belongs to. Overridden by
+   * the scene selector in the drafting UI.
+   */
+  sceneNumber?: number;
+  /**
+   * Phase D1 — the location for this shot. Overridden by the scene
+   * selector in the drafting UI.
+   */
+  locationId?: string;
+  /**
+   * Phase D1 — per-character wardrobe look for this shot.
+   */
+  wardrobeLookIds?: Record<string, string>;
+  /**
+   * Phase D4 — per-shot location conditions.
+   */
+  locationConditions?: ShotLocationConditions;
   /** The full 6-part shot prompt (Subject · Action · Camera · Lighting · Environment · Lens). */
   promptText: string;
   /** Subject + camera ending state handed to the next shot. */

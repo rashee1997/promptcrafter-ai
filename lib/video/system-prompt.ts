@@ -12,11 +12,15 @@
 
 import type { VideoProject } from '@/types/video';
 import {
+  buildSceneScopedBibleDigest,
   buildStoryBibleDigest,
   calculateShotHandoff,
   formatIdentityAnchors,
   formatSceneDefaults,
+  formatSceneScopedIdentityAnchors,
+  formatSceneScopedSceneDefaults,
   nextShotNumber,
+  type ShotSceneContext,
 } from './story-bible';
 import { getPlatformSpec } from './platforms';
 
@@ -119,6 +123,7 @@ function withDuration(text: string, min: number, max: number): string {
 export function buildShotDraftingSystemPrompt(
   project: VideoProject,
   imageRefs?: CharacterImageRef[],
+  shotContext?: ShotSceneContext,
 ): string {
   const bible = project.storyBible ?? { characters: [], locations: [], continuityLog: [] };
   const brief = project.customInstructions?.trim() || project.name || '(No brief supplied)';
@@ -151,13 +156,22 @@ export function buildShotDraftingSystemPrompt(
     durationMax,
   );
 
+  // ── D2: scene-scoped filtering ──
+  // When shotContext is provided, only the relevant location and characters
+  // are given full detail; everything else is omitted.
+  const isSceneScoped = !!shotContext;
+
   // ── C2: identity-by-reference vs. verbatim re-description ──
   // When reference images are attached, characters with images get a
   // pointer rule instead of a verbatim appearance string — shorter,
   // more specific, and lets the model anchor identity to the image.
+  // Scene-scoped: only characters present in this scene are considered.
+  const scopeChars = isSceneScoped
+    ? (bible.characters ?? []).filter((c) => shotContext!.characterIds.includes(c.id))
+    : bible.characters ?? [];
   const imageRefMap = new Map(imageRefs?.map((r) => [r.characterId, r.imageIndex]) ?? []);
-  const charsWithImages = bible.characters?.filter((c) => imageRefMap.has(c.id)) ?? [];
-  const charsWithoutImages = bible.characters?.filter((c) => !imageRefMap.has(c.id)) ?? [];
+  const charsWithImages = scopeChars.filter((c) => imageRefMap.has(c.id));
+  const charsWithoutImages = scopeChars.filter((c) => !imageRefMap.has(c.id));
 
   let identityBlock: string;
   if (charsWithImages.length > 0) {
@@ -199,18 +213,34 @@ ${formatIdentityAnchors(bible)}`;
     wardrobeNote = `\nWARDROBE VARIANTS — identity (face/build) stays locked; only clothing changes:\n${lookLines.join('; ')}\nWhen a shot requires a wardrobe change, pick a different look from the character's wardrobeLooks and note the switch in continuityHandoff.`;
   }
 
+  // Phase D2 — scene-scoped vs. full digest
+  const bibleDigest = isSceneScoped
+    ? buildSceneScopedBibleDigest(bible, shotContext!)
+    : buildStoryBibleDigest(bible);
+  const identityContent = isSceneScoped
+    ? formatSceneScopedIdentityAnchors(bible, shotContext!)
+    : (identityBlock.includes('IDENTITY LOCK') ? '' : formatIdentityAnchors(bible));
+  const sceneDefaultsContent = isSceneScoped
+    ? formatSceneScopedSceneDefaults(bible, shotContext!)
+    : formatSceneDefaults(bible);
+
+  // When scene-scoped, the identityBlock already contains the scoped anchors.
+  // When not scene-scoped, use identityBlock as-is.
+  const finalIdentityBlock = isSceneScoped ? `IDENTITY LOCK — reuse these EXACT strings every time, never change them:
+${identityContent}` : identityBlock;
+
   return `You are the shot drafter on a short-form video production. You work inside the director's multi-turn drafting thread: you propose ONE sequential shot per turn, the director approves it into the storyboard or asks for a revision, and you keep character, setting, and visual style anchors perfectly stable across every shot.
 
 DIRECTORIAL BRIEF:
 ${brief}
 
 STORY BIBLE:
-${buildStoryBibleDigest(bible)}
+${bibleDigest}
 
-${identityBlock}
+${finalIdentityBlock}
 
 SCENE DEFAULTS — starting point for wardrobe and location conditions. You may evolve these across shots ONLY when the story motivates it (new day, after an event, weather turning for dramatic pressure). When you do, say so out loud in continuityHandoff so the next shot inherits the change instead of reverting:
-${formatSceneDefaults(bible)}${wardrobeNote}
+${sceneDefaultsContent}${wardrobeNote}
 
 CONTINUITY HANDOFF FROM THE STORYBOARD:
 ${calculateShotHandoff(lastShot)}

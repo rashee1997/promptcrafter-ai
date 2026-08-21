@@ -14,7 +14,10 @@
 import type {
   DialogueLine,
   DraftedShot,
+  ScreenplayScene,
+  ShotLocationConditions,
   StoryBible,
+  VideoLocation,
   VideoProject,
   VideoShot,
 } from '@/types/video';
@@ -267,4 +270,190 @@ export function rebuildShotContinuity(shots: VideoShot[], action: string): ShotR
   const renumbered = shots.map((shot, i) => ({ ...shot, shotNumber: i + 1 }));
   const logEntry = `${action}; continuity chain renumbered 1–${renumbered.length}.`;
   return { shots: renumbered, logEntry };
+}
+
+// ── Phase D — scene-scoped Story Bible digest ───────────────────────────────
+
+/**
+ * Context the UI supplies per-shot so the drafting prompt is scoped to the
+ * current scene instead of dumping the full Story Bible.
+ */
+export interface ShotSceneContext {
+  /** The screenplay scene this shot belongs to. */
+  sceneNumber: number;
+  /** Location id to show in full detail. */
+  locationId?: string;
+  /** Character ids present in this shot. */
+  characterIds: string[];
+  /** Per-character wardrobe look overrides. */
+  wardrobeLookIds?: Record<string, string>;
+  /** Per-shot location conditions (time-of-day, weather, etc.). */
+  locationConditions?: ShotLocationConditions;
+}
+
+/**
+ * Phase D2 — scene-scoped Story Bible digest. Only the location and
+ * characters present in the current scene are given full detail; everything
+ * else is omitted or reduced to a one-line mention. This is the single
+ * highest-leverage change for prompt vagueness — the prompt gets shorter
+ * and every line in it is relevant.
+ */
+export function buildSceneScopedBibleDigest(
+  bible: StoryBible,
+  ctx: ShotSceneContext,
+): string {
+  const blocks: string[] = [];
+
+  // Characters — only those present in this shot get full detail.
+  const allChars = bible.characters ?? [];
+  const presentChars = allChars.filter((c) => ctx.characterIds.includes(c.id));
+  const absentChars = allChars.filter((c) => !ctx.characterIds.includes(c.id));
+
+  if (presentChars.length > 0) {
+    blocks.push(
+      `CAST IN THIS SCENE (full detail):\n${presentChars
+        .map(
+          (c) =>
+            `- ${c.name} (${clip(c.role, 80)}) — appearance: ${clip(c.appearance, 240)}; wardrobe: ${clip(c.wardrobe, 240)}; voice tone: ${clip(c.voiceTone, 120)}`
+        )
+        .join('\n')}`
+    );
+  }
+
+  if (absentChars.length > 0) {
+    blocks.push(
+      `Other characters (NOT in this scene — do not include in shot): ${absentChars.map((c) => c.name).join(', ')}`
+    );
+  }
+
+  // Location — only the one this shot is in gets full detail.
+  const allLocs = bible.locations ?? [];
+  const sceneLoc = ctx.locationId ? allLocs.find((l) => l.id === ctx.locationId) : null;
+  const otherLocs = ctx.locationId ? allLocs.filter((l) => l.id !== ctx.locationId) : allLocs;
+
+  if (sceneLoc) {
+    blocks.push(
+      `LOCATION (full detail):\n- ${sceneLoc.name} — ${clip(sceneLoc.description, 400)}`
+    );
+  } else if (allLocs.length > 0) {
+    blocks.push(
+      `LOCATION:\n${allLocs.map((l) => `- ${l.name} — ${clip(l.description, 320)}`).join('\n')}`
+    );
+  }
+
+  if (otherLocs.length > 0) {
+    blocks.push(
+      `Other locations (NOT in this scene — do not use): ${otherLocs.map((l) => l.name).join(', ')}`
+    );
+  }
+
+  // Style + VFX — always included (they're locked global properties).
+  if (bible.style) {
+    blocks.push(
+      `LOCKED VISUAL STYLE:\n- Look & mood: ${clip(bible.style.lookAndMood, 320)}\n- Color grade: ${clip(bible.style.colorGrade, 160)}\n- Film stock: ${clip(bible.style.filmStock, 120)}\n- Aspect ratio: ${clip(bible.style.aspectRatio, 60)}`
+    );
+  }
+
+  if (bible.effects) {
+    blocks.push(
+      `LOCKED VFX DIRECTION:\n- VFX: ${clip(bible.effects.vfxDirection, 320)}\n- Particle density: ${clip(bible.effects.particleDensity, 160)}\n- Pacing: ${clip(bible.effects.pacing, 160)}`
+    );
+  }
+
+  // Continuity log — always included (last 6 entries).
+  if (bible.continuityLog?.length) {
+    blocks.push(
+      `CONTINUITY LOG (recent):\n${bible.continuityLog.slice(-6).map((line) => `- ${clip(line, 240)}`).join('\n')}`
+    );
+  }
+
+  return blocks.join('\n\n') || '(Story bible is still empty — draft from the directorial brief.)';
+}
+
+/**
+ * Phase D2 — scene-scoped identity anchors. Only the characters and
+ * location present in this scene get verbatim anchors.
+ */
+export function formatSceneScopedIdentityAnchors(
+  bible: StoryBible,
+  ctx: ShotSceneContext,
+): string {
+  const anchors: string[] = [];
+
+  const allChars = bible.characters ?? [];
+  const presentChars = allChars.filter((c) => ctx.characterIds.includes(c.id));
+
+  if (presentChars.length > 0) {
+    anchors.push(
+      presentChars
+        .map((c) => `${c.name} = "${clip(c.appearance, 240)}"`)
+        .join('; ')
+    );
+  }
+
+  const allLocs = bible.locations ?? [];
+  const sceneLoc = ctx.locationId ? allLocs.find((l) => l.id === ctx.locationId) : null;
+  if (sceneLoc) {
+    anchors.push(`${sceneLoc.name} = "${clip(sceneLoc.description, 280)}"`);
+  }
+
+  if (bible.style) {
+    anchors.push(`Style = "${clip(bible.style.lookAndMood, 240)}"`);
+  }
+
+  if (bible.effects) {
+    anchors.push(`VFX = "${clip(bible.effects.vfxDirection, 240)}"`);
+  }
+
+  return anchors.join('\n') || '(No identity anchors yet — invent consistent names and lock them in the draft.)';
+}
+
+/**
+ * Phase D2 — scene-scoped scene defaults. Wardrobe for present characters
+ * and conditions for the current location only.
+ */
+export function formatSceneScopedSceneDefaults(
+  bible: StoryBible,
+  ctx: ShotSceneContext,
+): string {
+  const parts: string[] = [];
+
+  const allChars = bible.characters ?? [];
+  const presentChars = allChars.filter((c) => ctx.characterIds.includes(c.id));
+
+  if (presentChars.length > 0) {
+    parts.push(
+      presentChars
+        .map((c) => `${c.name} wardrobe = "${clip(c.wardrobe, 240)}"`)
+        .join('; ')
+    );
+  }
+
+  const allLocs = bible.locations ?? [];
+  const sceneLoc = ctx.locationId ? allLocs.find((l) => l.id === ctx.locationId) : null;
+  if (sceneLoc) {
+    const condParts: string[] = [];
+    if (ctx.locationConditions) {
+      const c = ctx.locationConditions;
+      if (c.timeOfDay) condParts.push(`time: ${c.timeOfDay}`);
+      if (c.weather) condParts.push(`weather: ${c.weather}`);
+      if (c.lightingMood) condParts.push(`lighting: ${c.lightingMood}`);
+      if (c.occupancy) condParts.push(`occupancy: ${c.occupancy}`);
+    }
+    const condStr = condParts.length > 0 ? ` (${condParts.join(', ')})` : '';
+    parts.push(`${sceneLoc.name} starting conditions = "${clip(sceneLoc.description, 280)}"${condStr}`);
+  }
+
+  return parts.join('\n') || '(No scene defaults yet — use the Story Bible digest as your starting point.)';
+}
+
+/**
+ * Phase D1 — looks up a screenplay scene by number and returns the
+ * matching ScreenplayScene or undefined.
+ */
+export function findScene(
+  project: VideoProject,
+  sceneNumber: number,
+): ScreenplayScene | undefined {
+  return project.screenplay?.find((s) => s.sceneNumber === sceneNumber);
 }

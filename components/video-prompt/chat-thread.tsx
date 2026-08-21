@@ -6,7 +6,7 @@ import type { UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { Clapperboard, Eye, EyeOff, Sparkles, Square } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
-import type { ChatMessage, DraftedShot, StoryBibleCharacterImage, ThinkingOrbState, VideoProject, VideoShot } from '@/types/video';
+import type { ChatMessage, DraftedShot, ShotLocationConditions, StoryBibleCharacterImage, ThinkingOrbState, VideoProject, VideoShot } from '@/types/video';
 import {
   Conversation,
   ConversationContent,
@@ -20,6 +20,7 @@ import { blobToDataUrl } from '@/lib/compression';
 import { ThinkingOrb } from './thinking-orb';
 import { ShotDraftCard } from './shot-draft-card';
 import { ChatInput } from './chat-input';
+import { ShotSceneSelector, type ShotSceneContextValue } from './shot-scene-selector';
 import { cn } from '@/lib/utils';
 
 interface ChatThreadProps {
@@ -94,6 +95,9 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
     [entries]
   );
 
+  // Phase D — scene context for scoped Story Bible digest
+  const shotContextRef = useRef<ShotSceneContextValue | null>(null);
+
   const [seed] = useState<UIMessage[]>(() => seedFromHistory(project));
   const [transport] = useState(
     () =>
@@ -102,6 +106,7 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         body: () => ({
           project: projectRef.current,
           providerConfig: providerRef.current,
+          shotContext: shotContextRef.current ?? undefined,
         }),
       })
   );
@@ -159,6 +164,7 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
       const base = projectRef.current;
       const now = Date.now();
       const existing = base.shots.find((s) => s.shotNumber === draft.shotNumber);
+      const ctx = shotContextRef.current;
       const shot: VideoShot = {
         id: existing?.id ?? `shot-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
         shotNumber: draft.shotNumber,
@@ -170,6 +176,11 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         negativePrompt: draft.negativePrompt,
         ...(draft.emotion ? { emotion: draft.emotion } : {}),
         ...(draft.shotFunction ? { shotFunction: draft.shotFunction } : {}),
+        // Phase D1 — persist scene context on the approved shot
+        ...(ctx ? { sceneNumber: ctx.sceneNumber } : {}),
+        ...(ctx?.locationId ? { locationId: ctx.locationId } : {}),
+        ...(ctx?.locationConditions ? { locationConditions: ctx.locationConditions } : {}),
+        ...(ctx?.wardrobeLookIds ? { wardrobeLookIds: ctx.wardrobeLookIds } : {}),
         confirmed: true,
         createdAt: existing?.createdAt ?? now,
       };
@@ -200,9 +211,12 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
    *  it never fires as a side effect of Approve. */
   const handleDraftNext = async () => {
     if (streaming || approving) return;
-    // C1 — auto-attach character reference images
-    const allCharIds = project.storyBible?.characters?.map((c) => c.id) ?? [];
-    const images = await resolveCharacterImages(allCharIds);
+    // D — use scene-scoped character list when a scene is selected
+    const ctx = shotContextRef.current;
+    const charIds = ctx?.characterIds.length
+      ? ctx.characterIds
+      : (project.storyBible?.characters?.map((c) => c.id) ?? []);
+    const images = await resolveCharacterImages(charIds);
     const charImageFiles = images
       .filter((e) => e.imageDataUrl)
       .map((e) => ({
@@ -231,9 +245,12 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
 
   const handleRevise = async (draft: DraftedShot) => {
     if (streaming) return;
-    // C1 — auto-attach character reference images
-    const allCharIds = project.storyBible?.characters?.map((c) => c.id) ?? [];
-    const images = await resolveCharacterImages(allCharIds);
+    // D — use scene-scoped character list when a scene is selected
+    const ctx = shotContextRef.current;
+    const charIds = ctx?.characterIds.length
+      ? ctx.characterIds
+      : (project.storyBible?.characters?.map((c) => c.id) ?? []);
+    const images = await resolveCharacterImages(charIds);
     const charImageFiles = images
       .filter((e) => e.imageDataUrl)
       .map((e) => ({
@@ -411,13 +428,24 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         </div>
       )}
 
+      {/* Phase D3 — scene/location/character selector strip */}
+      {project.screenplay && project.screenplay.length > 0 && (
+        <ShotSceneSelector
+          project={project}
+          onContextChange={(ctx) => { shotContextRef.current = ctx; }}
+        />
+      )}
+
       <ChatInput
         project={project}
         busy={streaming}
         onSend={async (text, files) => {
-          // C1 — merge director-attached files with auto-attached character images
-          const allCharIds = project.storyBible?.characters?.map((c) => c.id) ?? [];
-          const charImages = await resolveCharacterImages(allCharIds);
+          // D — use scene-scoped character list when a scene is selected
+          const ctx = shotContextRef.current;
+          const charIds = ctx?.characterIds.length
+            ? ctx.characterIds
+            : (project.storyBible?.characters?.map((c) => c.id) ?? []);
+          const charImages = await resolveCharacterImages(charIds);
           const charImageFiles = charImages
             .filter((e) => e.imageDataUrl)
             .map((e) => ({

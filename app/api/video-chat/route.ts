@@ -4,6 +4,7 @@ import type { ProviderConfig } from '@/types';
 import type { VideoChatFile, VideoProject } from '@/types/video';
 import { resolveVideoModel, resolveModelId } from '@/lib/video-ai';
 import { buildShotDraftingSystemPrompt, type CharacterImageRef } from '@/lib/video/system-prompt';
+import type { ShotSceneContext } from '@/lib/video/story-bible';
 import { routeMultimodalContext, modelSupportsVision } from '@/lib/model-fallback';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,8 @@ interface VideoChatRequestBody {
   messages?: IncomingMessage[];
   project?: VideoProject;
   providerConfig?: ProviderConfig;
+  /** Phase D — scene context for the current shot draft. */
+  shotContext?: ShotSceneContext;
 }
 
 type ModelMessage =
@@ -105,7 +108,7 @@ function collectLastUserFiles(messages: IncomingMessage[]): VideoChatFile[] {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as VideoChatRequestBody;
-    const { messages, project, providerConfig } = body;
+    const { messages, project, providerConfig, shotContext } = body;
 
     if (!project?.id || !project.name) {
       return NextResponse.json({ error: 'A valid project is required.' }, { status: 400 });
@@ -150,7 +153,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let system = buildShotDraftingSystemPrompt(project, charImageRefs.length > 0 ? charImageRefs : undefined);
+    let system = buildShotDraftingSystemPrompt(
+      project,
+      charImageRefs.length > 0 ? charImageRefs : undefined,
+      shotContext,
+    );
 
     // C5 — visible routing note injected into the system prompt
     const modelId = resolveModelId(providerConfig);
