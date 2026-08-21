@@ -1,7 +1,7 @@
 import { DomainPreset, FrameworkType, PromptInput, ToneType } from '@/types';
 
 /** Default cap (in characters) applied to the engineered prompt when the user keeps the default value. */
-export const DEFAULT_OUTPUT_CHAR_LIMIT = 4000;
+export const DEFAULT_OUTPUT_CHAR_LIMIT = 8000;
 
 export const DOMAIN_PRESETS: DomainPreset[] = [
   {
@@ -9,7 +9,7 @@ export const DOMAIN_PRESETS: DomainPreset[] = [
     name: 'Software & Technology',
     iconName: 'Code2',
     description: 'Planning systems, writing technical specs, troubleshooting, and quality checks for software projects.',
-    systemPromptFragment: 'You are an expert Principal Software Engineer and System Architect specializing in writing production-grade code, clean architecture, design patterns, security, and testability.',
+    systemPromptFragment: 'You are an expert Principal Software Engineer, Senior Solutions Architect, and Lead Code Reviewer specializing in writing production-grade code, clean architecture, design patterns, robust error handling, security, and testability.',
     placeholders: {
       topic: 'e.g., Design a customer sign-in and account system for a web app',
       audience: 'e.g., Engineering team',
@@ -21,6 +21,25 @@ export const DOMAIN_PRESETS: DomainPreset[] = [
       'Write automated quality checks for a new feature',
       'Document the API for a customer sign-in service',
     ],
+    domainGuidance: `Embed ALL of the following as mandatory engineering directives inside the engineered prompt (do not summarize or drop any):
+
+1. STRICT ANTI-LAZINESS & COMPLETENESS DIRECTIVE:
+   - The target AI must NEVER emit placeholder code, ellipses (\`// ...\`), \`// TODO\`, \`/* implement rest here */\`, or pseudo-code abbreviations.
+   - Every function, handler, type definition, database migration, API route, and error handler must be 100% fully implemented, syntactically valid, and copy-paste ready for immediate production execution.
+
+2. GROUNDING IN ATTACHED PROJECT CONTEXT & REAL SCHEMAS:
+   - When project context (files, folder structure, schemas, types) is attached, the target AI MUST directly inspect, reference, and match the exact real file paths, interfaces, model names, environment variables, utility functions, and existing dependencies provided in the context.
+   - Forbid inventing redundant duplicate helper utilities or hypothetical abstractions when existing implementations are present in the attached codebase context.
+   - Forbid bracketed stubs (like \`[INSERT_SCHEMA_HERE]\` or \`[INSERT_TECH_STACK]\`) for details that already exist in the provided project context.
+
+3. ARCHITECTURAL & TYPING RIGOR:
+   - Require strict static typing (TypeScript, Python type hints, Go structs, Rust traits). Forbid \`any\` or unvalidated type casts.
+   - Require explicit schema validation at IO boundaries (e.g. Zod, Pydantic, Joi) for all external payloads, request bodies, and route parameters.
+   - Require robust structured error handling (try/catch with typed domain errors, HTTP status codes, user-safe error messages, and internal debugging logs).
+
+4. CODE STRUCTURE & COPY-PASTE READY ARTIFACTS:
+   - Direct the target AI to output complete code blocks tagged with explicit filename headers (e.g., \`\`\`typescript // path/to/file.ts\n...code...\`\`\`) to eliminate ambiguity regarding where the code belongs.
+   - When modifying an existing file from the attached context, provide either the complete drop-in replacement file or exact, unambiguous line-by-line replacement blocks.`,
   },
   {
     id: 'product-management',
@@ -432,7 +451,10 @@ STRICT GENERATION DIRECTIVES:
 3. ILLUSTRATIVE EXAMPLE: ${input.includeExamples ? 'Include ONE short, concrete input/output example block that shows the expected behavior. Place it after the core instructions. Keep it brief (under 150 words) and clearly labeled.' : 'Do NOT include example blocks.'}
 4. ADHERE TO USER-SELECTED OUTPUT FORMAT:
    ${formatGuide}
-5. DYNAMIC BRACKETED PLACEHOLDERS: Whenever specific variables (like tech stack, API key, domain database, product name) are contextually variable, use bracketed uppercase placeholders (e.g., [INSERT_TECH_STACK_HERE], [INSERT_PRODUCT_NAME_HERE], [INSERT_TARGET_METRIC]).
+5. CONTEXT GROUNDING & NO CODE PLACEHOLDERS:
+   - When project context or codebase files are attached, the engineered prompt MUST be deeply grounded in the real project structure, file paths, existing libraries, schemas, interfaces, and function signatures provided in the context.
+   - The engineered prompt must explicitly instruct the target AI NEVER to use placeholder comments (e.g., \`// ... rest of code\`, \`// TODO\`, \`/* implement rest */\`, \`[INSERT_CODE_HERE]\`) and to produce 100% complete, fully implemented, working code blocks with all imports, types, and logic written out in full.
+   - Only use bracketed uppercase placeholders (e.g., [INSERT_API_KEY], [INSERT_WEBHOOK_URL]) for truly unknown external credentials or runtime parameters that cannot be derived from the user request or attached context.
 6. HIGH-SIGNAL INSTRUCTIONS: Ensure the prompt contains an expert persona, explicit goal, step-by-step logic, edge-case handling, and strict negative constraints ("What NOT to do").
 ${input.outputCharLimit ? `7. OUTPUT LENGTH CONSTRAINT: The complete engineered prompt you return MUST NOT exceed ${input.outputCharLimit} characters total (count every character, including headers and formatting). If a draft is longer than the limit, tighten wording and cut redundancy until it fits while preserving every required section and directive.` : ''}
 

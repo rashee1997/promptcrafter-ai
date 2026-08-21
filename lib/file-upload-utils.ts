@@ -164,8 +164,8 @@ export function parseGitignore(content: string): GitignoreRule[] {
 
 // ── Size / Count Caps ────────────────────────────────────────────────────────
 
-export const MAX_INCLUDED_FILES = 200;
-export const MAX_TOTAL_SIZE_BYTES = 500 * 1024; // 500 KB
+export const MAX_INCLUDED_FILES = 400;
+export const MAX_TOTAL_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 // ── Project Upload Processing ────────────────────────────────────────────────
 
@@ -178,6 +178,58 @@ interface RawUploadedFile {
   size: number;
   /** Whether the browser detected this as a directory entry. */
   isDirectory: boolean;
+}
+
+/**
+ * Assign a priority weight to files so architectural definitions (package configs,
+ * schemas, types, APIs) are preserved even in large repositories.
+ */
+function getFilePriority(filePath: string): number {
+  const lower = filePath.toLowerCase();
+  const base = lower.split('/').pop() || '';
+
+  // Priority 1: Manifests, schemas, configurations, and core typing
+  if (
+    base === 'package.json' ||
+    base === 'tsconfig.json' ||
+    base === 'schema.prisma' ||
+    base === 'gemfile' ||
+    base === 'cargo.toml' ||
+    base === 'requirements.txt' ||
+    base === 'pyproject.toml' ||
+    base === 'go.mod' ||
+    base === 'dockerfile' ||
+    base.endsWith('.d.ts') ||
+    lower.includes('/types/') ||
+    lower.includes('/interfaces/') ||
+    lower.includes('/schemas/') ||
+    lower.includes('/models/') ||
+    base === 'types.ts' ||
+    base === 'index.ts' ||
+    base === 'app.ts' ||
+    base === 'main.ts'
+  ) {
+    return 1;
+  }
+
+  // Priority 2: Primary route handlers, APIs, database, and library utilities
+  if (
+    lower.includes('/api/') ||
+    lower.includes('/routes/') ||
+    lower.includes('/controllers/') ||
+    lower.includes('/services/') ||
+    lower.includes('/lib/') ||
+    lower.includes('/utils/')
+  ) {
+    return 2;
+  }
+
+  // Priority 3: Shallow components and source files
+  const depth = filePath.split('/').length;
+  if (depth <= 3) return 3;
+
+  // Priority 4: Everything else
+  return 4;
 }
 
 /**
@@ -240,8 +292,18 @@ export function processUploadedProject(
     return basename !== '.gitignore';
   });
 
-  // 5. Sort for stable output
-  candidates.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+  // 5. Sort by priority first (configs & types first), then path depth, then alphabetical
+  candidates.sort((a, b) => {
+    const pA = getFilePriority(a.relativePath);
+    const pB = getFilePriority(b.relativePath);
+    if (pA !== pB) return pA - pB;
+
+    const depthA = a.relativePath.split('/').length;
+    const depthB = b.relativePath.split('/').length;
+    if (depthA !== depthB) return depthA - depthB;
+
+    return a.relativePath.localeCompare(b.relativePath);
+  });
 
   // 6. Apply size cap
   let runningSize = 0;
@@ -285,39 +347,46 @@ export function processUploadedProject(
 // ── Project Context Formatting ───────────────────────────────────────────────
 
 /**
- * Format a ProjectContext into the structured PROJECT CONTEXT block
+ * Format a ProjectContext into the structured XML PROJECT CONTEXT block
  * that gets injected into the generation request.
  */
 export function formatProjectContext(ctx: ProjectContext): string {
   const lines: string[] = [];
 
-  lines.push('PROJECT CONTEXT (attached — use this as ground truth about the existing codebase, do not invent structure that is not shown):');
+  lines.push(`<project_context project_name="${ctx.projectName || 'Attached Codebase'}">`);
+  lines.push('<!-- GROUND TRUTH CODEBASE CONTEXT: Use the exact file paths, schemas, interfaces, function signatures, and imports provided below. DO NOT invent alternative structures, mock placeholders, or TODO stubs for files that exist here. -->');
   lines.push('');
 
   // File tree
-  lines.push('File tree:');
+  lines.push('<file_tree>');
   const tree = buildFileTree(ctx.files.map((f) => f.path));
   lines.push(tree);
+  lines.push('</file_tree>');
   lines.push('');
 
-  // File contents
+  // File contents in XML blocks
+  lines.push('<repository_files>');
   for (const file of ctx.files) {
-    lines.push(`--- ${file.path} ---`);
+    lines.push(`  <file path="${file.path}">`);
     lines.push(file.content);
+    lines.push('  </file>');
     lines.push('');
   }
+  lines.push('</repository_files>');
 
   // Omitted summary
   if (ctx.omittedSummary) {
     const s = ctx.omittedSummary;
-    lines.push(`${s.count} more files matched but were left out to keep this within a usable context size — largest omitted: \`${s.largestOmitted.path}\` (${formatBytes(s.largestOmitted.size)}).`);
+    lines.push(`<!-- Note: ${s.count} additional secondary files were omitted to stay within context limits. Largest omitted: ${s.largestOmitted.path} (${formatBytes(s.largestOmitted.size)}) -->`);
   }
+
+  lines.push('</project_context>');
 
   return lines.join('\n');
 }
 
 /** Build an indented file tree string from a list of paths. */
-function buildFileTree(paths: string[]): string {
+export function buildFileTree(paths: string[]): string {
   const tree: Record<string, any> = {};
   for (const p of paths) {
     const parts = p.split('/');

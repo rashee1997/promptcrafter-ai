@@ -37,7 +37,15 @@ import { formatProjectContext } from '@/lib/file-upload-utils';
 import { CustomChipEditor, useCustomChipEntry } from './image-prompt/use-custom-chip-entry';
 
 interface PromptFormProps {
-  onGenerate: (input: PromptInput) => void;
+  onGenerate: (
+    input: PromptInput,
+    attachments?: {
+      codeFiles: CodeFileAttachment[];
+      projectContext?: ProjectContext;
+      pdfs: PdfAttachment[];
+      images: TextStudioImageAttachment[];
+    },
+  ) => void;
   isGenerating: boolean;
   /** Active provider, used to show/switch the current model. */
   activeProvider?: ProviderConfig;
@@ -182,24 +190,29 @@ export function PromptForm({
     const parsedLimit = Number(outputCharLimit);
     const hasLimit = outputCharLimit.trim() !== '' && Number.isFinite(parsedLimit) && parsedLimit > 0;
 
-    onGenerate({
-      topic: topic.trim(),
-      domainId: selectedDomain.id,
-      customDomain: selectedDomain.id === 'custom-domain' ? customDomainText : undefined,
-      tone: tone as ToneType,
-      framework: framework as FrameworkType,
-      targetAudience: targetAudience.trim() || undefined,
-      outputFormat,
-      includeConstraints,
-      includeExamples,
-      requireEvidence,
-      additionalNotes: additionalNotes.trim() || undefined,
-      outputCharLimit: hasLimit ? Math.floor(parsedLimit) : undefined,
-    });
+    const currentAttachments = { codeFiles, projectContext, pdfs, images };
+
+    onGenerate(
+      {
+        topic: topic.trim(),
+        domainId: selectedDomain.id,
+        customDomain: selectedDomain.id === 'custom-domain' ? customDomainText : undefined,
+        tone: tone as ToneType,
+        framework: framework as FrameworkType,
+        targetAudience: targetAudience.trim() || undefined,
+        outputFormat,
+        includeConstraints,
+        includeExamples,
+        requireEvidence,
+        additionalNotes: additionalNotes.trim() || undefined,
+        outputCharLimit: hasLimit ? Math.floor(parsedLimit) : undefined,
+      },
+      currentAttachments,
+    );
 
     // Pass attachments up to the parent for inclusion in the API request
     if (onAttachmentsChange) {
-      onAttachmentsChange({ codeFiles, projectContext, pdfs, images });
+      onAttachmentsChange(currentAttachments);
     }
   };
 

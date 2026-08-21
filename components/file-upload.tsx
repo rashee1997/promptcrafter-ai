@@ -4,7 +4,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { FolderOpen, FileCode2, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeFileAttachment, ProjectContext } from '@/types';
-import { processUploadedProject, formatProjectContext, formatBytes } from '@/lib/file-upload-utils';
+import { processUploadedProject, formatProjectContext, formatBytes, buildFileTree } from '@/lib/file-upload-utils';
 
 interface FileUploadProps {
   /** Current code file attachments. */
@@ -224,7 +224,7 @@ export function FileUpload({
         {/* Project tree (collapsible) */}
         {projectContext && showTree && (
           <div className="p-3 rounded-lg bg-surface-code border border-border text-[11px] font-mono text-text-secondary max-h-48 overflow-y-auto">
-            <pre className="whitespace-pre-wrap">{formatProjectContext(projectContext).split('\n---')[0]}</pre>
+            <pre className="whitespace-pre-wrap">{buildFileTree(projectContext.files.map((f) => f.path))}</pre>
           </div>
         )}
 

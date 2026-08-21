@@ -24,13 +24,14 @@ TASK CONTEXT (why this prompt exists):
 - Original request: ${input.topic}
 - Framework: ${input.framework.toUpperCase()}
 - Output format: ${input.outputFormat || 'markdown'}
-- Tone: ${input.tone}${input.targetAudience ? `\n- Target audience: ${input.targetAudience}` : ''}${input.additionalNotes ? `\n- Additional notes: ${input.additionalNotes}` : ''}${input.outputCharLimit ? `\n- Character limit: the FULL revised prompt must stay under ${input.outputCharLimit} characters — tighten wording if the edit would push it over.` : ''}${input.includeConstraints ? `\n- The prompt currently includes explicit negative constraints/guardrails — keep them unless the change request specifically asks to remove them.` : ''}${domain.domainGuidance ? `\n- Domain requirements the prompt must keep satisfying:\n${domain.domainGuidance.slice(0, 2000)}` : ''}
+- Tone: ${input.tone}${input.targetAudience ? `\n- Target audience: ${input.targetAudience}` : ''}${input.additionalNotes ? `\n- Additional notes: ${input.additionalNotes}` : ''}${input.outputCharLimit ? `\n- Character limit: the FULL revised prompt must stay under ${input.outputCharLimit} characters — tighten wording if the edit would push it over.` : ''}${input.includeConstraints ? `\n- The prompt currently includes explicit negative constraints/guardrails — keep them unless the change request specifically asks to remove them.` : ''}${domain.domainGuidance ? `\n- Domain requirements & anti-laziness rules the prompt must keep satisfying:\n${domain.domainGuidance}` : ''}
 
 EDITING RULES:
 1. The user message contains a BASE PROMPT TO EDIT and a CHANGE REQUEST. The BASE PROMPT is the ONLY text you may modify; conversation history is context only.
 2. Make the smallest edit that satisfies the change request. Preserve the prompt's role, structure, sections, tone, and wording unless the request explicitly requires changing them. Do NOT rewrite from scratch, do NOT add unrelated sections, and do NOT restyle the whole prompt.
-3. If the change request would break a domain requirement listed above, keep the requirement and only make the requested change where it does not conflict.
-4. OUTPUT ONLY THE FULL REVISED PROMPT: no commentary, no diffs, no explanations, and no markdown code fences around the prompt.`;
+3. NEVER introduce code placeholders (like \`// ...\`, \`// TODO\`, or \`[INSERT_CODE]\`) during revisions.
+4. If the change request would break a domain requirement listed above, keep the requirement and only make the requested change where it does not conflict.
+5. OUTPUT ONLY THE FULL REVISED PROMPT: no commentary, no diffs, no explanations, and no markdown code fences around the prompt.`;
 }
 
 export async function POST(req: NextRequest) {

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+  - **Text Prompt Studio: Full Codebase Context Ingestion & Anti-Placeholder Engine**:
+    - **Synchronous Attachment Dispatch**: Fixed React state race condition in `components/prompt-form.tsx` and `app/page.tsx` where project folder attachments were omitted on initial submission; attachments are now passed directly into `onGenerate` and mapped into `attachmentPayload`.
+    - **Single Code File Ingestion**: Added fallback project context synthesis for loose single-file uploads (`att.codeFiles`), ensuring all attached source files are bundled and formatted for API ingestion.
+    - **Structured XML Context Ingestion (`<project_context>`)**: Upgraded `lib/file-upload-utils.ts` to output Anthropic/OpenAI standard XML tags (`<project_context>`, `<file_tree>`, `<repository_files><file path="...">...<file></repository_files>`), creating unambiguous syntactic boundaries and eliminating context bleeding.
+    - **Intelligent File Prioritization & Expanded 2MB Budget**: Increased project upload cap from 500KB to 2MB (up to 400 files) and added heuristic priority weighting so configs, schemas (`schema.prisma`), type definitions (`*.d.ts`, `types/`), APIs, and shallow source files are always preserved over secondary depth files.
+    - **Mandatory Software Engineering Directives & Anti-Laziness Rules**: Added comprehensive `domainGuidance` to `software-coding` in `lib/domains.ts` strictly forbidding code abbreviations (`// ...`, `// TODO`, `/* implement rest */`, `[INSERT_CODE]`) and requiring 100% complete, fully implemented, copy-paste ready code blocks with real types and schemas matched against the attached project context.
+    - **Grounded Meta-Prompt Directive 5**: Replaced indiscriminate placeholder directives with context-aware grounding rules: models must use the real paths, interfaces, and function signatures from the provided project context, reserving bracketed placeholders only for unknown external credentials.
+    - **Expanded Output Character Limit**: Doubled default character limit from 4,000 to 8,000 characters to prevent code truncation on large multi-file architectures.
+    - **Context Preservation in Refinement Route**: Updated `app/api/refine/route.ts` to enforce anti-laziness rules and prevent follow-up edits from degrading back into placeholders.
+
   - **Liquid Responsive UI/UX Overhaul & Container Scaling**:
     - Expanded shell container from rigid `max-w-6xl` to fluid `max-w-[1560px]` with adaptive padding for viewports from 320px mobile to 2560px+ ultrawide.
     - Upgraded two-column studio layout to a responsive 12-column grid (`5 col` form, `7 col` output) with `min-w-0` overflow isolation.

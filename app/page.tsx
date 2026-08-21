@@ -295,7 +295,15 @@ export default function HomePage() {
     setActiveTab('history');
   };
 
-  const handleGeneratePrompt = async (input: PromptInput) => {
+  const handleGeneratePrompt = async (
+    input: PromptInput,
+    directAttachments?: {
+      codeFiles: CodeFileAttachment[];
+      projectContext?: ProjectContext;
+      pdfs: PdfAttachment[];
+      images: TextStudioImageAttachment[];
+    },
+  ) => {
     handleCancelGeneration();
 
     const controller = new AbortController();
@@ -308,13 +316,34 @@ export default function HomePage() {
     const domain = DOMAIN_PRESETS.find((d) => d.id === input.domainId) || DOMAIN_PRESETS[0];
     let fullText = '';
 
-    // Build attachment payload from the pending state
-    const att = pendingAttachmentsRef.current;
-    const hasAttachments = att.codeFiles.length > 0 || !!att.projectContext || att.pdfs.length > 0 || att.images.length > 0;
+    // Build attachment payload from direct attachments or pending state
+    const att = directAttachments || pendingAttachmentsRef.current;
+    if (directAttachments) {
+      pendingAttachmentsRef.current = directAttachments;
+    }
+
+    const hasAttachments =
+      (att.codeFiles && att.codeFiles.length > 0) ||
+      !!att.projectContext ||
+      (att.pdfs && att.pdfs.length > 0) ||
+      (att.images && att.images.length > 0);
+
+    let projectContextText: string | undefined = undefined;
+    if (att.projectContext) {
+      projectContextText = formatProjectContext(att.projectContext);
+    } else if (att.codeFiles && att.codeFiles.length > 0) {
+      projectContextText = formatProjectContext({
+        files: att.codeFiles,
+        totalFilesFound: att.codeFiles.length,
+        includedCount: att.codeFiles.length,
+        projectName: 'Attached Code Files',
+      });
+    }
+
     const attachmentPayload: AttachmentPayload | undefined = hasAttachments ? {
-      projectContextText: att.projectContext ? formatProjectContext(att.projectContext) : undefined,
-      pdfParts: att.pdfs.map((pdf) => ({ mimeType: pdf.mimeType, data: pdf.base64Data })),
-      imageParts: att.images.map((img) => ({
+      projectContextText,
+      pdfParts: att.pdfs?.map((pdf) => ({ mimeType: pdf.mimeType, data: pdf.base64Data })),
+      imageParts: att.images?.map((img) => ({
         mimeType: img.dataUrl.split(';')[0].replace('data:', '') || 'image/png',
         data: img.dataUrl.split(',')[1] || '',
         purpose: img.purpose,
