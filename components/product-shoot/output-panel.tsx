@@ -114,12 +114,12 @@ export function OutputPanel({
 
   // Build platform cards list
   const platformCards: { id: VideoPlatformDialect; title: string; prompt?: string }[] = [
-    { id: 'master', title: 'Master Shot', prompt: sections.mainPrompt },
-    { id: 'runway', title: 'Runway Gen-3/4', prompt: sections.runwayPrompt },
-    { id: 'kling', title: 'Kling 1.6/3.0', prompt: sections.klingPrompt },
-    { id: 'veo', title: 'Google Veo', prompt: sections.veoPrompt },
-    { id: 'luma', title: 'Luma Ray 2', prompt: sections.lumaPrompt },
-    { id: 'minimax', title: 'Minimax Hailuo', prompt: sections.minimaxPrompt },
+    { id: 'master' as VideoPlatformDialect, title: 'Master Shot', prompt: sections.mainPrompt },
+    { id: 'runway' as VideoPlatformDialect, title: 'Runway Gen-3/4', prompt: sections.runwayPrompt },
+    { id: 'kling' as VideoPlatformDialect, title: 'Kling 1.6/3.0', prompt: sections.klingPrompt },
+    { id: 'veo' as VideoPlatformDialect, title: 'Google Veo', prompt: sections.veoPrompt },
+    { id: 'luma' as VideoPlatformDialect, title: 'Luma Ray 2', prompt: sections.lumaPrompt },
+    { id: 'minimax' as VideoPlatformDialect, title: 'Minimax Hailuo', prompt: sections.minimaxPrompt },
   ].filter((c) => !!c.prompt);
 
   return (

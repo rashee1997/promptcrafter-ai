@@ -13,6 +13,8 @@ import {
   ImageToPromptResult,
   PromptQuality,
   ProviderConfig,
+  TemplateGenerationRequest,
+  TemplateGenerationResult,
   RefineRequest,
   SuggestExamplesRequest,
   SuggestExamplesResponse,

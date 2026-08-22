@@ -629,9 +629,20 @@ export interface ImageToPromptResult {
     palette?: string;
     inImageText?: string;
     summary: string;
+    /** Logo-mode fields extracted from the image. */
+    brandName?: string;
+    logoType?: string;
+    shapeLanguage?: string;
   };
   suggestedPrompt: string;
 }
+
+/** Response from the Image Edit API. */
+export interface ImageEditResult {
+  editedPrompt: string;
+  deltaSummary?: string;
+}
+
 
 /** Request contract for Image Edit ("Edit, don't re-roll"). */
 export interface ImageEditRequest {
