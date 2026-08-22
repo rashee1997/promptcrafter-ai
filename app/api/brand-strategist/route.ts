@@ -1,7 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-provider';
-import { withModelFallback } from '@/lib/model-fallback';
 import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { ProviderConfig } from '@/types';
 
@@ -31,14 +30,36 @@ export interface BrandStrategistResult {
   strategyRationale: string;
 }
 
-function extractJson(str: string): any {
-  const cleaned = str.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+interface BrandStrategistJsonCandidate {
+  brandName?: string;
+  logoType?: string;
+  logoStyle?: string;
+  palette?: string;
+  industry?: string;
+  concept?: string;
+  shapeLanguage?: string;
+  typography?: string;
+  lockup?: string;
+  hiddenMeaning?: string;
+  boldness?: string;
+  usage?: string[];
+  strategyRationale?: string;
+}
+
+interface GeminiGenerateContentConfig {
+  systemInstruction: string;
+  responseMimeType: 'application/json';
+  temperature: number;
+}
+
+function extractJson(str: string): BrandStrategistJsonCandidate {
+  const cleaned: string = str.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(cleaned) as BrandStrategistJsonCandidate;
   } catch {
-    const match = str.match(/\{[\s\S]*\}/);
+    const match: RegExpMatchArray | null = str.match(/\{[\s\S]*\}/);
     if (match) {
-      return JSON.parse(match[0]);
+      return JSON.parse(match[0]) as BrandStrategistJsonCandidate;
     }
     throw new Error('Failed to parse AI output as JSON.');
   }
@@ -121,12 +142,15 @@ Synthesize the optimal brand architecture JSON matching this schema:
     let jsonString = '';
 
     if (provider && provider.apiKey && provider.apiKey !== 'BUILTIN' && !provider.useBuiltInGemini) {
-      jsonString = await handleOpenAIProviderRequest({
+      const openAIResponse = await handleOpenAIProviderRequest(
         provider,
-        systemInstruction,
-        messages: [{ role: 'user', content: userMessage }],
-        jsonMode: true,
-      });
+        [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userMessage },
+        ],
+        { temperature: 0.6 }
+      );
+      jsonString = await openAIResponse.text();
     } else {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
@@ -136,8 +160,13 @@ Synthesize the optimal brand architecture JSON matching this schema:
       const client = new GoogleGenAI({ apiKey });
       const activeModel = provider?.activeModel || provider?.model || GEMINI_DEFAULT_MODEL;
 
-      jsonString = await withModelFallback(
-        async (modelName) => {
+      const models: string[] = [
+        ...new Set([activeModel, GEMINI_DEFAULT_MODEL, 'gemini-3.6-flash']),
+      ];
+      let lastError: unknown;
+
+      for (const modelName of models) {
+        try {
           const res = await client.models.generateContent({
             model: modelName,
             contents: userMessage,
@@ -147,11 +176,14 @@ Synthesize the optimal brand architecture JSON matching this schema:
               temperature: 0.6,
             },
           });
-          return res.text || '';
-        },
-        activeModel,
-        [GEMINI_DEFAULT_MODEL, 'gemini-2.5-flash']
-      );
+          jsonString = res.text || '';
+          if (jsonString) break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (!jsonString && lastError) throw lastError;
     }
 
     const parsed = extractJson(jsonString) as BrandStrategistResult;

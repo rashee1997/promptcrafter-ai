@@ -192,12 +192,12 @@ ${isLogo ? `{
     let jsonString = '';
 
     if (provider && provider.apiKey && provider.apiKey !== 'BUILTIN' && !provider.useBuiltInGemini) {
-      jsonString = await handleOpenAIProviderRequest({
+      const response = await handleOpenAIProviderRequest(
         provider,
-        systemInstruction,
-        messages: [{ role: 'user', content: userMessage }],
-        jsonMode: true,
-      });
+        [{ role: 'user', content: userMessage }],
+        { temperature: 0.7 }
+      );
+      jsonString = await response.text();
     } else {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
@@ -214,7 +214,8 @@ ${isLogo ? `{
       const activeModel = provider?.activeModel || provider?.model || GEMINI_DEFAULT_MODEL;
 
       jsonString = await withModelFallback(
-        async (modelName) => {
+        { ...provider, model: activeModel, models: [GEMINI_DEFAULT_MODEL, 'gemini-3.7-flash'] },
+        async (modelName: string) => {
           const res = await client.models.generateContent({
             model: modelName,
             contents: userMessage,
@@ -225,9 +226,7 @@ ${isLogo ? `{
             },
           });
           return res.text || '';
-        },
-        activeModel,
-        [GEMINI_DEFAULT_MODEL, 'gemini-2.5-flash']
+        }
       );
     }
 
