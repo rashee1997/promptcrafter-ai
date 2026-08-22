@@ -14,6 +14,8 @@ interface ProjectDashboardProps {
   onSelectProject: (id: string) => void;
   onNewProject: () => void;
   onDeleteProject: (id: string) => void;
+  /** Phase 9 — 'Create Similar': open a new project prefilled from an existing one. */
+  onCreateSimilar?: (project: VideoProject) => void;
 }
 
 const STATUS_FILTERS: { id: VideoStatusFilter; label: string }[] = [
@@ -32,6 +34,7 @@ export function ProjectDashboard({
   onSelectProject,
   onNewProject,
   onDeleteProject,
+  onCreateSimilar,
 }: ProjectDashboardProps) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<VideoStatusFilter>('all');
@@ -220,6 +223,7 @@ export function ProjectDashboard({
                 viewMode={viewMode}
                 onSelect={onSelectProject}
                 onDelete={onDeleteProject}
+                onCreateSimilar={onCreateSimilar}
               />
             </motion.div>
           ))}

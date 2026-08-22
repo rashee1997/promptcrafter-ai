@@ -45,6 +45,7 @@ import {
 } from '@/types';
 import { StoryTreatment, VideoProject } from '@/types/video';
 import { ProductShootStudio } from '@/components/product-shoot/product-shoot-studio';
+import { ChatOnboarding } from '@/components/video-prompt/chat-onboarding';
 import {
   clearAllSessions,
   DEFAULT_BUILTIN_PROVIDER,
@@ -687,6 +688,16 @@ export default function HomePage() {
   const activeVideoProject =
     videoProjects.find((p) => p.id === activeVideoProjectId) ?? null;
 
+  // Phase 9 — prefill data passed from chat-onboarding or 'Create Similar'.
+  const [modalPrefill, setModalPrefill] = useState<{
+    title?: string;
+    brief?: string;
+    frameworkId?: string;
+    platform?: import('@/types/video').VideoTargetPlatform;
+    cameraVocabulary?: 'cinematic' | 'animated' | 'graphic';
+    styleHint?: string;
+  } | undefined>(undefined);
+
   const handleCreateVideoProject = async (
     title: string,
     customInstructions: string,
@@ -710,6 +721,7 @@ export default function HomePage() {
     await saveVideoProject(project);
     setVideoProjects(await getVideoProjects());
     setVideoModalOpen(false);
+    setModalPrefill(undefined);
     setActiveVideoProjectId(project.id);
     toast.success('Project created', `"${project.name}" is ready for production planning.`);
   };
@@ -717,6 +729,31 @@ export default function HomePage() {
   const handleSelectVideoProject = (id: string) => setActiveVideoProjectId(id);
 
   const handleBackToVideoDashboard = () => setActiveVideoProjectId(null);
+
+  // Phase 9 — Chat-first onboarding: open the NewProjectModal with prefilled data
+  const handleVideoOpenFromOnboarding = (payload: {
+    title: string;
+    brief: string;
+    frameworkId?: string;
+    platform?: import('@/types/video').VideoTargetPlatform;
+    cameraVocabulary?: 'cinematic' | 'animated' | 'graphic';
+    styleHint?: string;
+  }) => {
+    setModalPrefill(payload);
+    setVideoModalOpen(true);
+  };
+
+  // Phase 9 — 'Create Similar': open a new project modal pre-filled from an existing project.
+  const handleCreateSimilar = async (sourceProject: import('@/types/video').VideoProject) => {
+    setModalPrefill({
+      title: `${sourceProject.name} (copy)`,
+      brief: sourceProject.customInstructions,
+      platform: sourceProject.targetPlatform ?? undefined,
+      cameraVocabulary: sourceProject.storyBible?.style?.cameraVocabulary,
+      styleHint: sourceProject.storyBible?.style?.lookAndMood,
+    });
+    setVideoModalOpen(true);
+  };
 
   const handleDeleteVideoProject = async (id: string) => {
     await deleteVideoProject(id);
@@ -1017,12 +1054,18 @@ export default function HomePage() {
                           provider={activeProvider}
                           onUpdate={handleVideoProjectUpdate}
                         />
+                      ) : videoProjects.length === 0 ? (
+                        <ChatOnboarding
+                          provider={activeProvider}
+                          onAccept={handleVideoOpenFromOnboarding}
+                        />
                       ) : (
                         <ProjectDashboard
                           projects={videoProjects}
                           onSelectProject={handleSelectVideoProject}
                           onNewProject={() => setVideoModalOpen(true)}
                           onDeleteProject={handleDeleteVideoProject}
+                          onCreateSimilar={handleCreateSimilar}
                         />
                       )}
                     </>
@@ -1104,12 +1147,13 @@ export default function HomePage() {
         providers={providers.map((p) => ({ ...p, model: p.activeModel ?? p.model }))}
       />
 
-      {/* Video Prompt Studio — Directorial Brief modal (Phase 2) */}
+      {/* Video Prompt Studio — Directorial Brief modal (Phase 2 + Phase 9 onboarding) */}
       <NewProjectModal
         isOpen={videoModalOpen}
-        onClose={() => setVideoModalOpen(false)}
+        onClose={() => { setVideoModalOpen(false); setModalPrefill(undefined); }}
         provider={activeProvider}
         onCreate={handleCreateVideoProject}
+        prefill={modalPrefill}
       />
 
       {/* Command Palette (⌘K) */}

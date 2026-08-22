@@ -12,6 +12,15 @@ import { useScrollLock } from '@/lib/use-scroll-lock';
 import { cn } from '@/lib/utils';
 import { ThinkingOrb } from './thinking-orb';
 
+export interface OnboardingPrefill {
+  title?: string;
+  brief?: string;
+  frameworkId?: string;
+  platform?: import('@/types/video').VideoTargetPlatform;
+  cameraVocabulary?: 'cinematic' | 'animated' | 'graphic';
+  styleHint?: string;
+}
+
 interface NewProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -21,6 +30,8 @@ interface NewProjectModalProps {
    *  third arg is the AI-confirmed script treatment (Part 3), if the director
    *  took the AI overview path — null otherwise. */
   onCreate: (title: string, customInstructions: string, confirmedStory?: StoryTreatment | null) => void;
+  /** Phase 9 — prefilled data from chat-onboarding or 'Create Similar'. */
+  prefill?: OnboardingPrefill;
 }
 
 /** Starter chips — pre-fill the brief (or append) with one click. */
@@ -61,7 +72,7 @@ function isAbortError(e: unknown): boolean {
  * actually create). Nothing auto-fires, and closing mid-generation aborts the
  * in-flight request without creating a project.
  */
-export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProjectModalProps) {
+export function NewProjectModal({ isOpen, onClose, provider, onCreate, prefill }: NewProjectModalProps) {
   const titleId = React.useId();
   const descId = React.useId();
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -82,15 +93,21 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
   useScrollLock(isOpen);
 
   // Focus the title field on open; restore focus to the trigger on close.
+  // Phase 9 — apply prefilled data from onboarding or 'Create Similar'.
   useEffect(() => {
     if (isOpen) {
       previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+      if (prefill) {
+        if (prefill.title) setTitle(prefill.title);
+        if (prefill.brief) setBrief(prefill.brief);
+      }
       requestAnimationFrame(() => titleInputRef.current?.focus());
     }
     return () => {
       previouslyFocusedRef.current?.focus?.();
     };
-  }, [isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, prefill?.title, prefill?.brief]);
 
   /** Close aborts any in-flight generation and resets the wizard state. */
   const handleClose = () => {

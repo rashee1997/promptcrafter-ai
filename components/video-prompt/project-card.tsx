@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Check, Clapperboard, SquarePlay, Trash2, Users, X } from 'lucide-react';
+import { Check, Clapperboard, Copy, SquarePlay, Trash2, Users, X } from 'lucide-react';
 import type { ProjectStatus, VideoProject } from '@/types/video';
 import { cn } from '@/lib/utils';
 
@@ -51,6 +51,8 @@ interface ProjectCardProps {
   viewMode: VideoViewMode;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Phase 9 — 'Create Similar': open a new project prefilled from this one. */
+  onCreateSimilar?: (project: VideoProject) => void;
 }
 
 /**
@@ -59,7 +61,7 @@ interface ProjectCardProps {
  * metrics, relative update time, brief truncation, and quick actions
  * (Open + two-step Delete confirmation).
  */
-export function ProjectCard({ project, viewMode, onSelect, onDelete }: ProjectCardProps) {
+export function ProjectCard({ project, viewMode, onSelect, onDelete, onCreateSimilar }: ProjectCardProps) {
   const [confirming, setConfirming] = useState(false);
 
   // Auto-cancel a pending delete confirmation after 4s.
@@ -147,6 +149,20 @@ export function ProjectCard({ project, viewMode, onSelect, onDelete }: ProjectCa
     </button>
   );
 
+  const similarControl = onCreateSimilar ? (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onCreateSimilar(project);
+      }}
+      title="Create a new project with the same settings"
+      className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+    >
+      <Copy className="w-3.5 h-3.5" />
+    </button>
+  ) : null;
+
   return (
     <div
       role="button"
@@ -199,7 +215,10 @@ export function ProjectCard({ project, viewMode, onSelect, onDelete }: ProjectCa
 
           <div className="flex items-center justify-between pt-2.5 border-t border-border/60">
             {openControl}
-            {deleteControl}
+            <div className="flex items-center gap-1">
+              {similarControl}
+              {deleteControl}
+            </div>
           </div>
         </>
       ) : (
@@ -215,7 +234,8 @@ export function ProjectCard({ project, viewMode, onSelect, onDelete }: ProjectCa
             {timeAgo(project.updatedAt)}
           </span>
           <div className="hidden md:flex items-center gap-1.5 shrink-0">{metrics}</div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
+            {similarControl}
             {openControl}
             {deleteControl}
           </div>
