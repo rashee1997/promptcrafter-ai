@@ -898,55 +898,92 @@ export default function HomePage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-0"
+                className="w-full flex flex-col gap-4"
               >
-              {/* Left Column: Generator Form Controls (§8.2 — resizable on lg+) */}
-              <div
-                className="w-full space-y-6 lg:shrink-0 lg:min-w-[340px] lg:w-[var(--split-w)]"
-                style={{ '--split-w': `${splitPct}%` } as React.CSSProperties}
-              >
-                <PromptForm
-                  onGenerate={handleGeneratePrompt}
-                  isGenerating={isGenerating}
-                  activeProvider={activeProvider}
-                  onSelectActiveModel={handleSelectActiveModel}
-                  onAttachmentsChange={(att) => { pendingAttachmentsRef.current = att; }}
-                />
-              </div>
+                {/* Modern Text Studio Action Header */}
+                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-surface-card/80 backdrop-blur-md border border-border shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-brand/10 text-brand flex items-center justify-center border border-brand/20 shadow-xs">
+                      <SparklesIcon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-text-primary tracking-tight">
+                        Text Prompt Studio
+                      </span>
+                      <span className="hidden sm:inline-block ml-2 text-xs text-text-muted font-normal">
+                        {currentSession ? currentSession.title : 'Ready to draft'}
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Resize handle (§8.2) — lg+ only */}
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize panes"
-                onPointerDown={handleSplitDragStart}
-                className="hidden lg:flex group/handle items-center justify-center w-6 shrink-0 self-stretch cursor-col-resize touch-none select-none"
-              >
-                <div className="w-1 h-12 rounded-full bg-border transition-colors group-hover/handle:bg-brand/60 group-active/handle:bg-brand" />
-              </div>
+                  <div className="flex items-center gap-2">
+                    {currentSession && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentSession(null);
+                          setStreamingText('');
+                          window.dispatchEvent(new Event('pc:focus-topic'));
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-sunken hover:bg-surface-elevated text-text-secondary hover:text-text-primary border border-border transition-all"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-brand" />
+                        <span>New Prompt</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
 
-              {/* Right Column: Live Output & Refinement Display */}
-              <div className="w-full space-y-6 lg:sticky lg:top-20 lg:flex-1 lg:min-w-[340px]">
-                <PromptOutput
-                  output={displayOutput}
-                  isGenerating={isGenerating}
-                  onTestPrompt={handleOpenSandboxTest}
-                  onToggleFavorite={() =>
-                    currentSession && handleToggleFavorite(currentSession.id)
-                  }
-                  activeProvider={activeProvider}
-                  currentSession={currentSession}
-                  activeVersion={activeVersion}
-                  onSelectVersion={handleSelectVersion}
-                  onRefinePrompt={handleRefinePrompt}
-                  onSaveEditVersion={handleSaveEditVersion}
-                  onCancelGeneration={handleCancelGeneration}
-                  onClearOutput={handleClearOutput}
-                  onSessionUpdate={handleSessionUpdate}
-                  onOpenHistoryDiff={handleOpenHistoryDiff}
-                  charLimitWarning={charLimitWarning}
-                />
-              </div>
+                {/* Main Split Multi-Column Studio */}
+                <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-0 w-full">
+                  {/* Left Column: Generator Form Controls (§8.2 — resizable on lg+) */}
+                  <div
+                    className="w-full space-y-6 lg:shrink-0 lg:min-w-[340px] lg:w-[var(--split-w)]"
+                    style={{ '--split-w': `${splitPct}%` } as React.CSSProperties}
+                  >
+                    <PromptForm
+                      onGenerate={handleGeneratePrompt}
+                      isGenerating={isGenerating}
+                      activeProvider={activeProvider}
+                      onSelectActiveModel={handleSelectActiveModel}
+                      onAttachmentsChange={(att) => { pendingAttachmentsRef.current = att; }}
+                    />
+                  </div>
+
+                  {/* Resize handle (§8.2) — lg+ only */}
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize panes"
+                    onPointerDown={handleSplitDragStart}
+                    className="hidden lg:flex group/handle items-center justify-center w-6 shrink-0 self-stretch cursor-col-resize touch-none select-none"
+                  >
+                    <div className="w-1 h-14 rounded-full bg-border transition-colors group-hover/handle:bg-brand/60 group-active/handle:bg-brand shadow-xs" />
+                  </div>
+
+                  {/* Right Column: Live Output & Refinement Display */}
+                  <div className="w-full space-y-6 lg:sticky lg:top-20 lg:flex-1 lg:min-w-[340px]">
+                    <PromptOutput
+                      output={displayOutput}
+                      isGenerating={isGenerating}
+                      onTestPrompt={handleOpenSandboxTest}
+                      onToggleFavorite={() =>
+                        currentSession && handleToggleFavorite(currentSession.id)
+                      }
+                      activeProvider={activeProvider}
+                      currentSession={currentSession}
+                      activeVersion={activeVersion}
+                      onSelectVersion={handleSelectVersion}
+                      onRefinePrompt={handleRefinePrompt}
+                      onSaveEditVersion={handleSaveEditVersion}
+                      onCancelGeneration={handleCancelGeneration}
+                      onClearOutput={handleClearOutput}
+                      onSessionUpdate={handleSessionUpdate}
+                      onOpenHistoryDiff={handleOpenHistoryDiff}
+                      charLimitWarning={charLimitWarning}
+                    />
+                  </div>
+                </div>
               </motion.div>
             )}
             {activeTab === 'image' && (
