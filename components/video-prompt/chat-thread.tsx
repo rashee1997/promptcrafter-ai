@@ -356,6 +356,7 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
                       draft={draft}
                       disabled={streaming || approving}
                       targetPlatform={projectRef.current.targetPlatform}
+                      project={projectRef.current}
                       onApprove={(d) => void handleApprove(d)}
                       onRevise={handleRevise}
                     />

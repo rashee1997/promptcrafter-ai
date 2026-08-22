@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { Check, Clapperboard, RefreshCcw, Timer, X } from 'lucide-react';
-import type { DraftedShot, PromptForm, VideoTargetPlatform } from '@/types/video';
+import type { DraftedShot, PromptForm, VideoProject, VideoTargetPlatform } from '@/types/video';
 import { cn } from '@/lib/utils';
 import { PROMPT_FORM_LABELS } from '@/lib/video/system-prompt';
 import { getPlatformSpec } from '@/lib/video/platforms';
+import { detectStyleConflicts, compositionGuard } from '@/lib/video/styles';
 import { ShotDialogueCard } from './shot-dialogue-card';
 import { NegativePromptField } from './negative-prompt-field';
 
@@ -35,6 +36,8 @@ interface ShotDraftCardProps {
   disabled?: boolean;
   /** The project's target platform — for smart-suggest. */
   targetPlatform?: VideoTargetPlatform | null;
+  /** Phase 6 — the full project for style-lock and composition guard checks. */
+  project?: VideoProject;
   onApprove: (draft: DraftedShot) => void;
   onRevise: (draft: DraftedShot) => void;
 }
@@ -46,7 +49,7 @@ interface ShotDraftCardProps {
  * re-drafts it. Dialogue and the negative prompt are editable inline before
  * Approve — separate cards, never merged into the promptText well.
  */
-export function ShotDraftCard({ draft, disabled, targetPlatform, onApprove, onRevise }: ShotDraftCardProps) {
+export function ShotDraftCard({ draft, disabled, targetPlatform, project, onApprove, onRevise }: ShotDraftCardProps) {
   // Local editable copy — the director can tighten dialogue / negative terms
   // before Approve, and the approved shot carries those edits.
   const [draftState, setDraftState] = useState<DraftedShot>(draft);
@@ -64,6 +67,24 @@ export function ShotDraftCard({ draft, disabled, targetPlatform, onApprove, onRe
     effectivePlatform &&
     NO_MULTI_SHOT_PLATFORMS.has(effectivePlatform) &&
     showsMultiBeat;
+
+  // Phase 6 — style-lock enforcement: detect contradictions.
+  const [dismissedStyleConflict, setDismissedStyleConflict] = useState(false);
+  const styleConflicts = project?.storyBible?.style?.styleId
+    ? detectStyleConflicts(draftState.promptText + ' ' + draftState.description, project.storyBible.style.styleId)
+    : [];
+  const showStyleConflict = !dismissedStyleConflict && styleConflicts.length > 0;
+
+  // Phase 6 — two-character composition guard.
+  const [dismissedComposition, setDismissedComposition] = useState(false);
+  const charCount = (() => {
+    if (!project) return 0;
+    const chars = project.storyBible?.characters ?? [];
+    const lower = (draftState.promptText + ' ' + draftState.description).toLowerCase();
+    return chars.filter((c) => lower.includes(c.name.toLowerCase())).length;
+  })();
+  const compositionWarning = compositionGuard(charCount);
+  const showCompositionWarning = !dismissedComposition && !!compositionWarning;
 
   return (
     <div className="mt-2 w-full rounded-xl border border-brand/25 bg-brand/5 p-3.5 space-y-2.5">
@@ -96,6 +117,48 @@ export function ShotDraftCard({ draft, disabled, targetPlatform, onApprove, onRe
 
       {draftState.description && (
         <p className="text-xs font-semibold text-text-primary leading-relaxed">{draftState.description}</p>
+      )}
+
+      {/* Phase 6 — style-lock enforcement: style conflict warning */}
+      {showStyleConflict && (
+        <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-2.5">
+          <X className="w-3.5 h-3.5 text-danger mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-danger">Style conflict detected</p>
+            <p className="text-[10px] text-text-secondary leading-relaxed mt-0.5">
+              This shot contains language that contradicts the locked visual style: {styleConflicts.map((k) => `"${k}"`).join(', ')}. Please revise to use language consistent with the style family.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedStyleConflict(true)}
+            className="p-0.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0"
+            aria-label="Dismiss style conflict warning"
+          >
+            <X className="w-3 h-3" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {/* Phase 6 — two-character composition guard */}
+      {showCompositionWarning && (
+        <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/5 p-2.5">
+          <X className="w-3.5 h-3.5 text-warning mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-warning">Composition note</p>
+            <p className="text-[10px] text-text-secondary leading-relaxed mt-0.5">
+              {compositionWarning}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedComposition(true)}
+            className="p-0.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0"
+            aria-label="Dismiss composition warning"
+          >
+            <X className="w-3 h-3" aria-hidden="true" />
+          </button>
+        </div>
       )}
 
       {/* Phase 4 — smart-suggest: platform recommendation */}

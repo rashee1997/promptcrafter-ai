@@ -27,7 +27,26 @@ export interface VisualStyle {
   negativeTokens: string[];
   bestFor: string;
   cameraVocabulary: 'cinematic' | 'animated' | 'graphic';
+  /**
+   * Phase 6 — sub-profile within 'animated' camera vocabulary. Gates which
+   * descriptive language family the shot drafter uses. Anime vocabulary
+   * stays anime; western-cartoon vocabulary stays western-cartoon. Absent
+   * means the base cameraVocabulary is used without sub-profiling.
+   */
+  animationVocabulary?: AnimationVocabularyProfile;
 }
+
+/**
+ * Phase 6 — distinct descriptive vocabulary profiles within the 'animated'
+ * camera vocabulary. Each profile carries its own word lists that the
+ * system prompt injects so styles don't borrow each other's language.
+ */
+export type AnimationVocabularyProfile =
+  | 'anime'
+  | 'western-cartoon'
+  | 'pixar-3d'
+  | 'ghibli'
+  | 'claymation';
 
 // ── Family ordering (display) ───────────────────────────────────────────────
 
@@ -104,6 +123,7 @@ export const VIDEO_STYLE_LIBRARY: readonly VisualStyle[] = [
     ],
     bestFor: 'Brand storytelling, whimsical narratives, artisanal products, children\'s content, handmade aesthetics.',
     cameraVocabulary: 'animated',
+    animationVocabulary: 'claymation',
   },
 
   // ── 3D Animation ────────────────────────────────────────────────────────
@@ -130,6 +150,7 @@ export const VIDEO_STYLE_LIBRARY: readonly VisualStyle[] = [
     ],
     bestFor: 'Animated shorts, character-driven stories, family-friendly content, product explainers.',
     cameraVocabulary: 'animated',
+    animationVocabulary: 'pixar-3d',
   },
 
   // ── 2D Animation ────────────────────────────────────────────────────────
@@ -156,6 +177,7 @@ export const VIDEO_STYLE_LIBRARY: readonly VisualStyle[] = [
     ],
     bestFor: 'Quiet emotional stories, nature scenes, nostalgic or dreamlike narratives, period pieces.',
     cameraVocabulary: 'animated',
+    animationVocabulary: 'ghibli',
   },
 
   // ── Stylized ────────────────────────────────────────────────────────────
@@ -184,6 +206,7 @@ export const VIDEO_STYLE_LIBRARY: readonly VisualStyle[] = [
     ],
     bestFor: 'Action sequences, dramatic reveals, stylized narratives, manga-inspired content.',
     cameraVocabulary: 'animated',
+    animationVocabulary: 'anime',
   },
 
   {
@@ -208,6 +231,7 @@ export const VIDEO_STYLE_LIBRARY: readonly VisualStyle[] = [
     ],
     bestFor: 'Creative commercials, music videos, genre-blending narratives, fantasy-meets-reality.',
     cameraVocabulary: 'animated',
+    animationVocabulary: 'anime',
   },
 
   {
@@ -259,6 +283,7 @@ export const VIDEO_STYLE_LIBRARY: readonly VisualStyle[] = [
     ],
     bestFor: 'Explainer videos, social media content, upbeat brand messaging, educational content.',
     cameraVocabulary: 'animated',
+    animationVocabulary: 'western-cartoon',
   },
 
   // ── Graphic & Illustration ──────────────────────────────────────────────
@@ -339,4 +364,315 @@ export function groupStylesByFamily(
       label: STYLE_FAMILY_LABELS[f],
       styles: grouped.get(f)!,
     }));
+}
+
+// ── Phase 6 — Animation Studio Track ───────────────────────────────────────
+
+/** Families that represent animation styles (trigger animation-principle rules). */
+export const ANIMATION_FAMILIES: ReadonlySet<VisualStyle['family']> = new Set([
+  'animation-3d',
+  'animation-2d',
+  'stop-motion',
+  'stylized',
+]);
+
+/** Returns true when the style's family is an animation family. */
+export function isAnimationFamily(family: VisualStyle['family']): boolean {
+  return ANIMATION_FAMILIES.has(family);
+}
+
+/**
+ * Phase 6 — style-lock enforcement: per-family keywords that CONTRADICT
+ * the animation style. If a shot prompt contains any of these, the draft
+ * card flags it before approval. Each entry is a regex-friendly substring
+ * match (lowercased against the prompt text).
+ */
+export const STYLE_CONFLICT_KEYWORDS: Record<string, string[]> = {
+  'claymation-stop-motion': [
+    'photorealistic skin texture',
+    'photorealistic',
+    'smooth cgi',
+    'digital perfection',
+    'glossy',
+    'sharp edges',
+    'uncanny valley',
+    '3d render',
+    'hyperrealistic',
+    'photo-realistic',
+  ],
+  'pixar-3d': [
+    'photorealistic',
+    'live-action',
+    'flat 2d',
+    'gritty texture',
+    'film grain',
+    'hand-drawn',
+    'watercolor',
+    'visible thumbprint',
+  ],
+  'ghibli-2d': [
+    'photorealistic',
+    '3d render',
+    'cgi',
+    'subsurface scattering',
+    'neon colors',
+    'sharp vector',
+    'glossy',
+    'stop-motion',
+  ],
+  'anime-cel-shaded': [
+    'photorealistic',
+    '3d render',
+    'western cartoon',
+    'blurry',
+    'low quality',
+    'hand-painted',
+    'watercolor',
+    'visible thumbprint',
+  ],
+  'anime-hybrid': [
+    'pure cgi',
+    'unmatched lighting',
+    'flat compositing',
+    'seam artifacts',
+    'hand-painted',
+    'watercolor',
+  ],
+  'modern-cartoon': [
+    'photorealistic',
+    'gritty',
+    'complex shading',
+    'film grain',
+    'anamorphic',
+    'hand-drawn',
+    'watercolor',
+    'stop-motion',
+  ],
+  'oil-painting': [
+    'clean digital',
+    'flat colors',
+    'vector art',
+    'smooth gradients',
+    'cgi',
+    'sharp edges',
+    'stop-motion',
+  ],
+  'flat-vector-storybook': [
+    '3d render',
+    'photorealistic',
+    'realistic shadows',
+    'glossy',
+    'film grain',
+    'stop-motion',
+  ],
+  'isometric-explainer': [
+    'photorealistic',
+    'organic shapes',
+    'hand-drawn',
+    'gritty texture',
+    'cinematic lighting',
+    'stop-motion',
+  ],
+};
+
+/**
+ * Detects style-family conflicts in a shot's prompt text. Returns an array
+ * of conflict descriptions (empty = no conflicts detected).
+ */
+export function detectStyleConflicts(
+  promptText: string,
+  styleId: string,
+): string[] {
+  const keywords = STYLE_CONFLICT_KEYWORDS[styleId];
+  if (!keywords) return [];
+  const lower = promptText.toLowerCase();
+  const conflicts: string[] = [];
+  for (const kw of keywords) {
+    if (lower.includes(kw)) {
+      conflicts.push(kw);
+    }
+  }
+  return conflicts;
+}
+
+// ── Phase 6 — animation vocabulary sub-profiles ────────────────────────────
+
+/**
+ * Per-profile descriptive language. The system prompt injects the matching
+ * list so the shot drafter uses vocabulary consistent with the animation
+ * tradition — anime language stays anime; western-cartoon stays western.
+ */
+export const ANIMATION_VOCABULARY_PROFILES: Record<
+  AnimationVocabularyProfile,
+  { label: string; preferredTerms: string[]; bannedTerms: string[] }
+> = {
+  anime: {
+    label: 'Anime',
+    preferredTerms: [
+      'speed lines',
+      'dramatic perspective',
+      'chibi proportions',
+      'sakuga fluid motion',
+      'impact frame',
+      'vignette frame',
+      'screen tone',
+      'manga-style composition',
+      'dramatic close-up',
+      'exaggerated expression',
+      'dynamic angle',
+      'motion smear',
+      'dramatic wind',
+      'starburst background',
+    ],
+    bannedTerms: [
+      'squash and stretch',
+      'cartoon outlines',
+      'saturday morning',
+      'flat color blocks',
+      'bold outlines',
+      'exaggerated proportions',
+    ],
+  },
+  'western-cartoon': {
+    label: 'Western Cartoon',
+    preferredTerms: [
+      'squash and stretch',
+      'bold outlines',
+      'exaggerated expressions',
+      'cartoon physics',
+      'anticipation pose',
+      'follow-through',
+      'smear frame',
+      'flat color blocks',
+      'saturday morning energy',
+      'rubber-hose motion',
+      'clean silhouette',
+      'oversized gestures',
+      'broad comedy timing',
+    ],
+    bannedTerms: [
+      'speed lines',
+      'sakuga',
+      'chibi',
+      'screen tone',
+      'manga-style',
+      'dramatic perspective',
+      'sakuga fluid motion',
+    ],
+  },
+  'pixar-3d': {
+    label: 'Pixar-Style 3D',
+    preferredTerms: [
+      'subsurface scattering',
+      'rim lighting',
+      'expressive eyes',
+      'appealing proportions',
+      'soft shadow',
+      'global illumination',
+      'warm key light',
+      'character appeal',
+      'broad silhouette',
+      'emotional lighting',
+    ],
+    bannedTerms: [
+      'speed lines',
+      'cel-shading',
+      'flat colors',
+      'hand-drawn',
+      'watercolor',
+      'manga',
+    ],
+  },
+  ghibli: {
+    label: 'Ghibli-Style 2D',
+    preferredTerms: [
+      'gentle wind motion',
+      'hand-painted backgrounds',
+      'watercolor textures',
+      'soft pastel palette',
+      'natural light',
+      'ambient movement',
+      'delicate brushwork',
+      'atmospheric haze',
+      'gentle parallax',
+      'organic motion',
+    ],
+    bannedTerms: [
+      'speed lines',
+      'dramatic perspective',
+      'cgi render',
+      'sharp vector',
+      'neon',
+      'bold outlines',
+    ],
+  },
+  claymation: {
+    label: 'Claymation',
+    preferredTerms: [
+      'visible thumbprints',
+      'hand-sculpted',
+      'plasticine',
+      'frame stutter',
+      'matte surfaces',
+      'tactile texture',
+      'tool marks',
+      'finger ridges',
+      'soft studio lighting',
+      'charming imperfections',
+    ],
+    bannedTerms: [
+      'photorealistic',
+      'smooth cgi',
+      'digital perfection',
+      'glossy',
+      'sharp edges',
+      '3d render',
+      'subsurface scattering',
+    ],
+  },
+};
+
+// ── Phase 6 — animation-principle rules ────────────────────────────────────
+
+/**
+ * Injected into the system prompt ONLY when the project uses an animation
+ * family style. These rules ensure the drafter applies medium-appropriate
+ * animation craft instead of defaulting to live-action realism.
+ */
+export const ANIMATION_PRINCIPLE_RULES = `ANIMATION PRINCIPLES (active because this project uses an animation style):
+- Squash-and-stretch: when a character or object moves fast or impacts something, EXPLICITLY describe the deformation in the prompt (e.g. "the ball squashes flat on impact then stretches tall as it bounces", "her cheeks compress as she lands, then spring back"). Do not imply motion blur as a substitute — name the shape distortion.
+- Exaggeration: key emotional beats SHOULD be exaggerated beyond naturalistic proportions — this is correct for the medium, not an error. A shocked expression should be wider than life; a joyful leap should tower. Do not soften animated reactions to "realistic" levels.
+- Comedic timing: every comedic beat needs an explicit held pause BEFORE and/or AFTER the punchline moment (e.g. "a one-beat stillness before the vase shatters", "holds the freeze-frame for a beat after the pratfall"). The pause is what makes the joke land — do not rush through the beat.
+- Silhouette readability: even in chaotic multi-character shots, keep character silhouettes bold and readable. Describe poses that are distinct in outline (one character hunched, another arms-wide) rather than similar overlapping stances.`;
+
+/**
+ * Phase 6 — animation vocabulary block: per-profile language gate.
+ * Injected into the system prompt when the style has an animationVocabulary.
+ */
+export function buildAnimationVocabularyBlock(
+  profile: AnimationVocabularyProfile,
+): string {
+  const data = ANIMATION_VOCABULARY_PROFILES[profile];
+  if (!data) return '';
+  return `
+ANIMATION VOCABULARY (${data.label}):
+PREFERRED TERMS — prefer these when describing motion, framing, and effects:
+${data.preferredTerms.join(', ')}
+
+DO NOT USE these terms (they belong to a different animation tradition):
+${data.bannedTerms.join(', ')}
+`;
+}
+
+/**
+ * Phase 6 — two-character composition guard: soft-warning threshold.
+ * Current models reliably struggle with more than 2 characters in frame.
+ * Returns a warning string when the character count exceeds the threshold,
+ * or null when it's fine.
+ */
+export function compositionGuard(
+  characterCount: number,
+): string | null {
+  if (characterCount <= 2) return null;
+  return `COMPOSITION NOTE: this shot has ${characterCount} characters in frame — current video models reliably struggle with 3+ characters. Consider reducing to 2 characters or splitting into multiple shots for cleaner results.`;
 }

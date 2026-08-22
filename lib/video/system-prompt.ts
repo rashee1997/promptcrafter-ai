@@ -23,7 +23,14 @@ import {
   type ShotSceneContext,
 } from './story-bible';
 import { getPlatformSpec } from './platforms';
-import { getVisualStyle } from './styles';
+import {
+  getVisualStyle,
+  isAnimationFamily,
+  buildAnimationVocabularyBlock,
+  compositionGuard,
+  ANIMATION_PRINCIPLE_RULES,
+  type AnimationVocabularyProfile,
+} from './styles';
 
 /**
  * Maps character id → 1-based image index in the attached reference set.
@@ -221,6 +228,18 @@ export function buildShotDraftingSystemPrompt(
     ? `\nSTYLE-SPECIFIC NEGATIVE TOKENS (always include these in negativePrompt):\n${styleLib.negativeTokens.join(', ')}\n`
     : '';
 
+  // Phase 6 — animation principle rules (active only for animation families).
+  const isAnimFamily = styleLib ? isAnimationFamily(styleLib.family) : false;
+  const animationPrinciplesBlock = isAnimFamily
+    ? `\n${ANIMATION_PRINCIPLE_RULES}\n`
+    : '';
+
+  // Phase 6 — animation vocabulary sub-profile (anime vs western-cartoon etc.).
+  const animVocabProfile = styleLib?.animationVocabulary as AnimationVocabularyProfile | undefined;
+  const animVocabBlock = animVocabProfile
+    ? buildAnimationVocabularyBlock(animVocabProfile)
+    : '';
+
   const sixPart = SIX_PART_ARCHITECTURE.replace('__LENS_INSTRUCTION__', lensInstruction);
 
   const rules = withDuration(
@@ -235,6 +254,7 @@ export function buildShotDraftingSystemPrompt(
 8. Detail scaling: Calibrate descriptive detail to shot framing scale. Close-ups require dense micro-action, facial micro-expressions, texture, and breath; wide shots focus on spatial geography, blocking, and silhouette.
 9. Anchor every hand/prop interaction to a concrete object — never describe a hand or limb moving in empty space; give it something specific to hold, touch, or rest on (jittery/floating limbs are the #1 single-shot glitch).
 10. Do not stack contradictory descriptors in one section (e.g. "gritty realism" + "pristine, flawless skin") — pick one register per shot and hold it.
+13. STYLE-LOCK ENFORCEMENT: The locked visual style family is project-wide and NON-NEGOTIABLE. If the style is an animation family (claymation, 3D animation, 2D animation, stylized), NEVER use language that belongs to a different visual register — e.g. "photorealistic skin texture" in a claymation project, "film grain" in a cartoon, "subsurface scattering" in a 2D project. Every descriptor in every shot MUST be consistent with the locked style family.
 11. ${DIALOGUE_RULES}
 12. ${NEGATIVE_PROMPT_RULES}${styleNegativeBlock}`,
     durationFloor,
@@ -388,7 +408,7 @@ ${bibleDigest}
 
 ${finalIdentityBlock}
 
-${styleTokensBlock}${cameraVocabBlock}SCENE DEFAULTS — starting point for wardrobe and location conditions. You may evolve these across shots ONLY when the story motivates it (new day, after an event, weather turning for dramatic pressure). When you do, say so out loud in continuityHandoff so the next shot inherits the change instead of reverting:
+${styleTokensBlock}${cameraVocabBlock}${animationPrinciplesBlock}${animVocabBlock}SCENE DEFAULTS — starting point for wardrobe and location conditions. You may evolve these across shots ONLY when the story motivates it (new day, after an event, weather turning for dramatic pressure). When you do, say so out loud in continuityHandoff so the next shot inherits the change instead of reverting:
 ${sceneDefaultsContent}${wardrobeNote}
 
 CONTINUITY HANDOFF FROM THE STORYBOARD:

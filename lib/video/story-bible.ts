@@ -21,6 +21,7 @@ import type {
   VideoProject,
   VideoShot,
 } from '@/types/video';
+import { detectStyleConflicts } from './styles';
 
 /** Truncates context so long bible fields never bloat the system prompt. */
 function clip(text: string | null | undefined, max = 600): string {
@@ -460,4 +461,40 @@ export function findScene(
   sceneNumber: number,
 ): ScreenplayScene | undefined {
   return project.screenplay?.find((s) => s.sceneNumber === sceneNumber);
+}
+
+// ── Phase 6 — Animation Studio Track helpers ───────────────────────────────
+
+/**
+ * Phase 6 — style-lock enforcement. Validates a drafted shot's prompt text
+ * against the project's locked visual style. Returns an array of conflict
+ * descriptions (empty = no conflicts). Client-safe — reads only the locked
+ * styleId from the project's story bible.
+ */
+export function validateShotStyleConsistency(
+  promptText: string,
+  project: VideoProject,
+): string[] {
+  const styleId = project.storyBible?.style?.styleId;
+  if (!styleId) return [];
+  return detectStyleConflicts(promptText, styleId);
+}
+
+/**
+ * Phase 6 — counts how many distinct characters are referenced in a shot's
+ * prompt text. Searches for exact character names from the Story Bible.
+ */
+export function countShotCharacters(
+  promptText: string,
+  project: VideoProject,
+): number {
+  const chars = project.storyBible?.characters ?? [];
+  const lower = promptText.toLowerCase();
+  let count = 0;
+  for (const c of chars) {
+    if (lower.includes(c.name.toLowerCase())) {
+      count++;
+    }
+  }
+  return count;
 }
