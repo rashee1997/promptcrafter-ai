@@ -67,13 +67,33 @@ export interface ScriptTreatment {
 /**
  * Stage 1a — prose treatment, present tense, NO dialogue, NO scene headers.
  * Answers: does this story work before anyone writes a screenplay?
+ *
+ * When a structure framework is selected, each beat carries a `beatId`
+ * that maps to the framework's named beat (e.g. 'catalyst', 'midpoint').
+ * The `purpose` field contains the beat's dramatic requirement so the
+ * director can verify the AI did its job.
  */
 export interface StoryTreatment {
   logline: string;
   premise: string;
   emotionalArc: string;
   theme: string;
-  acts: { act: 1 | 2 | 3; title: string; beats: string[] }[];
+  /** Structure framework used to generate this treatment. Absent = AI chose freely. */
+  frameworkId?: string;
+  acts: {
+    act: 1 | 2 | 3;
+    title: string;
+    beats: {
+      /** Matched beat ID from the structure framework (e.g. 'catalyst'). Absent = freeform. */
+      beatId?: string;
+      /** Name of the story beat (e.g. 'Catalyst'). Always present. */
+      name?: string;
+      /** What this beat must accomplish — the framework's purpose text. */
+      purpose?: string;
+      /** The AI-generated content for this beat (replaces the old plain string). */
+      text: string;
+    }[];
+  }[];
   endingImage: string;
 }
 

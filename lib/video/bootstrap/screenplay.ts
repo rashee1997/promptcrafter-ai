@@ -61,7 +61,7 @@ export async function generateScreenplay({
   const context = [
     `PROJECT INTENT: ${clip(intent, 600)}`,
     storyTreatment
-      ? `STORY TREATMENT:\nLogline: ${storyTreatment.logline}\nPremise: ${clip(storyTreatment.premise, 600)}\nActs: ${storyTreatment.acts.map((a) => `Act ${a.act} (${a.title}): ${a.beats.join('; ')}`).join('\n')}`
+      ? `STORY TREATMENT:\nLogline: ${storyTreatment.logline}\nPremise: ${clip(storyTreatment.premise, 600)}\nActs: ${storyTreatment.acts.map((a) => `Act ${a.act} (${a.title}): ${a.beats.map((b) => typeof b === 'string' ? b : b.text).join('; ')}`).join('\n')}`
       : null,
     scriptDialogue
       ? `DIALOGUE DRAFT (${scriptDialogue.scenes.length} scenes):\n${clip(JSON.stringify(scriptDialogue.scenes.map((s) => ({ n: s.sceneNumber, goal: s.sceneGoal, lines: s.exchanges.map((e) => `${e.speaker}: ${e.line}`) }))), 2000)}`

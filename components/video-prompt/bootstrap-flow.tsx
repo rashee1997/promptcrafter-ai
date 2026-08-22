@@ -32,7 +32,7 @@ import { ThinkingOrb } from './thinking-orb';
 import { BootstrapProgress } from './bootstrap-progress';
 import { BootstrapModelSelector, type StageModelRef } from './bootstrap-model-selector';
 import { BootstrapPlatformStep } from './bootstrap-platform-step';
-import { BootstrapStoryStep } from './bootstrap-story-step';
+import { BootstrapStoryStep, FrameworkPicker } from './bootstrap-story-step';
 import { BootstrapDialogueStep } from './bootstrap-dialogue-step';
 import { BootstrapScreenplayStep } from './bootstrap-screenplay-step';
 import { BootstrapDirectionStep } from './bootstrap-direction-step';
@@ -103,6 +103,24 @@ const GENERATE_HINTS: Record<VideoBootstrapStage, string> = {
   9: 'Review everything and activate the production.',
 };
 
+/**
+ * Fix 3 — plain-language purpose descriptions for each bootstrap stage.
+ * Shown below the stage header so the director always knows what this
+ * stage is for and why it matters.
+ */
+const STAGE_PURPOSE: Record<VideoBootstrapStage, string> = {
+  0: 'Every video platform has different rules for duration, dialogue, and aspect ratio. Pick one now so every subsequent decision is built for real constraints, not a hypothetical viewer.',
+  1: 'This is the foundation of the entire production. A strong story treatment answers one question: does this story work before anyone writes a screenplay? Every beat earns its place through dramatic purpose, not decoration.',
+  2: 'Now that the story works on paper, write what characters actually say and do. Dialogue grounds the abstract beats into concrete human moments. No camera language yet — that comes later.',
+  3: 'A screenplay translates spoken scenes into numbered, location-tagged shots. This is what the crew reads on set: where we are, who is present, and how many shots we need to plan for.',
+  4: 'This is where you decide how the camera and lens should feel throughout — handheld and anxious, or locked-down and precise. Every shot inherits this. Lighting, sound, and colour palette live here too.',
+  5: 'A character is more than a name. Fixed appearance and wardrobe mean every shot references the same person. Continuity starts here.',
+  6: 'Locations are fixed environments with clear descriptions. The same place may look different at night versus dawn — that is a shot-level condition, not a new location.',
+  7: 'Visual style locks the look and mood of the entire production. Every shot prompt will inherit this grade, this stock, this aspect ratio. Choose intentionally.',
+  8: 'VFX direction sets the visual effects language — particle density, pacing, and how the style translates into movement. This locks the last creative variable before production.',
+  9: 'Everything is locked. Activate the production to enter the shot-drafting studio where you will write, revise, and export individual prompts.',
+};
+
 export function BootstrapFlow({ intent, customInstructions, provider, project, onComplete }: BootstrapFlowProps) {
   const [step, setStep] = useState<VideoBootstrapStage>(0);
   const [confirmed, setConfirmed] = useState<VideoBootstrapStage[]>([]);
@@ -116,6 +134,8 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
   const [targetPlatformSubModel, setTargetPlatformSubModel] = useState<string | null>(
     project.targetPlatformSubModel ?? null
   );
+  // Phase 1b — structure framework selection
+  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
   // Phase B — story pipeline states
   const [storyTreatment, setStoryTreatment] = useState<StoryTreatment | null>(null);
   const [scriptDialogue, setScriptDialogue] = useState<ScriptDialogueDraft | null>(null);
@@ -241,6 +261,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         previousContext: buildContext(stage),
         revisionPrompt,
         provider: await stageProvider(stage),
+        ...(stage === 1 && selectedFrameworkId ? { frameworkId: selectedFrameworkId } : {}),
         ...(stage === 7 && selectedStyleLibraryId ? { styleLibraryId: selectedStyleLibraryId } : {}),
       });
       applyStageData(res);
@@ -405,10 +426,29 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
         acts: legacyScript.actBeats.map((beat, i) => ({
           act: (i + 1) as 1 | 2 | 3,
           title: ['Setup', 'Confrontation', 'Resolution'][i] ?? 'Act',
-          beats: [beat],
+          beats: [{ text: beat }],
         })),
         endingImage: '',
       });
+    }
+
+    // Normalize legacy beats (plain strings → { text } objects) on existing treatments
+    if (hasStory && project.storyTreatment) {
+      const normalized = { ...project.storyTreatment };
+      let changed = false;
+      normalized.acts = normalized.acts.map((a) => ({
+        ...a,
+        beats: a.beats.map((b) => {
+          if (typeof b === 'string') {
+            changed = true;
+            return { text: b };
+          }
+          return b;
+        }),
+      }));
+      if (changed) setStoryTreatment(normalized);
+      else setStoryTreatment(project.storyTreatment!);
+      if (normalized.frameworkId) setSelectedFrameworkId(normalized.frameworkId);
     }
 
     // Determine the highest confirmed stage
@@ -526,7 +566,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
                 ? 'The studio is drafting this stage from everything you confirmed so far.'
                 : stageHasData(step)
                   ? 'Adjust anything below, then confirm to lock this stage and continue.'
-                  : 'Nothing runs until you click Generate — confirm only locks in what you review.'}
+                  : STAGE_PURPOSE[step]}
             </p>
           </div>
         </div>
@@ -558,8 +598,17 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
               </div>
               <div className="space-y-1 max-w-md">
                 <p className="text-sm font-bold text-text-primary">Draft the {meta.label.toLowerCase()}</p>
-                <p className="text-xs text-text-secondary leading-relaxed">{GENERATE_HINTS[step]}</p>
+                <p className="text-xs text-text-secondary leading-relaxed">{STAGE_PURPOSE[step]}</p>
               </div>
+              {/* Framework picker — only on stage 1 before generation */}
+              {step === 1 && (
+                <div className="w-full max-w-lg text-start">
+                  <FrameworkPicker
+                    selectedId={selectedFrameworkId}
+                    onSelect={setSelectedFrameworkId}
+                  />
+                </div>
+              )}
               <button type="button" onClick={() => void runStage(step)} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all">
                 <Sparkles className="w-4 h-4" aria-hidden="true" />
                 Generate {meta.label}
@@ -582,7 +631,21 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
 
           {/* Steps 1–9 — AI-generated steps */}
           {step === 1 && storyTreatment && (
-            <BootstrapStoryStep data={storyTreatment} busy={busy} onRevise={(p) => void runStage(1, p)} onConfirm={confirmStage} />
+            <BootstrapStoryStep
+              data={storyTreatment}
+              busy={busy}
+              onRevise={(p) => void runStage(1, p)}
+              onConfirm={confirmStage}
+              frameworkId={storyTreatment.frameworkId ?? selectedFrameworkId ?? undefined}
+              onRegenerateBeat={(actIdx, beatIdx, note) => {
+                // For now, regenerate a single beat by revising the treatment
+                // with a focused note about that specific beat
+                const beat = storyTreatment.acts[actIdx]?.beats[beatIdx];
+                if (!beat) return;
+                const beatLabel = beat.name ? `the "${beat.name}" beat` : `beat ${beatIdx + 1} of Act ${actIdx + 1}`;
+                void runStage(1, note ? `${note} — regenerate only ${beatLabel}` : `Regenerate only ${beatLabel} in Act ${actIdx + 1}`);
+              }}
+            />
           )}
           {step === 2 && scriptDialogue && (
             <BootstrapDialogueStep data={scriptDialogue} busy={busy} onRevise={(p) => void runStage(2, p)} onConfirm={confirmStage} />

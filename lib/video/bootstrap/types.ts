@@ -92,6 +92,11 @@ export interface VideoBootstrapRequest {
    * of inventing from scratch.
    */
   styleLibraryId?: string;
+  /**
+   * Structure framework id for stage 1 (story). When present, the AI
+   * is constrained to produce beats matching the framework's named beats.
+   */
+  frameworkId?: string;
 }
 
 /** POST /api/video-bootstrap response — typed per stage (1–8). */

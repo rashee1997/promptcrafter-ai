@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, MapPin, Plus, Radar, Trash2 } from 'lucide-react';
+import { Check, Edit3, MapPin, Plus, Radar, Trash2 } from 'lucide-react';
 import type { VideoLocation } from '@/types/video';
 import { cn } from '@/lib/utils';
 
@@ -23,55 +23,83 @@ function LocationCard({
   onChange: (patch: Partial<VideoLocation>) => void;
   onRemove: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+
   return (
-    <div className="relative rounded-2xl border border-border bg-surface-card/60 p-4 flex flex-col gap-2.5">
+    <div className={cn('relative rounded-2xl border p-4 flex flex-col gap-2.5', editing ? 'border-brand/30 bg-brand/5' : 'border-border bg-surface-card/60')}>
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-accent-soft text-text-primary border border-accent/30">
           <MapPin className="w-3 h-3 text-accent" aria-hidden="true" />
           Location
         </span>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${location.name || 'location'}`}
-          title="Remove location"
-          className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
-        >
-          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => setEditing(!editing)}
+            aria-label={editing ? 'Switch to read view' : `Edit ${location.name || 'location'}`}
+            className="p-1.5 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors"
+          >
+            {editing ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />}
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={`Remove ${location.name || 'location'}`}
+            title="Remove location"
+            className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        </div>
       </div>
-      <div>
-        <label
-          htmlFor={`loc-${location.id}-name`}
-          className="block text-[9px] font-bold uppercase tracking-wider text-text-muted"
-        >
-          Name
-        </label>
-        <input
-          id={`loc-${location.id}-name`}
-          type="text"
-          value={location.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="Location name"
-          className="mt-1 w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow"
-        />
-      </div>
-      <div>
-        <label
-          htmlFor={`loc-${location.id}-desc`}
-          className="block text-[9px] font-bold uppercase tracking-wider text-text-muted"
-        >
-          Environment description
-        </label>
-        <textarea
-          id={`loc-${location.id}-desc`}
-          value={location.description}
-          onChange={(e) => onChange({ description: e.target.value })}
-          rows={3}
-          placeholder="Light, texture, practical set dressing…"
-          className="mt-1 w-full px-2.5 py-1.5 rounded-lg text-xs bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow resize-y scrollbar-thin"
-        />
-      </div>
+
+      {editing ? (
+        <>
+          <div>
+            <label
+              htmlFor={`loc-${location.id}-name`}
+              className="block text-[9px] font-bold uppercase tracking-wider text-text-muted"
+            >
+              Name
+            </label>
+            <input
+              id={`loc-${location.id}-name`}
+              type="text"
+              value={location.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              placeholder="Location name"
+              className="mt-1 w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor={`loc-${location.id}-desc`}
+              className="block text-[9px] font-bold uppercase tracking-wider text-text-muted"
+            >
+              Environment description
+            </label>
+            <textarea
+              id={`loc-${location.id}-desc`}
+              value={location.description}
+              onChange={(e) => onChange({ description: e.target.value })}
+              rows={3}
+              placeholder="Light, texture, practical set dressing…"
+              className="mt-1 w-full px-2.5 py-1.5 rounded-lg text-xs bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow resize-y scrollbar-thin"
+            />
+          </div>
+        </>
+      ) : (
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-text-primary">
+            {location.name || 'Unnamed location'}
+          </h3>
+          {location.description && (
+            <p className="mt-1.5 text-xs text-text-secondary leading-relaxed">
+              {location.description}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

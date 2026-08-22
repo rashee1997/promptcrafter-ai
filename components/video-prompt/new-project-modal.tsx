@@ -492,9 +492,9 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                                   {BEAT_LABELS[i]} — {act.title}
                                 </p>
                                 <ul className="mt-0.5 space-y-0.5">
-                                  {act.beats.map((beat: string, j: number) => (
+                                  {act.beats.map((beat: { text: string }, j: number) => (
                                     <li key={j} className="text-xs text-text-secondary leading-relaxed">
-                                      • {beat}
+                                      • {beat.text}
                                     </li>
                                   ))}
                                 </ul>

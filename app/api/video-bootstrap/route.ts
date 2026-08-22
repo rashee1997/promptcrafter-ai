@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
           customInstructions,
           revisionPrompt,
           previous: ctx.storyTreatment ?? ctx.script ?? null,
+          frameworkId: body.frameworkId,
         });
         return NextResponse.json({ stage: 1, data });
       }

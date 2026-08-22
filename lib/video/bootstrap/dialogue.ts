@@ -52,7 +52,7 @@ export async function generateScriptDialogue({
   const context = [
     `PROJECT INTENT: ${clip(intent, 600)}`,
     storyTreatment
-      ? `CONFIRMED STORY TREATMENT:\nLogline: ${storyTreatment.logline}\nPremise: ${clip(storyTreatment.premise, 800)}\nEmotional arc: ${storyTreatment.emotionalArc}\nActs: ${storyTreatment.acts.map((a) => `Act ${a.act} (${a.title}): ${a.beats.join('; ')}`).join('\n')}\nEnding image: ${storyTreatment.endingImage}`
+      ? `CONFIRMED STORY TREATMENT:\nLogline: ${storyTreatment.logline}\nPremise: ${clip(storyTreatment.premise, 800)}\nEmotional arc: ${storyTreatment.emotionalArc}\nActs: ${storyTreatment.acts.map((a) => `Act ${a.act} (${a.title}): ${a.beats.map((b) => typeof b === 'string' ? b : b.text).join('; ')}`).join('\n')}\nEnding image: ${storyTreatment.endingImage}`
       : null,
     previous
       ? `PREVIOUS DIALOGUE DRAFT (revise this, keep what works):\n${clip(JSON.stringify(previous), 1600)}`
