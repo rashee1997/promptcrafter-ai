@@ -119,9 +119,21 @@ export function SidebarLocationsPanel({ project, provider, onUpdate }: SidebarLo
       </div>
 
       {locations.length === 0 ? (
-        <p className="text-[11px] text-text-muted leading-relaxed rounded-lg border border-dashed border-border p-2.5">
-          No locations yet — scout one with AI or add it manually.
-        </p>
+        <div className="rounded-xl border border-dashed border-border bg-surface-code/40 px-4 py-5 text-center">
+          <MapPin className="w-4 h-4 text-accent/50 mx-auto" aria-hidden="true" />
+          <p className="mt-1.5 text-[11px] font-semibold text-text-primary">No locations yet</p>
+          <p className="mt-0.5 text-[10px] text-text-muted leading-relaxed">
+            Scout one with AI or add it manually to anchor continuity.
+          </p>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="mt-2 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold bg-brand/10 text-brand border border-brand/25 hover:bg-brand/15 transition-colors"
+          >
+            <Plus className="w-3 h-3" aria-hidden="true" />
+            Add Location
+          </button>
+        </div>
       ) : (
         <ul className="space-y-1.5">
           {locations.map((l) => (

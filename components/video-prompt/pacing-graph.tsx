@@ -41,7 +41,21 @@ export function PacingGraph({ project }: PacingGraphProps) {
   );
 
   if (pacing.shotCount === 0) {
-    return null;
+    return (
+      <div className="rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-4">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted mb-3">
+          <Activity className="w-3.5 h-3.5 text-brand" aria-hidden="true" />
+          Pacing Analysis
+        </div>
+        <div className="rounded-xl border border-dashed border-border bg-surface-code/40 px-5 py-5 text-center">
+          <Activity className="w-4 h-4 text-brand/40 mx-auto" aria-hidden="true" />
+          <p className="mt-1.5 text-xs font-semibold text-text-primary">No pacing data yet</p>
+          <p className="mt-0.5 text-[10px] text-text-muted leading-relaxed">
+            Approve at least one shot to see pacing analysis and rhythm graphs.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

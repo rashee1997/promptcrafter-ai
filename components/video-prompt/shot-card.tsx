@@ -198,8 +198,8 @@ export function ShotCard({
       }}
       onDrop={handleDrop}
       className={cn(
-        'w-full rounded-xl border border-border bg-surface-card/70 backdrop-blur-xl p-3.5 space-y-2.5 transition-colors',
-        dragOver && 'border-brand/70 ring-1 ring-brand/40 bg-brand/5'
+        'w-full rounded-xl border bg-surface-card/70 backdrop-blur-xl p-3.5 space-y-2.5 transition-colors',
+        dragOver ? 'border-brand/70 ring-1 ring-brand/40 bg-brand/5' : shot.confirmed ? 'border-border' : 'border-brand/25'
       )}
     >
       {/* Header — Shot N, duration, reorder + delete controls */}

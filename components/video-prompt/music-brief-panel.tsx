@@ -30,7 +30,21 @@ export function MusicBriefPanel({ project }: MusicBriefPanelProps) {
   const { copiedKey, copy } = useInlineCopy(2000);
 
   const confirmedShots = project.shots.filter((s) => s.confirmed);
-  if (confirmedShots.length === 0) return null;
+  if (confirmedShots.length === 0) return (
+    <div className="rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-6">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted mb-3">
+        <Music className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+        Music & SFX Brief
+      </div>
+      <div className="rounded-xl border border-dashed border-border bg-surface-code/40 px-5 py-6 text-center">
+        <Music className="w-5 h-5 text-accent/40 mx-auto" aria-hidden="true" />
+        <p className="mt-2 text-xs font-semibold text-text-primary">No music brief yet</p>
+        <p className="mt-1 text-[11px] text-text-muted leading-relaxed max-w-xs mx-auto">
+          Approve at least one shot to generate a music and SFX brief from your pacing data.
+        </p>
+      </div>
+    </div>
+  );
 
   const copiedPrompt = copiedKey === 'music-brief-prompt';
 

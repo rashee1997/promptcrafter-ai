@@ -141,13 +141,13 @@ export function SequenceTimeline({ project, onUpdate }: SequenceTimelineProps) {
             </span>
           )}
         </div>
-        <p className="text-[10px] text-text-muted">
+        <p className="text-[10px] text-text-muted hidden sm:block">
           Drag cards to reorder — the storyboard chain updates automatically.
         </p>
       </div>
 
-      {/* Horizontal card strip */}
-      <div className="flex gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
+      {/* Phase 8 — responsive: horizontal scroll on narrow screens, no overflow */}
+      <div className="flex gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin -mx-1 px-1 snap-x snap-mandatory">
         {shots.map((shot, i) => {
           const effectivePlatform =
             shot.platformOverride ?? project.targetPlatform ?? null;
@@ -169,7 +169,7 @@ export function SequenceTimeline({ project, onUpdate }: SequenceTimelineProps) {
               onDrop={(e) => handleDrop(e, i)}
               onDragEnd={handleDragEnd}
               className={cn(
-                'flex-shrink-0 w-[160px] rounded-xl border bg-surface-card/80 backdrop-blur-xl p-2.5 space-y-2 cursor-grab active:cursor-grabbing transition-all select-none',
+                'flex-shrink-0 w-[160px] sm:w-[160px] min-w-[140px] rounded-xl border bg-surface-card/80 backdrop-blur-xl p-2.5 space-y-2 cursor-grab active:cursor-grabbing transition-all select-none snap-start',
                 isDragging && 'opacity-50 scale-95',
                 isDraggedOver
                   ? 'border-brand/70 ring-1 ring-brand/40 bg-brand/5'

@@ -5,30 +5,72 @@ import { Lock, Palette, Unlock, Zap } from 'lucide-react';
 import type { VideoProject } from '@/types/video';
 import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/tooltip';
+import { StudioCard, StudioCardHeader } from './studio/studio-card';
 
 interface SidebarStylePanelProps {
   project: VideoProject;
 }
 
-/** One read-only locked style card (Tier 1 UI lock when active). */
-function LockedCard({
+/**
+ * Phase 8 — Sidebar style cards using unified StudioCard with consistent
+ * locked vs editable visual distinction. Locked content gets a small lock
+ * icon and slightly subdued border; actively-editable/draft content gets
+ * the normal active border treatment.
+ */
+export function SidebarStylePanel({ project }: SidebarStylePanelProps) {
+  const locked = project.status === 'active';
+  const style = project.storyBible?.style;
+  const effects = project.storyBible?.effects;
+
+  return (
+    <div className="space-y-2.5">
+      <StyleCard
+        icon={<Palette className="w-3 h-3" aria-hidden="true" />}
+        title="Visual style"
+        tone="brand"
+        locked={locked}
+        lines={
+          style
+            ? [style.lookAndMood, `${style.colorGrade} · ${style.filmStock} · ${style.aspectRatio}`]
+            : ['Not set yet — confirm visual style during bootstrap.']
+        }
+      />
+      <StyleCard
+        icon={<Zap className="w-3 h-3" aria-hidden="true" />}
+        title="VFX style"
+        tone="warning"
+        locked={locked}
+        lines={
+          effects
+            ? [effects.vfxDirection, `${effects.particleDensity} · ${effects.pacing}`]
+            : ['Not set yet — confirm VFX direction during bootstrap.']
+        }
+      />
+    </div>
+  );
+}
+
+/** Unified style card with locked/editable visual distinction */
+function StyleCard({
   icon,
   title,
-  lines,
   tone,
   locked,
+  lines,
 }: {
   icon: React.ReactNode;
   title: string;
-  lines: string[];
   tone: 'brand' | 'warning';
   locked: boolean;
+  lines: string[];
 }) {
   return (
-    <div
+    <StudioCard
+      variant={locked ? 'default' : 'brand'}
+      locked={locked}
       className={cn(
-        'rounded-xl border p-3',
-        tone === 'brand' ? 'border-brand/25 bg-brand/5' : 'border-warning/25 bg-warning/5'
+        'p-3',
+        locked && 'border-dashed',
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -69,44 +111,6 @@ function LockedCard({
           {line}
         </p>
       ))}
-    </div>
-  );
-}
-
-/**
- * Sidebar — Visual Style + VFX direction cards. When project.status ===
- * 'active' both render as static read-only badges with a lock tooltip
- * (Tier 1); mutation is additionally short-circuited in sidebar.tsx (Tier 2).
- */
-export function SidebarStylePanel({ project }: SidebarStylePanelProps) {
-  const locked = project.status === 'active';
-  const style = project.storyBible?.style;
-  const effects = project.storyBible?.effects;
-
-  return (
-    <div className="space-y-2.5">
-      <LockedCard
-        icon={<Palette className="w-3 h-3" aria-hidden="true" />}
-        title="Visual style"
-        tone="brand"
-        locked={locked}
-        lines={
-          style
-            ? [style.lookAndMood, `${style.colorGrade} · ${style.filmStock} · ${style.aspectRatio}`]
-            : ['Not set yet — confirm visual style during bootstrap.']
-        }
-      />
-      <LockedCard
-        icon={<Zap className="w-3 h-3" aria-hidden="true" />}
-        title="VFX style"
-        tone="warning"
-        locked={locked}
-        lines={
-          effects
-            ? [effects.vfxDirection, `${effects.particleDensity} · ${effects.pacing}`]
-            : ['Not set yet — confirm VFX direction during bootstrap.']
-        }
-      />
-    </div>
+    </StudioCard>
   );
 }

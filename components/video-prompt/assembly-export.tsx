@@ -82,7 +82,21 @@ export function AssemblyExport({ project }: AssemblyExportProps) {
     URL.revokeObjectURL(url);
   }, [assemblyDocument, project.name]);
 
-  if (shots.length === 0) return null;
+  if (shots.length === 0) return (
+    <div className="rounded-2xl border border-border bg-surface-card/70 backdrop-blur-xl p-4">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted mb-3">
+        <Package className="w-3.5 h-3.5 text-brand" aria-hidden="true" />
+        Assembly Package
+      </div>
+      <div className="rounded-xl border border-dashed border-border bg-surface-code/40 px-5 py-5 text-center">
+        <Package className="w-5 h-5 text-brand/40 mx-auto" aria-hidden="true" />
+        <p className="mt-2 text-xs font-semibold text-text-primary">No assembly yet</p>
+        <p className="mt-1 text-[11px] text-text-muted leading-relaxed max-w-xs mx-auto">
+          Approve at least one shot to build a copyable assembly package.
+        </p>
+      </div>
+    </div>
+  );
 
   const dialogueShotCount = voicePackages.filter(
     (vp) => vp.lines.length > 0,

@@ -160,11 +160,21 @@ export function ShotList({ project, onUpdate }: ShotListProps) {
           Storyboard
         </div>
         <div className="rounded-xl border border-dashed border-border bg-surface-code/60 px-5 py-7 text-center">
-          <Clapperboard className="w-4 h-4 text-brand/60 mx-auto" aria-hidden="true" />
-          <p className="mt-2 text-xs font-semibold text-text-primary">No shots yet</p>
-          <p className="mt-1 text-[11px] text-text-muted leading-relaxed">
-            Approve a draft in the chat thread to start the storyboard.
+          <Clapperboard className="w-6 h-6 text-brand/40 mx-auto" aria-hidden="true" />
+          <p className="mt-2.5 text-xs font-bold text-text-primary">No shots yet</p>
+          <p className="mt-1 text-[11px] text-text-muted leading-relaxed max-w-xs mx-auto">
+            Approve a draft in the chat thread to add it to the storyboard, then reorder and export each shot.
           </p>
+          <div className="mt-3 flex items-center justify-center gap-1.5">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border">
+              <Film className="w-2.5 h-2.5" aria-hidden="true" />
+              0 shots
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border">
+              <Timer className="w-2.5 h-2.5" aria-hidden="true" />
+              0s total
+            </span>
+          </div>
         </div>
       </div>
     );
