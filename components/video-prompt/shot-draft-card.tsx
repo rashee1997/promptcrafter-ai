@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Check, Clapperboard, RefreshCcw, Timer } from 'lucide-react';
 import type { DraftedShot } from '@/types/video';
 import { cn } from '@/lib/utils';
+import { PROMPT_FORM_LABELS } from '@/lib/video/system-prompt';
 import { ShotDialogueCard } from './shot-dialogue-card';
 import { NegativePromptField } from './negative-prompt-field';
 
@@ -40,6 +41,11 @@ export function ShotDraftCard({ draft, disabled, onApprove, onRevise }: ShotDraf
         {draftState.shotFunction && (
           <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/30">
             {draftState.shotFunction}
+          </span>
+        )}
+        {draftState.promptForm && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-brand/10 text-brand border border-brand/25">
+            {PROMPT_FORM_LABELS[draftState.promptForm] ?? draftState.promptForm}
           </span>
         )}
         {draftState.emotion && (

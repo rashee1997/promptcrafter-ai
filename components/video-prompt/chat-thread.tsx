@@ -176,6 +176,7 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         negativePrompt: draft.negativePrompt,
         ...(draft.emotion ? { emotion: draft.emotion } : {}),
         ...(draft.shotFunction ? { shotFunction: draft.shotFunction } : {}),
+        ...(draft.promptForm ? { promptForm: draft.promptForm } : {}),
         // Phase D1 — persist scene context on the approved shot
         ...(ctx ? { sceneNumber: ctx.sceneNumber } : {}),
         ...(ctx?.locationId ? { locationId: ctx.locationId } : {}),

@@ -231,6 +231,9 @@ export function parseDraftedShot(text: string): DraftedShot | null {
   const emotion = typeof shot.emotion === 'string' ? shot.emotion.trim() : '';
   const shotFunction = typeof shot.shotFunction === 'string' ? shot.shotFunction.trim() : '';
 
+  // Phase 3 — prompt form selection (AI-chosen per shot).
+  const promptForm = typeof shot.promptForm === 'string' ? shot.promptForm.trim() : '';
+
   // Clamp silently in the persisted value, but record what the model asked for
   // so the UI can surface the truncation instead of hiding it (A5).
   const rawDuration = Number.isFinite(durationSeconds) ? Math.round(durationSeconds) : 12;
@@ -246,6 +249,7 @@ export function parseDraftedShot(text: string): DraftedShot | null {
     negativePrompt,
     ...(emotion ? { emotion } : {}),
     ...(shotFunction ? { shotFunction } : {}),
+    ...(promptForm ? { promptForm: promptForm as DraftedShot['promptForm'] } : {}),
     ...(clampedDuration !== rawDuration ? { durationClampedFrom: rawDuration } : {}),
   };
 }

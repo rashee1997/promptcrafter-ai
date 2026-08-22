@@ -50,7 +50,9 @@ const SIX_PART_ARCHITECTURE = `Every drafted shot prompt MUST be written as one 
 3. CAMERA: one specific motivated camera move or static framing (e.g. slow dolly-in, whip pan, handheld push, static wide) that advances the emotion.
 4. LIGHTING: the exact lighting/atmosphere treatment (locked visual style grade must be honored).
 5. ENVIRONMENT: the exact location from the Story Bible with its fixed set dressing, never a new invented space.
-6. LENS: __LENS_INSTRUCTION__`;
+6. LENS: __LENS_INSTRUCTION__
+
+You MUST choose one prompt form (see PROMPT FORM SELECTION below) that matches this specific shot, and write promptText accordingly — the 6-part content above is the information to include, but the STRUCTURE of how you present it depends on the form you chose.`;
 
 /** Phase E3 — camera vocabulary gates what the LENS section may contain. */
 const LENS_INSTRUCTIONS: Record<string, string> = {
@@ -75,7 +77,8 @@ const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
     ],
     "negativePrompt": "<3–5 short comma-separated terms, most-damaging artifact first, or empty string>",
     "emotion": "<the emotion this shot carries, one word or short phrase — e.g. guilt, resolve, quiet dread>",
-    "shotFunction": "<one of: Establish, Reveal, Power, Pressure, Detail, Reaction, Shift, Impact, Aftermath, Exit>"
+    "shotFunction": "<one of: Establish, Reveal, Power, Pressure, Detail, Reaction, Shift, Impact, Aftermath, Exit>",
+    "promptForm": "<one of: flowing-prose, minimal-labeled, time-coded, reference-directive>"
   }
 }
 \`\`\`
@@ -103,6 +106,21 @@ const NEGATIVE_PROMPT_RULES = `NEGATIVE PROMPT RULES (Rule 12):
 - Always include the shot-appropriate baseline: blur, distorted anatomy, flickering, unstable motion, duplicate objects.
 - If this shot has dialogue, also include: lip-sync misalignment, garbled speech, audio desync.
 - If this shot has hands/props in frame, also include: floating hands, extra fingers, morphing objects.`;
+
+const PROMPT_FORM_SELECTION = `PROMPT FORM SELECTION (choose ONE per shot, do not default to the same form every time):
+- flowing-prose: one clean continuous action. Write the entire shot as a single flowing paragraph with no labels or headers — just vivid, present-tense action. Best for simple, clean beats: a character turns, a door opens, light shifts.
+- minimal-labeled: distinct parts worth separating — invent 2–4 labels specific to THIS shot, not the same generic six every time. Use only the labels that matter (e.g. "Subject", "The turn", "Light shift" or "Beat 1", "Beat 2"). Never fall back to the standard SUBJECT/ACTION/CAMERA/etc. labels.
+- time-coded: the shot escalates or has 2+ distinct movements within its duration. Use [0–3s]/[3–6s]/[6–9s] style time markers, each with its own beat description.
+- reference-directive: primarily "place this character/product from the reference image into this context." A short directive instruction, not a cinematographic breakdown.
+Vary the form across a storyboard — not every shot should read identically. The form choice MUST be reflected in the "promptForm" field of your JSON output.`;
+
+/** Human-readable label for a PromptForm value, shown on the shot card. */
+export const PROMPT_FORM_LABELS: Record<string, string> = {
+  'flowing-prose': 'Flowing prose',
+  'minimal-labeled': 'Minimal labeled',
+  'time-coded': 'Time-coded',
+  'reference-directive': 'Reference directive',
+};
 
 /** Truncates context so long bible fields never bloat the system prompt. */
 function clip(text: string | null | undefined, max = 600): string {
@@ -322,6 +340,8 @@ CONTINUITY HANDOFF FROM THE STORYBOARD:
 ${calculateShotHandoff(lastShot)}
 
 ${directorialApproachBlock}${DIRECTOR_RULES}
+
+${PROMPT_FORM_SELECTION}
 
 ${rules}${platformBlock}
 ${withNextShot(withDuration(OUTPUT_CONTRACT, durationFloor, durationMax), nextShot)}`;

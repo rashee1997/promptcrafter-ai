@@ -7,6 +7,7 @@ import {
   formatShotForDialect,
   type VideoDialect,
 } from '@/lib/video/model-dialects';
+import { PROMPT_FORM_LABELS } from '@/lib/video/system-prompt';
 import { blobToDataUrl } from '@/lib/compression';
 import { useStoryBible } from '@/lib/video/story-bible-context';
 import { useInlineCopy } from '@/lib/use-inline-copy';
@@ -174,6 +175,11 @@ export function ShotCard({
           {shot.shotFunction && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/30 shrink-0">
               {shot.shotFunction}
+            </span>
+          )}
+          {shot.promptForm && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-brand/10 text-brand border border-brand/25 shrink-0">
+              {PROMPT_FORM_LABELS[shot.promptForm] ?? shot.promptForm}
             </span>
           )}
           {shot.emotion && (

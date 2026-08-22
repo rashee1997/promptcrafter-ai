@@ -6,6 +6,18 @@ export type VideoDialect = 'veo' | 'higgsfield' | 'kling' | 'seedance';
 export type ProjectStatus = 'draft' | 'active';
 
 /**
+ * Phase 3 — AI-chosen prompt form per shot. Structure follows the shot
+ * instead of forcing every shot through the same 6-section template.
+ * Derived from practitioner examples (awesome-seedance collection) where
+ * genuinely different shots take genuinely different shapes.
+ */
+export type PromptForm =
+  | 'flowing-prose'
+  | 'minimal-labeled'
+  | 'time-coded'
+  | 'reference-directive';
+
+/**
  * Phase 3 — single source of truth for every video generation platform.
  * The drafting AI reads `draftingSystemPromptBlock`; the Phase 2 picker UI
  * reads `usageInstructions` and `strengths`. Both derive from the same
@@ -318,6 +330,12 @@ export interface VideoShot {
    * have a shape instead of repeating the same beat.
    */
   shotFunction?: string;
+  /**
+   * Phase 3 — the AI-chosen prompt form for this shot. Determines the
+   * structural shape of promptText (flowing prose, minimal labels, time-coded,
+   * or reference-directive). Surfaced as a visible tag on the shot card.
+   */
+  promptForm?: PromptForm;
 }
 
 /**
@@ -432,6 +450,12 @@ export interface DraftedShot {
    * Impact / Aftermath / Exit.
    */
   shotFunction?: string;
+  /**
+   * Phase 3 — the AI-chosen prompt form for this shot. Determines the
+   * structural shape of promptText (flowing prose, minimal labels, time-coded,
+   * or reference-directive). Surfaced as a visible tag on the shot card.
+   */
+  promptForm?: PromptForm;
 }
 
 export interface VideoProject {
