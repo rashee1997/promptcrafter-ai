@@ -44,6 +44,16 @@ export interface AppSettings {
   defaultOutputFormat: string;
   /** Default character limit (replaces DEFAULT_OUTPUT_CHAR_LIMIT constant). 0 = no limit. */
   defaultCharLimit: number;
+
+  // ── Phase 4: Video Prompt Studio Director Defaults
+  /** Default prompt form override for new video shots ('auto' = let AI choose). */
+  videoPromptFormOverride?: string;
+  /** Default platform override for new video shots (empty = inherit project platform). */
+  videoPlatformOverride?: string;
+  /** Product Studio — dialects to skip by default. */
+  videoSkippedDialects?: string[];
+  /** Product Studio — extension beats enabled by default. */
+  videoExtensionBeatsEnabled?: boolean;
 }
 
 /** Schema version — bump when AppSettings shape changes. */

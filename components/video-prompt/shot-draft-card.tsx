@@ -1,16 +1,40 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Clapperboard, RefreshCcw, Timer } from 'lucide-react';
-import type { DraftedShot } from '@/types/video';
+import { Check, Clapperboard, RefreshCcw, Timer, X } from 'lucide-react';
+import type { DraftedShot, PromptForm, VideoTargetPlatform } from '@/types/video';
 import { cn } from '@/lib/utils';
 import { PROMPT_FORM_LABELS } from '@/lib/video/system-prompt';
+import { getPlatformSpec } from '@/lib/video/platforms';
 import { ShotDialogueCard } from './shot-dialogue-card';
 import { NegativePromptField } from './negative-prompt-field';
+
+const PROMPT_FORM_OPTIONS: { value: PromptForm | 'auto'; label: string }[] = [
+  { value: 'auto', label: 'Let AI choose' },
+  { value: 'flowing-prose', label: 'Flowing prose' },
+  { value: 'minimal-labeled', label: 'Minimal labeled' },
+  { value: 'time-coded', label: 'Time-coded' },
+  { value: 'reference-directive', label: 'Reference directive' },
+];
+
+const PLATFORM_OPTIONS: { value: VideoTargetPlatform; label: string }[] = [
+  { value: 'veo', label: 'Veo' },
+  { value: 'kling', label: 'Kling' },
+  { value: 'seedance', label: 'Seedance' },
+  { value: 'higgsfield', label: 'Higgsfield' },
+  { value: 'runway', label: 'Runway' },
+  { value: 'luma', label: 'Luma' },
+  { value: 'pika', label: 'Pika' },
+];
+
+/** Platforms that lack native multi-shot support — triggers smart-suggest. */
+const NO_MULTI_SHOT_PLATFORMS = new Set<VideoTargetPlatform>(['runway', 'luma', 'pika']);
 
 interface ShotDraftCardProps {
   draft: DraftedShot;
   disabled?: boolean;
+  /** The project's target platform — for smart-suggest. */
+  targetPlatform?: VideoTargetPlatform | null;
   onApprove: (draft: DraftedShot) => void;
   onRevise: (draft: DraftedShot) => void;
 }
@@ -22,13 +46,24 @@ interface ShotDraftCardProps {
  * re-drafts it. Dialogue and the negative prompt are editable inline before
  * Approve — separate cards, never merged into the promptText well.
  */
-export function ShotDraftCard({ draft, disabled, onApprove, onRevise }: ShotDraftCardProps) {
+export function ShotDraftCard({ draft, disabled, targetPlatform, onApprove, onRevise }: ShotDraftCardProps) {
   // Local editable copy — the director can tighten dialogue / negative terms
   // before Approve, and the approved shot carries those edits.
   const [draftState, setDraftState] = useState<DraftedShot>(draft);
   const clampedFrom = draftState.durationClampedFrom;
 
   const patchDraft = (patch: Partial<DraftedShot>) => setDraftState((prev) => ({ ...prev, ...patch }));
+
+  // Phase 4 — smart-suggest for multi-beat content on non-multi-shot platforms.
+  const [dismissedSuggestion, setDismissedSuggestion] = useState(false);
+  const effectivePlatform = draftState.platformOverride ?? targetPlatform;
+  const multiBeatPattern = /\b(beat\s*[123]|shot\s*[123]|sequence|combo|flurry|barrage|rapid[- ]?fire)\b/i;
+  const showsMultiBeat = multiBeatPattern.test(draftState.promptText) || multiBeatPattern.test(draftState.description);
+  const showPlatformSuggestion =
+    !dismissedSuggestion &&
+    effectivePlatform &&
+    NO_MULTI_SHOT_PLATFORMS.has(effectivePlatform) &&
+    showsMultiBeat;
 
   return (
     <div className="mt-2 w-full rounded-xl border border-brand/25 bg-brand/5 p-3.5 space-y-2.5">
@@ -62,6 +97,75 @@ export function ShotDraftCard({ draft, disabled, onApprove, onRevise }: ShotDraf
       {draftState.description && (
         <p className="text-xs font-semibold text-text-primary leading-relaxed">{draftState.description}</p>
       )}
+
+      {/* Phase 4 — smart-suggest: platform recommendation */}
+      {showPlatformSuggestion && (
+        <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/5 p-2.5">
+          <X className="w-3.5 h-3.5 text-warning mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-warning">Platform suggestion</p>
+            <p className="text-[10px] text-text-secondary leading-relaxed mt-0.5">
+              This shot contains multi-beat action content. Consider overriding to Kling or Seedance for better multi-shot results.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedSuggestion(true)}
+            className="p-0.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0"
+            aria-label="Dismiss suggestion"
+          >
+            <X className="w-3 h-3" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {/* Phase 4 — shot-level customization controls */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Prompt form override selector */}
+        <div className="relative">
+          <label className="sr-only" htmlFor={`draft-form-${draftState.shotNumber}`}>Prompt form override</label>
+          <select
+            id={`draft-form-${draftState.shotNumber}`}
+            value={draftState.promptFormOverride ?? 'auto'}
+            onChange={(e) => patchDraft({ promptFormOverride: e.target.value as PromptForm | 'auto' })}
+            className="appearance-none px-2 py-1 pr-5 rounded-lg text-[9px] font-semibold bg-surface-muted text-text-secondary border border-border hover:border-brand/40 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand/50"
+            title="Override the AI's prompt form choice for this shot"
+          >
+            {PROMPT_FORM_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Custom label chip (for minimal-labeled form) */}
+        {(draftState.promptFormOverride === 'minimal-labeled' || draftState.promptForm === 'minimal-labeled') && (
+          <input
+            type="text"
+            value={draftState.customLabel ?? ''}
+            onChange={(e) => patchDraft({ customLabel: e.target.value || undefined })}
+            placeholder="Add a label (e.g. Sound cue)"
+            aria-label="Custom label for minimal-labeled form"
+            className="px-2 py-1 rounded-lg text-[9px] font-semibold bg-surface-muted text-text-secondary border border-border hover:border-brand/40 transition-colors focus:outline-none focus:ring-2 focus:ring-brand/50 w-36 placeholder:text-text-muted"
+          />
+        )}
+
+        {/* Platform override selector */}
+        <div className="relative">
+          <label className="sr-only" htmlFor={`draft-platform-${draftState.shotNumber}`}>Platform override</label>
+          <select
+            id={`draft-platform-${draftState.shotNumber}`}
+            value={draftState.platformOverride ?? ''}
+            onChange={(e) => patchDraft({ platformOverride: (e.target.value as VideoTargetPlatform) || undefined })}
+            className="appearance-none px-2 py-1 pr-5 rounded-lg text-[9px] font-semibold bg-surface-muted text-text-secondary border border-border hover:border-brand/40 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand/50"
+            title="Override the project's platform for this shot only"
+          >
+            <option value="">Inherit project</option>
+            {PLATFORM_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* The 6-part shot prompt */}
       <pre className="whitespace-pre-wrap break-words rounded-lg bg-surface-code border border-border p-2.5 text-[11px] leading-relaxed text-text-secondary font-mono max-h-56 overflow-y-auto scrollbar-thin overflow-x-hidden">

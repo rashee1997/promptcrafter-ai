@@ -105,7 +105,8 @@ const NEGATIVE_PROMPT_RULES = `NEGATIVE PROMPT RULES (Rule 12):
 - Order terms by how much each would ruin THIS shot — put the most damaging risk first.
 - Always include the shot-appropriate baseline: blur, distorted anatomy, flickering, unstable motion, duplicate objects.
 - If this shot has dialogue, also include: lip-sync misalignment, garbled speech, audio desync.
-- If this shot has hands/props in frame, also include: floating hands, extra fingers, morphing objects.`;
+- If this shot has hands/props in frame, also include: floating hands, extra fingers, morphing objects.
+- WARDROBE-CONDITION GUARD: If the Story Bible or continuityHandoff describes a wardrobe condition (torn, dust-covered, bloodied, rain-soaked, scorched, stained, etc.), ALWAYS include that condition term in negativePrompt so the model does not randomly revert the wardrobe to a clean state between shots. E.g., if the continuity says "rain-soaked jacket", include "clean dry clothing" or "pristine wardrobe" as a negative term.`;
 
 const PROMPT_FORM_SELECTION = `PROMPT FORM SELECTION (choose ONE per shot, do not default to the same form every time):
 - flowing-prose: one clean continuous action. Write the entire shot as a single flowing paragraph with no labels or headers — just vivid, present-tense action. Best for simple, clean beats: a character turns, a door opens, light shifts.
@@ -151,10 +152,33 @@ function withDuration(text: string, min: number, max: number): string {
  * draftingSystemPromptBlock replaces the generic duration rule and injects
  * platform-specific dialogue/negative-prompt syntax.
  */
+export interface ShotDraftingOptions {
+  /** Character reference images attached to this draft turn. */
+  imageRefs?: CharacterImageRef[];
+  /** Scene context for scoped Story Bible digest. */
+  shotContext?: ShotSceneContext;
+  /**
+   * Phase 4 — director's prompt form override for this shot. When set to a
+   * specific PromptForm value, the AI MUST use that form instead of choosing.
+   */
+  promptFormOverride?: import('@/types/video').PromptForm | 'auto';
+  /**
+   * Phase 4 — custom label for the minimal-labeled form. Injected as an
+   * additional label the AI should use if relevant.
+   */
+  customLabel?: string;
+  /**
+   * Phase 4 — per-shot platform override. Replaces the project's target
+   * platform for this specific shot draft.
+   */
+  platformOverride?: import('@/types/video').VideoTargetPlatform;
+}
+
 export function buildShotDraftingSystemPrompt(
   project: VideoProject,
   imageRefs?: CharacterImageRef[],
   shotContext?: ShotSceneContext,
+  options?: ShotDraftingOptions,
 ): string {
   const bible = project.storyBible ?? { characters: [], locations: [], continuityLog: [] };
   const brief = project.customInstructions?.trim() || project.name || '(No brief supplied)';
@@ -169,7 +193,9 @@ export function buildShotDraftingSystemPrompt(
   const lensInstruction = LENS_INSTRUCTIONS[cameraVocab] ?? LENS_INSTRUCTIONS.cinematic;
 
   // Phase 3 — look up the platform spec so the AI gets real constraints.
-  const platformSpec = getPlatformSpec(project.targetPlatform);
+  // Phase 4 — per-shot platform override takes precedence over the project default.
+  const effectivePlatform = options?.platformOverride ?? project.targetPlatform;
+  const platformSpec = getPlatformSpec(effectivePlatform);
 
   const durationMin = platformSpec?.durationCeilingSeconds ?? 30;
   const durationFloor = platformSpec ? Math.min(8, durationMin) : 8;
@@ -323,6 +349,34 @@ ${identityContent}` : identityBlock;
 `;
   }
 
+  // Phase 4 — prompt form override block. When the director pins a form,
+  // the AI MUST use it instead of choosing freely.
+  let promptFormOverrideBlock = '';
+  if (options?.promptFormOverride && options.promptFormOverride !== 'auto') {
+    const forcedForm = options.promptFormOverride;
+    const formLabel = PROMPT_FORM_LABELS[forcedForm] ?? forcedForm;
+    promptFormOverrideBlock = `\n\nPROMPT FORM OVERRIDE (DIRECTOR'S CHOICE — you MUST use this form for this shot):\nThe director has pinned this shot's prompt form to "${forcedForm}" (${formLabel}). You MUST write promptText in this form — do not choose a different form.\n`;
+    // Phase 4 — custom label injection for minimal-labeled form.
+    if (forcedForm === 'minimal-labeled' && options.customLabel?.trim()) {
+      promptFormOverrideBlock += `CUSTOM LABEL: The director wants you to use the label "${options.customLabel.trim()}" as one of your labels if it fits this shot.\n`;
+    }
+  }
+
+  // Phase 4 — custom label for minimal-labeled form (even without a form override,
+  // if the AI independently chose minimal-labeled, the custom label still applies).
+  let customLabelBlock = '';
+  if (
+    options?.customLabel?.trim() &&
+    (!options.promptFormOverride || options.promptFormOverride === 'auto')
+  ) {
+    customLabelBlock = `\n\nCUSTOM LABEL: When you choose the minimal-labeled form for this shot, include "${options.customLabel.trim()}" as one of your invented labels if it fits.\n`;
+  }
+
+  // Phase 4 — identity-lock reinforcement for action sequences.
+  // When the director's message contains "action sequence" or "break into",
+  // explicitly require identity-lock on every shot.
+  const identityLockReinforcement = `\n\nACTION SEQUENCE IDENTITY LOCK: If this shot is part of a multi-shot action sequence, the full identity-lock block (character names, appearance, wardrobe state, location geography) MUST be re-injected on EVERY shot — not just the first. The model must never assume identity carries from a prior shot without restating it.\n`;
+
   return `You are the shot drafter on a short-form video production. You work inside the director's multi-turn drafting thread: you propose ONE sequential shot per turn, the director approves it into the storyboard or asks for a revision, and you keep character, setting, and visual style anchors perfectly stable across every shot.
 
 DIRECTORIAL BRIEF:
@@ -341,7 +395,7 @@ ${calculateShotHandoff(lastShot)}
 
 ${directorialApproachBlock}${DIRECTOR_RULES}
 
-${PROMPT_FORM_SELECTION}
+${PROMPT_FORM_SELECTION}${promptFormOverrideBlock}${customLabelBlock}${identityLockReinforcement}
 
 ${rules}${platformBlock}
 ${withNextShot(withDuration(OUTPUT_CONTRACT, durationFloor, durationMax), nextShot)}`;

@@ -3,7 +3,7 @@ import { streamText } from 'ai';
 import type { ProviderConfig } from '@/types';
 import type { VideoChatFile, VideoProject } from '@/types/video';
 import { resolveVideoModel, resolveModelId } from '@/lib/video-ai';
-import { buildShotDraftingSystemPrompt, type CharacterImageRef } from '@/lib/video/system-prompt';
+import { buildShotDraftingSystemPrompt, type CharacterImageRef, type ShotDraftingOptions } from '@/lib/video/system-prompt';
 import type { ShotSceneContext } from '@/lib/video/story-bible';
 import { routeMultimodalContext, modelSupportsVision } from '@/lib/model-fallback';
 
@@ -49,6 +49,8 @@ interface VideoChatRequestBody {
   providerConfig?: ProviderConfig;
   /** Phase D — scene context for the current shot draft. */
   shotContext?: ShotSceneContext;
+  /** Phase 4 — per-shot customization overrides. */
+  shotOptions?: Pick<ShotDraftingOptions, 'promptFormOverride' | 'customLabel' | 'platformOverride'>;
 }
 
 type ModelMessage =
@@ -108,7 +110,7 @@ function collectLastUserFiles(messages: IncomingMessage[]): VideoChatFile[] {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as VideoChatRequestBody;
-    const { messages, project, providerConfig, shotContext } = body;
+    const { messages, project, providerConfig, shotContext, shotOptions } = body;
 
     if (!project?.id || !project.name) {
       return NextResponse.json({ error: 'A valid project is required.' }, { status: 400 });
@@ -157,6 +159,7 @@ export async function POST(req: NextRequest) {
       project,
       charImageRefs.length > 0 ? charImageRefs : undefined,
       shotContext,
+      shotOptions,
     );
 
     // C5 — visible routing note injected into the system prompt

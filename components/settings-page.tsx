@@ -18,6 +18,7 @@ import {
   Download,
   Upload as UploadIcon,
   AlertTriangle,
+  Clapperboard,
   Info,
   Eye,
   EyeOff,
@@ -696,6 +697,126 @@ export function SettingsPage({
                 className="w-full px-3 py-2 rounded-xl text-xs border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
                 placeholder="0 = no limit"
               />
+            </div>
+
+            {/* ═══════════════════════ Video Director Defaults ═══════════════════════ */}
+            <hr className="border-border" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/20">
+                <Clapperboard className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-text-primary">Video Director Defaults</h3>
+                <p className="text-xs text-text-muted">
+                  Default shot-level customization for new video projects
+                </p>
+              </div>
+            </div>
+
+            {/* Default prompt form override */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-text-primary">Default prompt form</label>
+              <select
+                value={settings.videoPromptFormOverride ?? 'auto'}
+                onChange={(e) => updateSettings({ videoPromptFormOverride: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl text-xs border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+              >
+                <option value="auto">Let AI choose</option>
+                <option value="flowing-prose">Flowing prose</option>
+                <option value="minimal-labeled">Minimal labeled</option>
+                <option value="time-coded">Time-coded</option>
+                <option value="reference-directive">Reference directive</option>
+              </select>
+              <p className="text-[11px] text-text-muted">
+                Applied to new shots unless overridden per-shot in the storyboard.
+              </p>
+            </div>
+
+            {/* Default platform override */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-text-primary">Default platform override</label>
+              <select
+                value={settings.videoPlatformOverride ?? ''}
+                onChange={(e) => updateSettings({ videoPlatformOverride: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl text-xs border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+              >
+                <option value="">Inherit project platform</option>
+                <option value="veo">Veo</option>
+                <option value="kling">Kling</option>
+                <option value="seedance">Seedance</option>
+                <option value="higgsfield">Higgsfield</option>
+                <option value="runway">Runway</option>
+                <option value="luma">Luma</option>
+                <option value="pika">Pika</option>
+              </select>
+            </div>
+
+            {/* Dialect toggles */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-primary">Dialect toggles (skip if unneeded)</label>
+              <p className="text-[11px] text-text-muted">
+                Toggle off platforms you don&apos;t use to shrink the API payload for Product Studio.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  { value: 'veo', label: 'Veo' },
+                  { value: 'kling', label: 'Kling' },
+                  { value: 'seedance', label: 'Seedance' },
+                  { value: 'higgsfield', label: 'Higgsfield' },
+                  { value: 'runway', label: 'Runway' },
+                  { value: 'luma', label: 'Luma' },
+                  { value: 'pika', label: 'Pika' },
+                ] as const).map((p) => {
+                  const skipped = (settings.videoSkippedDialects ?? []).includes(p.value);
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => {
+                        const current = settings.videoSkippedDialects ?? [];
+                        const next = skipped
+                          ? current.filter((d) => d !== p.value)
+                          : [...current, p.value];
+                        updateSettings({ videoSkippedDialects: next.length > 0 ? next : undefined });
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                        skipped
+                          ? 'bg-surface-muted text-text-muted border-border line-through'
+                          : 'bg-brand/10 text-brand border-brand/30'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Extension beats toggle */}
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface-card">
+              <div>
+                <label className="text-xs font-semibold text-text-primary">Extension beats</label>
+                <p className="text-[11px] text-text-muted mt-0.5">
+                  When on, new shots default to being part of a longer chained sequence.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.videoExtensionBeatsEnabled ?? false}
+                onClick={() => updateSettings({ videoExtensionBeatsEnabled: !(settings.videoExtensionBeatsEnabled ?? false) })}
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                  (settings.videoExtensionBeatsEnabled ?? false)
+                    ? 'bg-brand'
+                    : 'bg-surface-muted border-border'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                    (settings.videoExtensionBeatsEnabled ?? false) ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
           </GlassCard>
         )}

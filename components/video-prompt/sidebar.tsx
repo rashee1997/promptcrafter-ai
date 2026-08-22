@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Check, ChevronsLeft, ChevronsRight, ChevronDown, Clapperboard, Target } from 'lucide-react';
+import { Check, ChevronsLeft, ChevronsRight, ChevronDown, ChevronUp, Clapperboard, Sliders, Target } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
-import type { VideoProject, VideoTargetPlatform } from '@/types/video';
+import type { DirectorDefaults, PromptForm, VideoProject, VideoTargetPlatform } from '@/types/video';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { getPlatformSpec, PLATFORM_SPECS } from '@/lib/video/platforms';
@@ -216,6 +216,11 @@ export function Sidebar({ project, provider, onUpdate }: SidebarProps) {
         </div>
       )}
 
+      {/* Director Defaults — shot-level customization defaults */}
+      <DirectorDefaultsPanel project={project} onUpdate={applyUpdate} />
+
+      <hr className="border-border" aria-hidden="true" />
+
       {/* Locked style + VFX cards */}
       <SidebarStylePanel project={project} />
 
@@ -245,5 +250,187 @@ export function Sidebar({ project, provider, onUpdate }: SidebarProps) {
         }}
       />
     </aside>
+  );
+}
+
+// ── Director Defaults Panel ────────────────────────────────────────────────
+
+const DIRECTOR_PROMPT_FORM_OPTIONS: { value: PromptForm | 'auto'; label: string }[] = [
+  { value: 'auto', label: 'Let AI choose' },
+  { value: 'flowing-prose', label: 'Flowing prose' },
+  { value: 'minimal-labeled', label: 'Minimal labeled' },
+  { value: 'time-coded', label: 'Time-coded' },
+  { value: 'reference-directive', label: 'Reference directive' },
+];
+
+const DIRECTOR_PLATFORM_OPTIONS: { value: VideoTargetPlatform; label: string }[] = [
+  { value: 'veo', label: 'Veo' },
+  { value: 'kling', label: 'Kling' },
+  { value: 'seedance', label: 'Seedance' },
+  { value: 'higgsfield', label: 'Higgsfield' },
+  { value: 'runway', label: 'Runway' },
+  { value: 'luma', label: 'Luma' },
+  { value: 'pika', label: 'Pika' },
+];
+
+const ALL_DIALECT_PLATFORMS: { value: VideoTargetPlatform; label: string }[] = [
+  { value: 'veo', label: 'Veo' },
+  { value: 'kling', label: 'Kling' },
+  { value: 'seedance', label: 'Seedance' },
+  { value: 'higgsfield', label: 'Higgsfield' },
+  { value: 'runway', label: 'Runway' },
+  { value: 'luma', label: 'Luma' },
+  { value: 'pika', label: 'Pika' },
+];
+
+interface DirectorDefaultsPanelProps {
+  project: VideoProject;
+  onUpdate: (next: VideoProject) => void;
+}
+
+/**
+ * Phase 4 — collapsible panel in the sidebar for editing the director's
+ * usual shot-level customization defaults. Persists to project.directorDefaults.
+ */
+function DirectorDefaultsPanel({ project, onUpdate }: DirectorDefaultsPanelProps) {
+  const [expanded, setExpanded] = useState(false);
+  const defaults: DirectorDefaults = project.directorDefaults ?? {};
+
+  const updateDefaults = (patch: Partial<DirectorDefaults>) => {
+    const next: VideoProject = {
+      ...project,
+      directorDefaults: { ...defaults, ...patch },
+      updatedAt: Date.now(),
+    };
+    onUpdate(next);
+    void saveVideoProject(next);
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-card/60 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-surface-hover/50 transition-colors"
+        aria-expanded={expanded}
+      >
+        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+          <Sliders className="w-3 h-3 text-brand" aria-hidden="true" />
+          Director Defaults
+        </span>
+        {expanded ? (
+          <ChevronUp className="w-3 h-3 text-text-muted" aria-hidden="true" />
+        ) : (
+          <ChevronDown className="w-3 h-3 text-text-muted" aria-hidden="true" />
+        )}
+      </button>
+      {expanded && (
+        <div className="px-3 pb-3 space-y-3 border-t border-border/60 pt-3">
+          {/* Default prompt form */}
+          <div className="space-y-1">
+            <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+              Default prompt form
+            </label>
+            <select
+              value={defaults.promptFormOverride ?? 'auto'}
+              onChange={(e) => updateDefaults({ promptFormOverride: e.target.value as PromptForm | 'auto' })}
+              className="w-full appearance-none px-2 py-1 pr-5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border hover:border-brand/40 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand/50"
+            >
+              {DIRECTOR_PROMPT_FORM_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <p className="text-[8px] text-text-muted leading-relaxed">
+              Applied to new shots unless overridden per-shot.
+            </p>
+          </div>
+
+          {/* Default platform override */}
+          <div className="space-y-1">
+            <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+              Default platform override
+            </label>
+            <select
+              value={defaults.platformOverride ?? ''}
+              onChange={(e) => updateDefaults({ platformOverride: (e.target.value as VideoTargetPlatform) || undefined })}
+              className="w-full appearance-none px-2 py-1 pr-5 rounded-lg text-[10px] font-semibold bg-surface-muted text-text-secondary border border-border hover:border-brand/40 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand/50"
+            >
+              <option value="">Inherit project platform</option>
+              {DIRECTOR_PLATFORM_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dialect toggles — skip platforms not needed */}
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+              Dialect toggles (skip if unneeded)
+            </label>
+            <p className="text-[8px] text-text-muted leading-relaxed">
+              Toggle off platforms you don&apos;t use to shrink the API payload.
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {ALL_DIALECT_PLATFORMS.map((p) => {
+                const skipped = (defaults.skippedDialects ?? []).includes(p.value);
+                return (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => {
+                      const current = defaults.skippedDialects ?? [];
+                      const next = skipped
+                        ? current.filter((d) => d !== p.value)
+                        : [...current, p.value];
+                      updateDefaults({ skippedDialects: next.length > 0 ? next : undefined });
+                    }}
+                    className={cn(
+                      'px-2 py-0.5 rounded-md text-[9px] font-semibold border transition-colors',
+                      skipped
+                        ? 'bg-surface-muted text-text-muted border-border line-through'
+                        : 'bg-brand/10 text-brand border-brand/25'
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Extension beats toggle */}
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+                Extension beats
+              </label>
+              <p className="text-[8px] text-text-muted leading-relaxed">
+                On = this is part of a longer chained sequence.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={defaults.extensionBeatsEnabled ?? false}
+              onClick={() => updateDefaults({ extensionBeatsEnabled: !(defaults.extensionBeatsEnabled ?? false) })}
+              className={cn(
+                'relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60',
+                (defaults.extensionBeatsEnabled ?? false)
+                  ? 'bg-brand'
+                  : 'bg-surface-muted border-border'
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
+                  (defaults.extensionBeatsEnabled ?? false) ? 'translate-x-4' : 'translate-x-0'
+                )}
+              />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

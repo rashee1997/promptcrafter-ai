@@ -16,7 +16,7 @@ import {
   Zap,
   Timer,
 } from 'lucide-react';
-import type { CreativeControls, VideoAspectRatio, GenerationMode } from '@/lib/product-shoot/types';
+import type { CreativeControls, VideoAspectRatio, GenerationMode, VideoPlatformDialect } from '@/lib/product-shoot/types';
 import {
   CAMERA_MOTION_PRESETS,
   FOCAL_LENGTH_PRESETS,
@@ -30,6 +30,16 @@ import {
   ASPECT_RATIOS,
   type OptionPreset,
 } from '@/lib/product-shoot/presets';
+
+/** All platform dialects the Product Studio can emit. */
+const DIALECT_OPTIONS: { value: VideoPlatformDialect; label: string }[] = [
+  { value: 'master', label: 'Master' },
+  { value: 'runway', label: 'Runway' },
+  { value: 'kling', label: 'Kling' },
+  { value: 'veo', label: 'Veo' },
+  { value: 'luma', label: 'Luma' },
+  { value: 'minimax', label: 'Minimax' },
+];
 
 interface CreativeControlsProps {
   controls: CreativeControls;
@@ -111,6 +121,8 @@ export function CreativeControlsPanel({
     controls.generationMode === 'campaign-3shot' ? '3shot' : null,
     controls.customVisualNotes?.trim() ? 'notes' : null,
     controls.negativeConstraints?.trim() ? 'neg' : null,
+    controls.enabledDialects && controls.enabledDialects.length < 6 ? 'dialects' : null,
+    controls.extensionBeatsEnabled === false ? 'no-ext' : null,
   ].filter(Boolean).length;
 
   return (
@@ -367,6 +379,78 @@ export function CreativeControlsPanel({
               selectedId={controls.humanInteraction}
               onSelect={(id) => update('humanInteraction', id)}
             />
+
+            {/* Phase 4 — Dialect Toggles (skip platforms if unneeded) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+                  <Layers className="w-3.5 h-3.5 text-brand" />
+                  Dialect Toggles
+                </label>
+                <span className="text-[10px] text-text-muted">
+                  {controls.enabledDialects ? `${controls.enabledDialects.length} enabled` : 'All enabled'}
+                </span>
+              </div>
+              <p className="text-[10px] text-text-muted leading-relaxed">
+                Skip platform dialects you don&apos;t need — fewer dialects means a smaller, faster output.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {DIALECT_OPTIONS.map((dialect) => {
+                  const isEnabled = !controls.enabledDialects || controls.enabledDialects.includes(dialect.value);
+                  return (
+                    <button
+                      key={dialect.value}
+                      type="button"
+                      onClick={() => {
+                        const current = controls.enabledDialects ?? DIALECT_OPTIONS.map((d) => d.value);
+                        const next = isEnabled
+                          ? current.filter((d) => d !== dialect.value)
+                          : [...current, dialect.value];
+                        // If all are enabled, store undefined (default behavior)
+                        update('enabledDialects', next.length === DIALECT_OPTIONS.length ? undefined : next);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all border ${
+                        isEnabled
+                          ? 'bg-brand/10 text-brand border-brand/40'
+                          : 'bg-surface-muted/60 text-text-muted border-border/60 line-through'
+                      }`}
+                    >
+                      {dialect.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Phase 4 — Extension Beats Toggle */}
+            <div className="space-y-1.5 p-3 rounded-xl bg-surface-muted/30 border border-border">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+                  <Timer className="w-3.5 h-3.5 text-brand" />
+                  Extension Beats (Multi-Beat Chaining)
+                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={controls.extensionBeatsEnabled !== false}
+                  onClick={() => update('extensionBeatsEnabled', controls.extensionBeatsEnabled === false ? true : false)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    controls.extensionBeatsEnabled !== false ? 'bg-brand' : 'bg-surface-muted'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                      controls.extensionBeatsEnabled !== false ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="text-[10px] text-text-muted leading-relaxed">
+                {controls.extensionBeatsEnabled !== false
+                  ? 'Sequential extension beats are included — the output includes chained clip prompts with last-frame anchors.'
+                  : 'Extension beats are skipped — only the single master shot prompt is generated.'}
+              </p>
+            </div>
 
             {/* Negative Constraints Input */}
             <div className="space-y-1.5">

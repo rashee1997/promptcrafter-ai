@@ -4,9 +4,10 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { Clapperboard, Eye, EyeOff, Sparkles, Square } from 'lucide-react';
+import { Clapperboard, Eye, EyeOff, Film, Sparkles, Square, X } from 'lucide-react';
 import type { ProviderConfig } from '@/types';
-import type { ChatMessage, DraftedShot, ShotLocationConditions, StoryBibleCharacterImage, ThinkingOrbState, VideoProject, VideoShot } from '@/types/video';
+import type { ActionBeatDecomposition, ChatMessage, DraftedShot, ShotLocationConditions, StoryBibleCharacterImage, ThinkingOrbState, VideoProject, VideoShot } from '@/types/video';
+import { decomposeActionBeat } from '@/lib/video/action-decomposer';
 import {
   Conversation,
   ConversationContent,
@@ -64,6 +65,11 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
   const onProjectUpdateRef = useRef(onProjectUpdate);
   onProjectUpdateRef.current = onProjectUpdate;
 
+  // Phase 4 — action-beat decomposition state.
+  const [actionDecomposition, setActionDecomposition] = useState<ActionBeatDecomposition | null>(null);
+  const [decompositionInput, setDecompositionInput] = useState('');
+  const [showDecompositionInput, setShowDecompositionInput] = useState(false);
+
   // C1 — Story Bible image context for auto-attaching character references
   const { entries } = useStoryBible();
   /**
@@ -99,15 +105,33 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
   const shotContextRef = useRef<ShotSceneContextValue | null>(null);
 
   const [seed] = useState<UIMessage[]>(() => seedFromHistory(project));
+  // Phase 4 — per-shot customization overrides sent with each draft request.
+  const shotOptionsRef = useRef<{
+    promptFormOverride?: import('@/types/video').PromptForm | 'auto';
+    customLabel?: string;
+    platformOverride?: import('@/types/video').VideoTargetPlatform;
+  } | null>(null);
+
   const [transport] = useState(
     () =>
       new DefaultChatTransport({
         api: '/api/video-chat',
-        body: () => ({
-          project: projectRef.current,
-          providerConfig: providerRef.current,
-          shotContext: shotContextRef.current ?? undefined,
-        }),
+        body: () => {
+          const p = projectRef.current;
+          const defaults = p.directorDefaults;
+          return {
+            project: p,
+            providerConfig: providerRef.current,
+            shotContext: shotContextRef.current ?? undefined,
+            // Phase 4 — use explicit per-shot options if set, else fall back to director defaults.
+            shotOptions: shotOptionsRef.current ?? (
+              defaults ? {
+                promptFormOverride: defaults.promptFormOverride,
+                platformOverride: defaults.platformOverride,
+              } : undefined
+            ),
+          };
+        },
       })
   );
 
@@ -177,6 +201,10 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         ...(draft.emotion ? { emotion: draft.emotion } : {}),
         ...(draft.shotFunction ? { shotFunction: draft.shotFunction } : {}),
         ...(draft.promptForm ? { promptForm: draft.promptForm } : {}),
+        // Phase 4 — persist shot-level customization overrides
+        ...(draft.promptFormOverride && draft.promptFormOverride !== 'auto' ? { promptFormOverride: draft.promptFormOverride } : {}),
+        ...(draft.customLabel ? { customLabel: draft.customLabel } : {}),
+        ...(draft.platformOverride ? { platformOverride: draft.platformOverride } : {}),
         // Phase D1 — persist scene context on the approved shot
         ...(ctx ? { sceneNumber: ctx.sceneNumber } : {}),
         ...(ctx?.locationId ? { locationId: ctx.locationId } : {}),
@@ -327,6 +355,7 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
                     <ShotDraftCard
                       draft={draft}
                       disabled={streaming || approving}
+                      targetPlatform={projectRef.current.targetPlatform}
                       onApprove={(d) => void handleApprove(d)}
                       onRevise={handleRevise}
                     />
@@ -395,9 +424,140 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
         <ConversationScrollButton />
       </Conversation>
 
-      {/* Explicit next-shot affordance — generation only fires on this click */}
-      {project.shots.length > 0 && (
-        <div className="flex items-center justify-end">
+      {/* Action-beat decomposition panel */}
+      {actionDecomposition && (
+        <div className="rounded-xl border border-brand/25 bg-brand/5 p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-brand/10 text-brand border border-brand/25">
+              <Film className="w-3 h-3" aria-hidden="true" />
+              Action Sequence Breakdown ({actionDecomposition.cells.length} shots)
+            </span>
+            <button
+              type="button"
+              onClick={() => setActionDecomposition(null)}
+              className="p-0.5 rounded text-text-muted hover:text-text-secondary transition-colors"
+              aria-label="Close breakdown"
+            >
+              <X className="w-3 h-3" aria-hidden="true" />
+            </button>
+          </div>
+          <p className="text-[10px] text-text-muted leading-relaxed">
+            Source beat: {actionDecomposition.sourceBeat}
+          </p>
+          <div className="grid gap-1.5 max-h-48 overflow-y-auto scrollbar-thin">
+            {actionDecomposition.cells.map((cell) => (
+              <div key={cell.cellNumber} className="flex items-start gap-2 rounded-lg border border-border bg-surface-card/60 p-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md text-[9px] font-bold bg-brand/10 text-brand border border-brand/25 shrink-0">
+                  {cell.cellNumber}
+                </span>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <p className="text-[9px] font-bold text-text-primary uppercase tracking-wider">{cell.framing}</p>
+                  <p className="text-[10px] text-text-secondary leading-relaxed">{cell.motion}</p>
+                  <p className="text-[9px] text-text-muted">{cell.cameraMove} · {cell.durationSeconds}s</p>
+                </div>
+                {cell.usesIdentityLock && (
+                  <span className="inline-flex items-center px-1 py-0.5 rounded text-[8px] font-bold bg-success/15 text-success border border-success/30 shrink-0">
+                    ID Lock
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                // Send the decomposition to the drafter for sequential drafting
+                const breakdown = actionDecomposition.cells
+                  .map((c) => `Shot ${c.cellNumber}: ${c.framing} — ${c.motion} (${c.durationSeconds}s, ${c.cameraMove})`)
+                  .join('\n');
+                void sendMessage({
+                  text: `Break this into an action sequence. Here's the decomposition I want you to draft shot by shot:\n\n${breakdown}\n\nDraft Shot 1 first. Every shot MUST carry the full identity-lock block — do not assume identity carries from a prior shot.`,
+                });
+                setActionDecomposition(null);
+              }}
+              disabled={streaming || approving}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all',
+                'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985]',
+                (streaming || approving) && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <Clapperboard className="w-3.5 h-3.5" aria-hidden="true" />
+              Draft from Breakdown
+            </button>
+            <button
+              type="button"
+              onClick={() => setActionDecomposition(null)}
+              disabled={streaming || approving}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-surface-muted text-text-secondary border-border hover:border-danger/40 hover:text-danger"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 4 — action-beat decomposition input */}
+      {showDecompositionInput && !actionDecomposition && (
+        <div className="rounded-xl border border-brand/25 bg-brand/5 p-3 space-y-2">
+          <p className="text-[10px] font-bold text-brand">Describe the action beat to decompose</p>
+          <textarea
+            value={decompositionInput}
+            onChange={(e) => setDecompositionInput(e.target.value)}
+            placeholder="e.g. Maya bursts through the door, ducks behind the counter, fires three shots, rolls under the table, and comes up aiming"
+            rows={2}
+            className="w-full px-2.5 py-1.5 rounded-lg text-[11px] font-mono bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 resize-none"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (decompositionInput.trim()) {
+                  const chars = projectRef.current.storyBible?.characters ?? [];
+                  setActionDecomposition(decomposeActionBeat(decompositionInput.trim(), chars));
+                  setDecompositionInput('');
+                  setShowDecompositionInput(false);
+                }
+              }}
+              disabled={!decompositionInput.trim()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Film className="w-3.5 h-3.5" aria-hidden="true" />
+              Decompose
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowDecompositionInput(false); setDecompositionInput(''); }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-surface-muted text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Explicit next-shot affordance + action sequence button */}
+      <div className="flex items-center justify-between">
+        <div>
+          {!showDecompositionInput && !actionDecomposition && (
+            <button
+              type="button"
+              onClick={() => setShowDecompositionInput(true)}
+              disabled={streaming || approving}
+              title="Break an action beat into a reviewable shot-by-shot sequence"
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                'bg-surface-muted text-text-secondary border-border hover:border-accent/40 hover:text-accent',
+                (streaming || approving) && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <Film className="w-3.5 h-3.5" aria-hidden="true" />
+              Break into Action Sequence
+            </button>
+          )}
+        </div>
+        {project.shots.length > 0 && (
           <button
             type="button"
             onClick={handleDraftNext}
@@ -412,8 +572,8 @@ export function ChatThread({ project, providerConfig, onProjectUpdate }: ChatThr
             <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             Draft Next Shot
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* C5 — visible routing note when text-only pre-pass ran */}
       {lastRoutingNote && (

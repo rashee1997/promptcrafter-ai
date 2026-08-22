@@ -336,6 +336,25 @@ export interface VideoShot {
    * or reference-directive). Surfaced as a visible tag on the shot card.
    */
   promptForm?: PromptForm;
+  /**
+   * Phase 4 — director override for the prompt form. When set to a specific
+   * form, the AI's own choice is overridden for this shot only. 'auto' or
+   * absent = let the AI choose (the default behavior).
+   */
+  promptFormOverride?: PromptForm | 'auto';
+  /**
+   * Phase 4 — custom label for minimal-labeled form. When a promptForm
+   * override of 'minimal-labeled' is active, this text is injected as an
+   * additional label the AI should use if relevant (e.g. "Sound cue",
+   * "Match-cut note").
+   */
+  customLabel?: string;
+  /**
+   * Phase 4 — per-shot platform override. Default: inherit the project's
+   * chosen platform. When set, this shot is drafted for the overridden
+   * platform's constraints regardless of the project default.
+   */
+  platformOverride?: VideoTargetPlatform;
 }
 
 /**
@@ -456,6 +475,20 @@ export interface DraftedShot {
    * or reference-directive). Surfaced as a visible tag on the shot card.
    */
   promptForm?: PromptForm;
+  /**
+   * Phase 4 — director override for the prompt form. When set to a specific
+   * form, the AI's own choice is overridden for this shot only. 'auto' or
+   * absent = let the AI choose.
+   */
+  promptFormOverride?: PromptForm | 'auto';
+  /**
+   * Phase 4 — custom label for minimal-labeled form.
+   */
+  customLabel?: string;
+  /**
+   * Phase 4 — per-shot platform override. Default: inherit project platform.
+   */
+  platformOverride?: VideoTargetPlatform;
 }
 
 export interface VideoProject {
@@ -496,6 +529,61 @@ export interface VideoProject {
   scriptDialogue?: ScriptDialogueDraft | null;
   screenplay?: ScreenplayScene[] | null;
   directionPlan?: DirectionPlan | null;
+  /**
+   * Phase 4 — persisted director defaults for shot-level customization.
+   * Once a director sets their usual controls, remember them across sessions.
+   * Optional for backward compatibility: old projects without defaults use
+   * the factory defaults.
+   */
+  directorDefaults?: DirectorDefaults;
+}
+
+/**
+ * Phase 4 — the director's usual shot-level customization settings,
+ * persisted so they carry across sessions and new shots.
+ */
+export interface DirectorDefaults {
+  /** Default prompt form override for new shots ('auto' = let AI choose). */
+  promptFormOverride?: PromptForm | 'auto';
+  /** Default platform override for new shots (absent = inherit project platform). */
+  platformOverride?: VideoTargetPlatform;
+  /** Product Studio — dialect toggles (platforms to skip). */
+  skippedDialects?: VideoTargetPlatform[];
+  /** Product Studio — whether extension beats are enabled for chained sequences. */
+  extensionBeatsEnabled?: boolean;
+}
+
+/**
+ * Phase 4 — action-beat decomposer output. A described action beat is broken
+ * into a reviewable ~16-cell shot breakdown: wide → shoulder-mount → ECU →
+ * hero-pose rhythm, one motion per shot. Surfaced in the chat thread as
+ * "Break this into an action sequence," accepted/edited/discarded before
+ * anything is actually drafted.
+ */
+export interface ActionBeatDecomposition {
+  /** The original described action beat the director submitted. */
+  sourceBeat: string;
+  /** The decomposed shot cells. */
+  cells: ActionBeatCell[];
+}
+
+/**
+ * One cell in the action-beat decomposition grid. Each cell describes
+ * a single shot in the proposed action sequence.
+ */
+export interface ActionBeatCell {
+  /** 1-based sequence number within this decomposition. */
+  cellNumber: number;
+  /** Framing type: wide, shoulder-mount, ECU, hero-pose, etc. */
+  framing: string;
+  /** The single motion/beat for this shot. */
+  motion: string;
+  /** Duration suggestion in seconds. */
+  durationSeconds: number;
+  /** Camera move suggestion. */
+  cameraMove: string;
+  /** Whether this cell uses identity lock (should be ALL in an action sequence). */
+  usesIdentityLock: boolean;
 }
 
 export type ThinkingOrbState =

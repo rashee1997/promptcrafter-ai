@@ -112,6 +112,18 @@ export interface CreativeControls {
   generationMode?: GenerationMode;
   negativeConstraints?: string;
   customVisualNotes?: string;
+  /**
+   * Phase 4 — dialect toggles. Which platform-specific prompt dialects to
+   * include in the output. When absent, all dialects are generated. When set,
+   * only the listed platforms appear in the output payload.
+   */
+  enabledDialects?: VideoPlatformDialect[];
+  /**
+   * Phase 4 — extension beats on/off. When true (or absent for backward
+   * compat), chained multi-beat extension prompts are included. When false,
+   * the output skips the sequential extension beats section.
+   */
+  extensionBeatsEnabled?: boolean;
 }
 
 // ── Multi-Beat Shot Extension & Temporal Chaining ───────────────────────
