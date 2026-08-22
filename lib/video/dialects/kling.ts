@@ -27,6 +27,7 @@ export const KLING_DIALECT = {
 export interface KlingOptions {
   characters?: VideoCharacter[];
   referenceImages?: VideoReferenceImage[];
+  nativeDialogueAudio?: boolean;
 }
 
 /**
@@ -62,6 +63,14 @@ export function formatKlingShot(shot: VideoShot, options?: KlingOptions): string
     lines.push(
       '',
       'VOICE BINDING — no dialogue in this shot; ambience and score carry the beat across cuts.'
+    );
+  }
+
+  // Phase 5 — external voice track routing for non-native-dialogue platforms.
+  if (options?.nativeDialogueAudio === false && shot.dialogue?.length) {
+    lines.push(
+      '',
+      'VOICE TRACK — this platform does not generate dialogue audio natively. Route each line through the external voice pipeline (CharacterVoice → audio generation → lip-sync placement) before the final video render.'
     );
   }
 

@@ -20,6 +20,7 @@ export const VEO_DIALECT = {
 
 export interface VeoOptions {
   referenceImages?: VideoReferenceImage[];
+  nativeDialogueAudio?: boolean;
 }
 
 /** Camera language that implies an explicit camera vector path. */
@@ -70,7 +71,16 @@ export function formatVeoShot(shot: VideoShot, options?: VeoOptions): string {
     ...shotReferenceImages(shot, options?.referenceImages).map(
       (r) => `[Reference image: ${r.characterName}] — image_url: ${r.dataUrl}`
     ),
-  ].filter(Boolean);
+  ];
 
-  return lines.join('\n');
+  // Phase 5 — external voice track routing for non-native-dialogue platforms.
+  if (options?.nativeDialogueAudio === false && shot.dialogue?.length) {
+    lines.push(
+      `[Voice Track] This platform does not generate dialogue audio natively. Route each line through the external voice pipeline (CharacterVoice → audio generation → lip-sync placement) before the final video render.`
+    );
+  }
+
+  const filtered = lines.filter(Boolean);
+
+  return filtered.join('\n');
 }

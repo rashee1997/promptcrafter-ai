@@ -20,6 +20,7 @@ export const seedance: PlatformSpec = {
   durationCeilingSeconds: 30,
   supportsMultiShot: true,
   supportsNativeDialogue: true,
+  nativeDialogueAudio: true,
   dialogueSyntaxNote:
     'Use inline dialogue attribution: Character: "Line text" — Seedance parses speaker names directly from the prompt text.',
   negativePromptConvention: 'dedicated-field',

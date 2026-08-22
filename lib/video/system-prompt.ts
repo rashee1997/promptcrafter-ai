@@ -73,7 +73,7 @@ const OUTPUT_CONTRACT = `OUTPUT CONTRACT (strict):
     "continuityHandoff": "<subject + camera ending state + any scene-condition changes and WHY they changed, so the next shot inherits them instead of reverting>",
     "durationSeconds": <integer __DURATION_RANGE__>,
     "dialogue": [
-      { "speaker": "<exact Story Bible name>", "line": "<short spoken line>", "tone": "<delivery, optional>" }
+      { "speaker": "<exact Story Bible name>", "line": "<short spoken line>", "tone": "<physical delivery direction, REQUIRED — e.g. 'leans forward, eyes narrowing, whispering'>" }
     ],
     "negativePrompt": "<3–5 short comma-separated terms, most-damaging artifact first, or empty string>",
     "emotion": "<the emotion this shot carries, one word or short phrase — e.g. guilt, resolve, quiet dread>",
@@ -95,9 +95,10 @@ const DIALOGUE_RULES = `DIALOGUE RULES (Rule 11):
 - dialogue is a SEPARATE structured field — never write spoken lines inside promptText.
 - Shots containing dialogue MUST be drafted as a single continuous take: write promptText as a single flowing present-tense paragraph (4–8 sentences) without implied internal cuts or perspective switching.
 - Every line's speaker must be an exact Story Bible character name (identity lock) — never invent a speaker.
-- Keep each line short enough to be spoken within this shot's durationSeconds (~2–3 words per second is a safe ceiling); a line that reads longer than the shot will produce rushed or gibberish speech.
+- KEEP EACH LINE SHORT enough to be spoken within this shot's durationSeconds (~2–3 words per second is a safe ceiling); a line that reads longer than the shot will produce rushed or gibberish speech.
+- DELIVERY DIRECTION IS MANDATORY on every dialogue line: the 'tone' field must ALWAYS be populated with a specific physical performance direction — not just an emotion word, but concrete body language, vocal quality, and physical action. Model professional AI-video direction reads: "leans forward, eyes narrowing, whispering", "flat, sarcastic, arms crossed, chin tilted up", "voice breaking, staring at the floor, hands trembling". A bare emotion word ("sad", "angry") is NOT sufficient — translate it into visible physical performance. The voice pipeline uses these directions to generate distinguishable character audio.
 - Leave dialogue as an empty array for a silent shot — do not force dialogue that isn't motivated by the beat.
-- For shots with 2+ speaking characters, make each speaker distinguishable by their locked Story Bible appearance, not just by name, since multi-character scenes are the most common source of crossed/misattributed lines.`;
+- For shots with 2+ speaking characters, make each speaker distinguishable by their locked Story Bible appearance AND by their attached voice (voiceTone + voice notes), not just by name, since multi-character scenes are the most common source of crossed/misattributed lines.`;
 
 const NEGATIVE_PROMPT_RULES = `NEGATIVE PROMPT RULES (Rule 12):
 - negativePrompt is a SEPARATE field — never write "no X" clauses inside promptText.

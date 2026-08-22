@@ -20,6 +20,7 @@ export const pika: PlatformSpec = {
   durationCeilingSeconds: 10,
   supportsMultiShot: false,
   supportsNativeDialogue: false,
+  nativeDialogueAudio: false,
   dialogueSyntaxNote:
     'Pika 2.5 does not generate native dialogue or lip-sync. Write speech as visual action descriptions. For talking-head content, use Pikaformance (talking face model) separately, then add audio.',
   negativePromptConvention: 'inline',

@@ -20,6 +20,7 @@ export const runway: PlatformSpec = {
   durationCeilingSeconds: 10,
   supportsMultiShot: false,
   supportsNativeDialogue: false,
+  nativeDialogueAudio: false,
   dialogueSyntaxNote:
     'Runway Gen-4.5 does not generate native dialogue or lip-sync. Write dialogue as narrative action descriptions: "Character speaks, delivering the line with urgency." For audio, add voiceover in post-production.',
   negativePromptConvention: 'inline',

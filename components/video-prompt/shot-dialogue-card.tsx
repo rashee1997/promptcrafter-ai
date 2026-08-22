@@ -95,9 +95,13 @@ export function ShotDialogueCard({
                         type="text"
                         value={d.tone ?? ''}
                         onChange={(e) => updateLine(i, { tone: e.target.value })}
-                        placeholder="Delivery (optional)"
-                        aria-label={`Delivery tone for dialogue line ${i + 1}`}
-                        className="min-w-0 flex-1 px-2 py-1 rounded-md text-[10px] bg-surface-input border border-border text-text-secondary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow"
+                        placeholder="Delivery direction (required)"
+                        aria-label={`Delivery direction for dialogue line ${i + 1}`}
+                        className={`min-w-0 flex-1 px-2 py-1 rounded-md text-[10px] bg-surface-input border text-text-secondary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow ${
+                          d.tone?.trim()
+                            ? 'border-border'
+                            : 'border-warning/50'
+                        }`}
                       />
                       <button
                         type="button"
@@ -125,10 +129,18 @@ export function ShotDialogueCard({
                     className="w-full px-2 py-1 rounded-md text-xs bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow resize-y scrollbar-thin"
                   />
                 ) : (
-                  <p className="text-xs text-text-primary leading-relaxed">
-                    &ldquo;{d.line}&rdquo;
-                    {d.tone ? <span className="text-text-muted"> — {d.tone}</span> : null}
-                  </p>
+                  <>
+                    <p className="text-xs text-text-primary leading-relaxed">
+                      &ldquo;{d.line}&rdquo;
+                    </p>
+                    {d.tone ? (
+                      <p className="text-[9px] text-accent italic leading-relaxed">— {d.tone}</p>
+                    ) : (
+                      <p className="text-[9px] text-warning font-semibold">
+                        No delivery direction — add a physical performance cue (e.g. &quot;whispering, leaning forward&quot;)
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {tooLong && (

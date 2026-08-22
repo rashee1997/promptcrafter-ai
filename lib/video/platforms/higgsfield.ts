@@ -21,6 +21,7 @@ export const higgsfield: PlatformSpec = {
   durationCeilingSeconds: 30,
   supportsMultiShot: false,
   supportsNativeDialogue: false,
+  nativeDialogueAudio: false,
   dialogueSyntaxNote:
     'Dialogue support depends on the underlying model. Use narrative prose for the prompt; the Soul ID engine binds character identity, and the underlying model handles audio generation if supported.',
   negativePromptConvention: 'dedicated-field',

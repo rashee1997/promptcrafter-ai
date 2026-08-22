@@ -20,6 +20,7 @@ export const luma: PlatformSpec = {
   durationCeilingSeconds: 10,
   supportsMultiShot: false,
   supportsNativeDialogue: false,
+  nativeDialogueAudio: false,
   dialogueSyntaxNote:
     'Luma Ray3 does not generate native dialogue or lip-sync. Write speech as visual action descriptions. For character-driven scenes, describe the character\'s expression and movement that conveys speech, then add audio in post.',
   negativePromptConvention: 'inline',

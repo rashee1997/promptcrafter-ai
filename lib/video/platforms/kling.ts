@@ -21,6 +21,7 @@ export const kling: PlatformSpec = {
   durationCeilingSeconds: 15,
   supportsMultiShot: true,
   supportsNativeDialogue: true,
+  nativeDialogueAudio: true,
   dialogueSyntaxNote:
     'Use Kling\'s native bracket format: [Character: role, tone]: "Line" — bind each line to an exact Story Bible character name for correct lip-sync assignment.',
   negativePromptConvention: 'dedicated-field',

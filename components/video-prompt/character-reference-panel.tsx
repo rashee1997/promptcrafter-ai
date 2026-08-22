@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Check, Copy, ImagePlus, Info, RefreshCw, Star, Trash2 } from 'lucide-react';
-import type { VideoCharacter, CharacterImageAnalysis } from '@/types/video';
+import { Check, Copy, ImagePlus, Info, Mic, RefreshCw, Star, Trash2 } from 'lucide-react';
+import type { VideoCharacter, CharacterImageAnalysis, CharacterVoice } from '@/types/video';
 import { blobToDataUrl, compressToWebP } from '@/lib/compression';
 import { useStoryBible } from '@/lib/video/story-bible-context';
 import { useInlineCopy } from '@/lib/use-inline-copy';
@@ -20,6 +20,8 @@ interface CharacterReferencePanelProps {
   onRegeneratePrompt: () => Promise<void>;
   /** Persists a manually-edited imagePrompt on the character. */
   onEditPrompt: (text: string) => void;
+  /** Persists a voice update on the character. */
+  onEditVoice?: (voice: CharacterVoice | undefined) => void;
   /** Called when vision analysis completes — auto-fills appearance fields. */
   onAnalysisComplete?: (analysis: CharacterImageAnalysis) => void;
 }
@@ -39,6 +41,7 @@ export function CharacterReferencePanel({
   busy = false,
   onRegeneratePrompt,
   onEditPrompt,
+  onEditVoice,
   onAnalysisComplete,
 }: CharacterReferencePanelProps) {
   const { entries, saveCharacterImage, deleteCharacterImage, setPrimaryCharacterImage } = useStoryBible();
@@ -47,6 +50,7 @@ export function CharacterReferencePanel({
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [voiceTab, setVoiceTab] = useState<'image' | 'voice'>('image');
 
   const saved = entries
     .filter((e) => e.characterId === character.id)
@@ -116,8 +120,57 @@ export function CharacterReferencePanel({
     }
   };
 
+  // Voice state helpers
+  const voice = character.voice;
+  const updateVoice = (patch: Partial<CharacterVoice>) => {
+    if (!onEditVoice) return;
+    const next: CharacterVoice = {
+      id: voice?.id || `voice-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      provider: voice?.provider || 'platform-native',
+      toneNotes: voice?.toneNotes || '',
+      ...voice,
+      ...patch,
+    };
+    onEditVoice(next);
+  };
+  const clearVoice = () => {
+    onEditVoice?.(undefined);
+  };
+
   return (
     <div className="space-y-2.5">
+      {/* Tab bar — Image / Voice */}
+      <div className="flex items-center rounded-lg border border-border bg-surface-muted/60 p-0.5" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={voiceTab === 'image'}
+          onClick={() => setVoiceTab('image')}
+          className={`flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-semibold transition-colors ${
+            voiceTab === 'image'
+              ? 'bg-surface-card text-brand border border-brand/25 shadow-sm'
+              : 'text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          <ImagePlus className="w-3 h-3" aria-hidden="true" />
+          Image
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={voiceTab === 'voice'}
+          onClick={() => setVoiceTab('voice')}
+          className={`flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-semibold transition-colors ${
+            voiceTab === 'voice'
+              ? 'bg-surface-card text-brand border border-brand/25 shadow-sm'
+              : 'text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          <Mic className="w-3 h-3" aria-hidden="true" />
+          Voice
+          {voice && <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-brand inline-block" title="Voice configured" />}
+        </button>
+      </div>
       {/* Image prompt — editable + AI regenerate loop */}
       <div className="rounded-xl border border-border bg-surface-code p-2.5 space-y-1.5">
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -221,6 +274,155 @@ export function CharacterReferencePanel({
           )}
         </label>
       </div>
+
+      {/* ═══ VOICE TAB ═══ */}
+      {voiceTab === 'voice' && (
+        <div className="space-y-2.5">
+          {/* Voice provider selector */}
+          <div className="rounded-xl border border-border bg-surface-code p-2.5 space-y-2">
+            <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+              Voice source
+            </label>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => updateVoice({ provider: 'platform-native' })}
+                className={`flex-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${
+                  (voice?.provider || 'platform-native') === 'platform-native'
+                    ? 'bg-brand/10 text-brand border-brand/30'
+                    : 'bg-surface-muted text-text-secondary border-border hover:border-brand/30'
+                }`}
+              >
+                Platform native
+              </button>
+              <button
+                type="button"
+                onClick={() => updateVoice({ provider: 'elevenlabs' })}
+                className={`flex-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${
+                  voice?.provider === 'elevenlabs'
+                    ? 'bg-brand/10 text-brand border-brand/30'
+                    : 'bg-surface-muted text-text-secondary border-border hover:border-brand/30'
+                }`}
+              >
+                ElevenLabs
+              </button>
+            </div>
+          </div>
+
+          {/* Tone notes — always visible */}
+          <div className="rounded-xl border border-border bg-surface-code p-2.5 space-y-1.5">
+            <label
+              htmlFor={`char-voice-${character.id}-tone-notes`}
+              className="text-[9px] font-bold uppercase tracking-wider text-text-muted"
+            >
+              Tone notes
+            </label>
+            <textarea
+              id={`char-voice-${character.id}-tone-notes`}
+              value={voice?.toneNotes ?? character.voiceTone ?? ''}
+              onChange={(e) => updateVoice({ toneNotes: e.target.value })}
+              rows={2}
+              placeholder="Rich delivery notes: gravelly baritone, measured pace, slight rasp on consonants"
+              className="w-full px-2.5 py-1.5 rounded-lg text-[10px] leading-relaxed font-mono bg-surface-input border border-border text-text-secondary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow resize-y scrollbar-thin"
+            />
+            <p className="text-[9px] text-text-muted leading-relaxed">
+              Describe the voice quality, pacing, accent, and emotional register — the voice pipeline uses these
+              as delivery instructions when generating audio, and the drafting AI references them for
+              character-distinguishable dialogue.
+            </p>
+          </div>
+
+          {/* ElevenLabs voice id (only when provider is elevenlabs) */}
+          {voice?.provider === 'elevenlabs' && (
+            <div className="rounded-xl border border-border bg-surface-code p-2.5 space-y-1.5">
+              <label
+                htmlFor={`char-voice-${character.id}-voice-id`}
+                className="text-[9px] font-bold uppercase tracking-wider text-text-muted"
+              >
+                Voice ID
+              </label>
+              <input
+                id={`char-voice-${character.id}-voice-id`}
+                type="text"
+                value={voice?.voiceId ?? ''}
+                onChange={(e) => updateVoice({ voiceId: e.target.value })}
+                placeholder="ElevenLabs voice ID (e.g. pNInz6obpgDQGcFmaJgB)"
+                className="w-full px-2.5 py-1.5 rounded-lg text-[10px] font-mono bg-surface-input border border-border text-text-secondary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow"
+              />
+              <p className="text-[9px] text-text-muted leading-relaxed">
+                Paste the voice ID from your ElevenLabs voice library. Leave empty to use tone-notes-only mode.
+              </p>
+            </div>
+          )}
+
+          {/* Reference audio placeholder (upload-to-clone) */}
+          <div className="rounded-xl border border-border bg-surface-code p-2.5 space-y-1.5">
+            <label className="text-[9px] font-bold uppercase tracking-wider text-text-muted">
+              Reference audio (optional)
+            </label>
+            {voice?.referenceAudioId ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-text-secondary font-mono truncate">
+                  Audio ref: {voice.referenceAudioId}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => updateVoice({ referenceAudioId: undefined })}
+                  className="text-[9px] text-danger hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-surface-muted/40 px-3 py-2.5 text-center">
+                <Mic className="w-4 h-4 text-accent" aria-hidden="true" />
+                <span className="text-[10px] text-text-muted">
+                  Upload a voice sample to clone (audio file)
+                </span>
+                <span className="text-[9px] text-text-muted/60">
+                  Optional — tone notes alone are enough for the pipeline
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Clear voice button */}
+          {voice && (
+            <button
+              type="button"
+              onClick={clearVoice}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border border-dashed border-danger/30 text-danger/70 hover:border-danger/50 hover:text-danger transition-colors"
+            >
+              <Trash2 className="w-3 h-3" aria-hidden="true" />
+              Remove voice
+            </button>
+          )}
+
+          {/* Voice guidance */}
+          <div className="rounded-xl border border-brand/15 bg-brand/5 p-2.5 space-y-1">
+            <div className="flex items-start gap-1.5">
+              <Info className="w-3 h-3 text-brand mt-0.5 shrink-0" aria-hidden="true" />
+              <div className="space-y-1">
+                <p className="text-[9px] font-semibold text-brand">Voice & dialogue tips</p>
+                <ul className="text-[9px] text-text-muted leading-relaxed space-y-0.5 list-disc list-inside">
+                  <li>
+                    <strong className="text-text-secondary">Platform-native</strong> relies on the target video model&apos;s built-in dialogue audio
+                    (Veo 3.1, Kling 3.0, Seedance 2.5). No external voice service needed.
+                  </li>
+                  <li>
+                    <strong className="text-text-secondary">ElevenLabs</strong> generates a separate voice track for non-native platforms
+                    (Runway, Luma, Pika, Higgsfield). The pipeline prepares the audio spec; you sync it in post.
+                  </li>
+                  <li>
+                    Rich <strong className="text-text-secondary">tone notes</strong> make two characters audibly distinguishable — describe
+                    pitch, pace, accent, and emotional register, not just &quot;deep voice&quot;.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* C6 — Reference image guidance hints */}
       <div className="rounded-xl border border-brand/15 bg-brand/5 p-2.5 space-y-1">

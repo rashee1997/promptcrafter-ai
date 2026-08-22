@@ -33,6 +33,14 @@ export interface PlatformSpec {
   supportsMultiShot: boolean;
   supportsNativeDialogue: boolean;
   /**
+   * Phase 5 — whether this platform generates its own dialogue audio
+   * inline. When true, dialogue audio is baked into the video model's
+   * output (no external voice pipeline needed). When false, each
+   * dialogue line should be routed through the external voice pipeline
+   * to produce a separate audio + lip-sync package.
+   */
+  nativeDialogueAudio: boolean;
+  /**
    * Exact dialogue / negative-prompt syntax for this platform, shown to the
    * drafting AI so it uses the right format instead of a generic one.
    */
@@ -160,6 +168,31 @@ export interface CharacterWardrobeLook {
   referenceImageId?: string;  // optional look-specific image (StoryBibleCharacterImage.id)
 }
 
+/**
+ * Phase 5 — voice asset attached to a character, mirroring how character
+ * images anchor visual identity. The voice is a Story Bible asset: it
+ * travels with the character across shots and into the external voice
+ * pipeline when the target platform lacks native dialogue audio.
+ */
+export interface CharacterVoice {
+  id: string;
+  /**
+   * Where this voice comes from. 'elevenlabs' = external voice-cloning
+   * service; 'platform-native' = the director is relying on the target
+   * platform's built-in voice generation (toneNotes only, no audio ref).
+   */
+  provider: 'elevenlabs' | 'platform-native';
+  /** ElevenLabs voice id or equivalent service-side identifier. */
+  voiceId?: string;
+  /** Rich free-text delivery notes — always present, even without an audio ref. */
+  toneNotes: string;
+  /**
+   * Story Bible image id for a reference audio sample (upload-to-clone
+   * flow). Optional — voice can exist as toneNotes only.
+   */
+  referenceAudioId?: string;
+}
+
 export interface VideoCharacter {
   id: string;
   name: string;
@@ -167,6 +200,13 @@ export interface VideoCharacter {
   appearance: string;
   wardrobe: string;
   voiceTone: string;
+  /**
+   * Phase 5 — structured voice asset. Optional so characters persisted
+   * before Phase 5 stay fully readable. When present, the external voice
+   * pipeline uses this to generate per-line audio; when absent, the
+   * pipeline falls back to the plain voiceTone string.
+   */
+  voice?: CharacterVoice;
   /**
    * Wardrobe variants — selectable per shot. Identity (face/build) stays
    * locked to the character's reference image; only clothing changes.
@@ -367,7 +407,13 @@ export interface DialogueLine {
   speaker: string;
   /** The exact words spoken, short enough to fit the clip's durationSeconds. */
   line: string;
-  /** Optional delivery direction, e.g. "urgent whisper", "flat, sarcastic". */
+  /**
+   * Delivery direction — how the line is performed, not just what is
+   * said. Phase 5 makes this consistently populated: "leans forward,
+   * eyes narrowing, whispering" or "flat, sarcastic, arms crossed".
+   * Optional for backward compat with pre-Phase-5 persisted shots, but
+   * the drafting AI is now instructed to always include it.
+   */
   tone?: string;
 }
 

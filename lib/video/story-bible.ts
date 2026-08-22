@@ -40,7 +40,7 @@ export function buildStoryBibleDigest(bible: StoryBible): string {
       `CAST:\n${bible.characters
         .map(
           (c) =>
-            `- ${c.name} (${clip(c.role, 80)}) — appearance: ${clip(c.appearance, 240)}; wardrobe: ${clip(c.wardrobe, 240)}; voice tone: ${clip(c.voiceTone, 120)}`
+            `- ${c.name} (${clip(c.role, 80)}) — appearance: ${clip(c.appearance, 240)}; wardrobe: ${clip(c.wardrobe, 240)}; voice tone: ${clip(c.voiceTone, 120)}${c.voice ? `; voice profile: ${c.voice.provider}${c.voice.toneNotes ? ` (${clip(c.voice.toneNotes, 120)})` : ''}` : ''}`
         )
         .join('\n')}`
     );
@@ -318,7 +318,7 @@ export function buildSceneScopedBibleDigest(
       `CAST IN THIS SCENE (full detail):\n${presentChars
         .map(
           (c) =>
-            `- ${c.name} (${clip(c.role, 80)}) — appearance: ${clip(c.appearance, 240)}; wardrobe: ${clip(c.wardrobe, 240)}; voice tone: ${clip(c.voiceTone, 120)}`
+            `- ${c.name} (${clip(c.role, 80)}) — appearance: ${clip(c.appearance, 240)}; wardrobe: ${clip(c.wardrobe, 240)}; voice tone: ${clip(c.voiceTone, 120)}${c.voice ? `; voice profile: ${c.voice.provider}${c.voice.toneNotes ? ` (${clip(c.voice.toneNotes, 120)})` : ''}` : ''}`
         )
         .join('\n')}`
     );

@@ -356,6 +356,7 @@ export function SidebarCharactersPanel({ project, provider, onUpdate }: SidebarC
                     character={editing}
                     projectId={project.id}
                     onEditPrompt={(text) => setEditing((prev) => (prev ? { ...prev, imagePrompt: text } : prev))}
+                    onEditVoice={(voice) => setEditing((prev) => (prev ? { ...prev, voice } : prev))}
                     onRegeneratePrompt={async () => {
                       await handleRegenerateImagePrompt();
                     }}

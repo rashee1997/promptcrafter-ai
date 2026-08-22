@@ -25,6 +25,13 @@ export interface DialectFormatOptions {
    * reference-image parameter (image_url / reference images).
    */
   referenceImages?: VideoReferenceImage[];
+  /**
+   * Phase 5 — when false, the target platform lacks native dialogue audio
+   * and an external voice track is needed. Adapters add a VOICE TRACK
+   * routing note to the exported prompt. When true (or absent), dialogue
+   * audio is baked into the video model's output.
+   */
+  nativeDialogueAudio?: boolean;
 }
 
 /** Registry — universal (the stored source of truth) first, then the four target dialects. */
@@ -56,6 +63,16 @@ export function formatShotForDialect(
       return formatSeedanceShot(shot, options);
     case 'universal':
     default:
+      // Phase 5 — universal dialect also surfaces the voice-track note
+      // when the platform lacks native dialogue audio, so the director
+      // sees the routing requirement even in the source-of-truth view.
+      if (options?.nativeDialogueAudio === false && shot.dialogue?.length) {
+        return [
+          shot.promptText?.trim() || '',
+          '',
+          'VOICE TRACK — this platform does not generate dialogue audio natively. Route each line through the external voice pipeline (CharacterVoice → audio generation → lip-sync placement) before the final video render.',
+        ].join('\n');
+      }
       return shot.promptText?.trim() || '';
   }
 }

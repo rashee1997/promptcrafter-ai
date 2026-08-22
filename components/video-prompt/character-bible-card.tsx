@@ -105,6 +105,7 @@ export function CharacterBibleCard({
           projectId={projectId}
           busy={busy}
           onEditPrompt={(text) => onChange({ imagePrompt: text })}
+          onEditVoice={(voice) => onChange({ voice })}
           onRegeneratePrompt={async () => {
             const next = await onRegenerateImagePrompt(character);
             if (next) onChange({ imagePrompt: next });
@@ -166,6 +167,7 @@ export function CharacterBibleCard({
         projectId={projectId}
         busy={busy}
         onEditPrompt={(text) => onChange({ imagePrompt: text })}
+        onEditVoice={(voice) => onChange({ voice })}
         onRegeneratePrompt={async () => {
           const next = await onRegenerateImagePrompt(character);
           if (next) onChange({ imagePrompt: next });

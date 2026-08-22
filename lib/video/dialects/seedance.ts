@@ -21,6 +21,7 @@ export const SEEDANCE_DIALECT = {
 
 export interface SeedanceOptions {
   referenceImages?: VideoReferenceImage[];
+  nativeDialogueAudio?: boolean;
 }
 
 /**
@@ -65,6 +66,13 @@ export function formatSeedanceShot(shot: VideoShot, options?: SeedanceOptions): 
   const handoff = shot.continuityHandoff?.trim();
   if (handoff) {
     lines.push(`CONTINUITY — ${handoff}`);
+  }
+
+  // Phase 5 — external voice track routing for non-native-dialogue platforms.
+  if (options?.nativeDialogueAudio === false && shot.dialogue?.length) {
+    lines.push(
+      `VOICE TRACK — this platform does not generate dialogue audio natively. Route each line through the external voice pipeline (CharacterVoice → audio generation → lip-sync placement) before the final video render.`
+    );
   }
 
   return lines.join('\n');

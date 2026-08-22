@@ -19,6 +19,7 @@ export const veo: PlatformSpec = {
   durationCeilingSeconds: 8,
   supportsMultiShot: false,
   supportsNativeDialogue: true,
+  nativeDialogueAudio: true,
   dialogueSyntaxNote:
     'Use colon format: "Speaker says: line" — no quotes around the line text. Colons avoid Veo\'s baked-in subtitle failure mode. Never use bracket dialogue syntax.',
   negativePromptConvention: 'dedicated-field',
