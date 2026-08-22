@@ -11,6 +11,10 @@ import { BootstrapFlow } from './bootstrap-flow';
 import { Sidebar } from './sidebar';
 import { ChatThread } from './chat-thread';
 import { ShotList } from './shot-list';
+import { SequenceTimeline } from './sequence-timeline';
+import { PacingGraph } from './pacing-graph';
+import { MusicBriefPanel } from './music-brief-panel';
+import { AssemblyExport } from './assembly-export';
 
 interface ProjectWorkspaceProps {
   project: VideoProject;
@@ -87,6 +91,12 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
               />
               {/* Phase 5 — dialect-ready storyboard under the chat column */}
               <ShotList project={project} onUpdate={onUpdate} />
+
+              {/* Phase 7 — timeline assembly & post-production prep */}
+              <SequenceTimeline project={project} onUpdate={onUpdate} />
+              <PacingGraph project={project} />
+              <MusicBriefPanel project={project} />
+              <AssemblyExport project={project} />
             </div>
           </div>
         </div>
