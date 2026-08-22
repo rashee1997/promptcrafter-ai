@@ -167,7 +167,7 @@ export function buildProductShootUserMessage(
   const parts: string[] = [
     `PRODUCT NAME: ${brief.name}`,
     brief.category ? `CATEGORY: ${brief.category}` : '',
-    `WHAT IT DOES / DESCRIPTION: ${brief.description}`,
+    `PRODUCT DESCRIPTION (write around this — translate facts into sensory detail, not a spec sheet): ${brief.description}`,
     `KEY SELLING POINT: ${brief.sellingPoint}`,
   ];
 
@@ -181,7 +181,7 @@ export function buildProductShootUserMessage(
   parts.push(
     '',
     'REFERENCE IMAGE ANCHOR:',
-    'The product reference image is attached above. It is the inviolable source of truth for the product geometry, logo, color, and packaging.'
+    'The product reference image is attached above. It is the inviolable source of truth for the product geometry, logo, color, and packaging. When describing the product in prose, write vividly — texture, light play, material weight — not as a bullet list of features.'
   );
 
   if (recipe) {

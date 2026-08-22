@@ -16,8 +16,14 @@ export const charactersSchema = z.object({
         role: z.string().describe('Role in the story, e.g. "the getaway driver"'),
         appearance: z
           .string()
-          .describe('Fixed visual appearance: age, build, face, hair, distinguishing marks'),
-        wardrobe: z.string().describe('Fixed wardrobe: clothing, colors, textures, accessories'),
+          .describe(
+            'Vivid, specific physical description — write it the way a director would describe someone to a cinematographer, not a checklist. Weave age/build/face/hair into a sentence or two as concrete sensory detail. Example register: "a wiry man in his late fifties, sun-cracked hands, a permanent squint from decades on fishing boats" — not "58, thin build, weathered face."'
+          ),
+        wardrobe: z
+          .string()
+          .describe(
+            'Specific enough to visualize, not a category list. "A cropped red denim jacket with tarnished silver buttons" beats "red jacket." Include texture and condition — it carries story information.'
+          ),
         voiceTone: z.string().describe('Voice/vocal tone for audio continuity'),
         narrativeDescription: z
           .string()
@@ -44,7 +50,7 @@ export interface GenerateCharactersArgs {
   previous?: VideoCharacter[] | null;
 }
 
-const SYSTEM = `You are a casting director for a short-form video production. You extract the people who must appear, then propose any missing supporting characters the script implies. Every character gets a FIXED visual appearance and wardrobe so the story bible can lock continuity — describe them the same way every time, as if writing a character sheet for a VFX team.
+const SYSTEM = `You are a casting director for a short-form video production. You extract the people who must appear, then propose any missing supporting characters the script implies. Every character gets a FIXED visual appearance and wardrobe so the story bible can lock continuity — repeat the same description verbatim across every shot. Precision and vividness are not in tension: "sun-cracked hands" is both more specific AND more alive than "weathered." Write people the way a novelist would, not the way a police report would.
 
 IMAGE PROMPT RULE — every character must also carry an \`imagePrompt\` for EXTERNAL image models (Midjourney, Imagen UI, …). Build it EXACTLY in this structure:
 \"[Subject details]. 360-degree character sheet turnaround: front view, side profile view, back view, and extreme face close-up. [Style]. Pure white background. Empty hands, no props. 4K resolution.\"
