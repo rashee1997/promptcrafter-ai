@@ -165,7 +165,7 @@ function streamOpenAIRedo(
   refImages: NonNullable<ImagePromptRedoRequest['input']['referenceImages']>,
   hasRefImages: boolean,
 ): Promise<Response> {
-  const openAIUserContent: string | Array<Record<string, unknown>> = hasRefImages
+  const openAIUserContent: any = hasRefImages
     ? [
         { type: 'text', text: userMessage },
         ...refImages.map((img) => ({
