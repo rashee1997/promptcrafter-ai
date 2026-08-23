@@ -79,6 +79,109 @@ function CopyButton({
   );
 }
 
+// ── Script assembly helpers ───────────────────────────────────────────────
+
+function formatAudioDesign(audio: import('@/lib/product-shoot/types').AudioDesignPackage): string {
+  const lines: string[] = [];
+  if (audio.foleyPrompts.length > 0) {
+    lines.push('Foley Prompts:', ...audio.foleyPrompts.map((p) => `  • ${p}`), '');
+  }
+  if (audio.soundscapeBed) {
+    lines.push(`Soundscape Bed: ${audio.soundscapeBed}`, '');
+  }
+  if (audio.musicScore) {
+    lines.push(`Music Score: ${audio.musicScore}`);
+  }
+  return lines.join('\n').trim();
+}
+
+function formatAdStrategy(ad: import('@/lib/product-shoot/types').AdStrategyPackage): string {
+  const lines: string[] = [];
+  if (ad.smp) lines.push(`SMP: "${ad.smp}"`, '');
+  if (ad.voiceoverScript) lines.push(`Voiceover Script:\n${ad.voiceoverScript}`, '');
+  const { hook, benefit, cta } = ad.onScreenCaptions;
+  lines.push(`On-Screen Text (OST):\n  0–3s Hook: ${hook}\n  3–7s Value: ${benefit}\n  7–10s CTA: ${cta}`);
+  return lines.join('\n').trim();
+}
+
+function buildFullPlatformScript(
+  platformName: string,
+  visualPrompt: string,
+  sections: import('@/lib/product-shoot/types').ProductShootSections,
+): string {
+  const parts: string[] = [
+    `=== ${platformName.toUpperCase()} — FULL PRODUCTION SCRIPT ===`,
+    '',
+    '[VISUAL PROMPT]',
+    visualPrompt,
+    '',
+  ];
+
+  if (sections.negativePrompt) {
+    parts.push('[NEGATIVE PROMPT]', sections.negativePrompt, '');
+  }
+  if (sections.audioDesign) {
+    parts.push('[AUDIO & FOLEY]', formatAudioDesign(sections.audioDesign), '');
+  }
+  if (sections.adStrategy) {
+    parts.push('[AD COPY / ON-SCREEN TEXT]', formatAdStrategy(sections.adStrategy), '');
+  }
+
+  // Remove trailing blank line
+  while (parts[parts.length - 1] === '') parts.pop();
+  return parts.join('\n');
+}
+
+function buildShotScript(shot: import('@/lib/product-shoot/types').CampaignShot): string {
+  return [
+    `--- SHOT ${shot.shotNumber}: ${shot.title.toUpperCase()} (${shot.durationSeconds}s) ---`,
+    `[VISUAL] ${shot.prompt}`,
+    `[AUDIO CUE] ${shot.foleyCue}`,
+    `[ON-SCREEN TEXT] ${shot.onScreenText}`,
+  ].join('\n');
+}
+
+function buildFullCampaignScript(
+  campaign: import('@/lib/product-shoot/types').ThreeShotCampaign,
+): string {
+  const shots = [
+    campaign.shot1Hook,
+    campaign.shot2SensoryDemo,
+    campaign.shot3BrandCta,
+  ];
+  const parts: string[] = ['=== 3-SHOT COMMERCIAL — FULL SCRIPT ===', ''];
+  shots.forEach((shot) => {
+    parts.push(buildShotScript(shot), '');
+  });
+  while (parts[parts.length - 1] === '') parts.pop();
+  return parts.join('\n');
+}
+
+function buildBeatScript(beat: import('@/lib/product-shoot/types').ExtensionBeat): string {
+  return [
+    `--- BEAT ${beat.beatNumber}: ${beat.beatTitle.toUpperCase()} [${beat.timecodeRange}] ---`,
+    `[EXTENSION PROMPT] ${beat.extensionPrompt}`,
+    `[CONTINUITY ANCHOR] ${beat.continuityAnchor}`,
+    `[MODEL WORKFLOW] ${beat.modelInstruction}`,
+  ].join('\n');
+}
+
+function buildFullExtensionSequence(
+  pkg: import('@/lib/product-shoot/types').ChainedExtensionPackage,
+): string {
+  const parts: string[] = [
+    `=== SEQUENTIAL CLIP EXTENSIONS — FULL SEQUENCE (${pkg.totalDurationSeconds}s) ===`,
+    '',
+  ];
+  pkg.beats.forEach((beat) => {
+    parts.push(buildBeatScript(beat), '');
+  });
+  while (parts[parts.length - 1] === '') parts.pop();
+  return parts.join('\n');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function OutputPanel({
   output,
   isGenerating,
@@ -189,8 +292,8 @@ export function OutputPanel({
               </button>
             )}
 
-            {/* Copy all */}
-            <CopyButton text={output} label="Copy All" />
+            {/* Copy full generation (raw) */}
+            <CopyButton text={output} label="Copy Full Generation" />
           </div>
         )}
       </div>
@@ -411,7 +514,15 @@ export function OutputPanel({
                             <span className="text-[10px] font-mono text-text-muted">
                               {card.prompt?.length || 0} chars
                             </span>
-                            <CopyButton text={card.prompt || ''} />
+                            <CopyButton text={card.prompt || ''} label="Copy Prompt" compact />
+                            <CopyButton
+                              text={buildFullPlatformScript(
+                                meta?.name || card.title,
+                                card.prompt || '',
+                                sections,
+                              )}
+                              label="Copy Full Script"
+                            />
                           </div>
                         </div>
 
@@ -538,6 +649,14 @@ export function OutputPanel({
                   {/* 3-Shot Campaign Storyboard Tab */}
                   {activeTab === 'campaign' && sections.threeShotCampaign && (
                     <div className="space-y-4">
+                      {/* Campaign-level copy */}
+                      <div className="flex justify-end">
+                        <CopyButton
+                          text={buildFullCampaignScript(sections.threeShotCampaign)}
+                          label="Copy Entire 3-Shot Script"
+                        />
+                      </div>
+
                       {[
                         sections.threeShotCampaign.shot1Hook,
                         sections.threeShotCampaign.shot2SensoryDemo,
@@ -556,7 +675,13 @@ export function OutputPanel({
                                 {shot.goal}
                               </span>
                             </div>
-                            <CopyButton text={shot.prompt} compact />
+                            <div className="flex items-center gap-2">
+                              <CopyButton text={shot.prompt} label="Copy Prompt" compact />
+                              <CopyButton
+                                text={buildShotScript(shot)}
+                                label={`Copy Shot ${shot.shotNumber} Script`}
+                              />
+                            </div>
                           </div>
 
                           <div className="rounded-xl bg-surface-code border border-border p-3">
@@ -585,11 +710,17 @@ export function OutputPanel({
                     <div className="space-y-4">
                       {/* Explanatory Banner */}
                       <div className="rounded-2xl border border-brand/25 bg-brand/5 p-4 space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <Timer className="w-4 h-4 text-brand" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-brand">
-                            Multi-Beat Temporal Chaining (Cross-Clip Continuity)
-                          </h3>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Timer className="w-4 h-4 text-brand" />
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-brand">
+                              Multi-Beat Temporal Chaining (Cross-Clip Continuity)
+                            </h3>
+                          </div>
+                          <CopyButton
+                            text={buildFullExtensionSequence(sections.chainedExtensions)}
+                            label="Copy Entire Sequence"
+                          />
                         </div>
                         <p className="text-xs text-text-secondary leading-relaxed">
                           Video models (Runway, Kling, Luma, Veo) enforce 5s–10s limits. Use these sequential prompts with explicit last-frame anchors to chain continuous camera movement and fluid action without morphing or hallucinations.
@@ -609,7 +740,13 @@ export function OutputPanel({
                                   Beat {beat.beatNumber}: {beat.beatTitle}
                                 </h4>
                               </div>
-                              <CopyButton text={beat.extensionPrompt} compact />
+                              <div className="flex items-center gap-2">
+                                <CopyButton text={beat.extensionPrompt} label="Copy Prompt" compact />
+                                <CopyButton
+                                  text={buildBeatScript(beat)}
+                                  label={`Copy Beat ${beat.beatNumber} Script`}
+                                />
+                              </div>
                             </div>
 
                             <div className="rounded-xl bg-surface-code border border-border p-3">
