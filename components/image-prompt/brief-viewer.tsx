@@ -174,6 +174,11 @@ export function BriefViewer({
     setEditInstruction('');
   };
 
+  const buildPlatformWithNegative = (cardLabel: string, prompt: string, negative?: string) =>
+    negative
+      ? `## ${cardLabel}\n\n${prompt}\n\n## NEGATIVE PROMPT\n\n${negative}`
+      : prompt;
+
   const renderCard = (key: keyof ImagePromptSections, label: string) => {
     const content = sections[key] ?? '';
     const prevContent = previousSections?.[key] ?? '';
@@ -282,6 +287,33 @@ export function BriefViewer({
               {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
               {copied ? 'Copied' : 'Copy'}
             </button>
+
+            {/* Copy with Negative */}
+            {sections.negative && key !== 'negative' && key !== 'json' && key !== 'research' && (
+              <button
+                type="button"
+                onClick={() =>
+                  copy(
+                    buildPlatformWithNegative(label, content, sections.negative),
+                    `${String(key)}-neg`
+                  )
+                }
+                aria-label={`Copy ${label} prompt with negative prompt`}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all active:scale-[0.97]',
+                  copiedKey === `${String(key)}-neg`
+                    ? 'bg-success/10 border-success/40 text-success'
+                    : 'bg-surface-card border-border text-text-secondary hover:text-brand hover:border-brand/40'
+                )}
+              >
+                {copiedKey === `${String(key)}-neg` ? (
+                  <Check className="w-3 h-3" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+                {copiedKey === `${String(key)}-neg` ? 'Copied + Neg' : 'Copy with Negative'}
+              </button>
+            )}
           </div>
         </div>
 
