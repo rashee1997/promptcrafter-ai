@@ -133,7 +133,7 @@ export function SceneRecipePicker({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-1 @sm:grid-cols-2 @xl:grid-cols-3 gap-2.5">
         {/* Surprise Me card */}
         <motion.button
           type="button"

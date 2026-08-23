@@ -324,7 +324,7 @@ export function ProductShootStudio({
       {/* Main Two-Column Studio Layout */}
       <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-24">
         {/* Left column — Form & Controls (independent scroll context, mirrors right column) */}
-        <div className="w-full lg:col-span-5 xl:col-span-5 min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto no-scrollbar scroll-smooth space-y-5">
+        <div className="@container w-full lg:col-span-5 xl:col-span-5 min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto no-scrollbar scroll-smooth space-y-5">
           {/* 1. Product Reference Upload */}
           <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-4 sm:p-5 shadow-sm">
             <ProductUploadPanel images={images} onImagesChange={setImages} />

@@ -125,7 +125,7 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
             <div id="panel-story-bible" role="tabpanel" aria-labelledby="tab-story-bible">
               <div className="grid gap-5 lg:grid-cols-[minmax(220px,26%)_minmax(0,1fr)] items-start">
                 <Sidebar project={project} provider={provider} onUpdate={onUpdate} />
-                <div className="space-y-4 min-w-0">
+                <div className="@container space-y-4 min-w-0">
                   {/* Characters, locations, style are in the sidebar */}
                   {/* Voice panel would go here if Phase 5 voice panel exists */}
                   <StudioCard>
@@ -143,7 +143,7 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
                       </p>
                       {/* Character reference images grid */}
                       {(project.storyBible?.characters?.length ?? 0) > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2">
                           {project.storyBible.characters.map((c) => (
                             <div key={c.id} className="rounded-lg border border-border bg-surface-muted/40 p-2.5 space-y-1">
                               <p className="text-[10px] font-bold text-text-primary truncate">{c.name}</p>
@@ -158,7 +158,7 @@ export function ProjectWorkspace({ project, provider, onUpdate }: ProjectWorkspa
                         </div>
                       )}
                       {(project.storyBible?.locations?.length ?? 0) > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2">
                           {project.storyBible.locations.map((l) => (
                             <div key={l.id} className="rounded-lg border border-border bg-surface-muted/40 p-2.5 space-y-1">
                               <p className="text-[10px] font-bold text-text-primary truncate">{l.name}</p>
