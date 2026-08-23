@@ -11,6 +11,7 @@ import {
   ImagePromptRedoRequest,
   ImageToPromptRequest,
   ImageToPromptResult,
+  PromptInput,
   PromptQuality,
   ProviderConfig,
   TemplateGenerationRequest,
@@ -499,5 +500,83 @@ export async function runBrandStrategist(
   }
   return await res.json();
 }
+
+/** Phase 6 — Text Prompt Studio: Synthesize few-shot exemplars */
+export async function synthesizeExemplars(
+  input: PromptInput,
+  signal?: AbortSignal
+): Promise<import('@/types').FewShotExemplar[]> {
+  try {
+    const res = await fetch('/api/synthesize-exemplars', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input }),
+      signal,
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.exemplars) ? data.exemplars : [];
+  } catch (err) {
+    console.error('synthesizeExemplars failed:', err);
+    return [];
+  }
+}
+
+/** Phase 7 — Text Prompt Studio: Distill and compress prompt */
+export async function distillPrompt(
+  prompt: string,
+  provider?: ProviderConfig,
+  signal?: AbortSignal
+): Promise<string> {
+  const res = await fetch('/api/distill-prompt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, provider }),
+    signal,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: `Server HTTP ${res.status}` }));
+    throw new Error(errData.error || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.distilledPrompt || '';
+}
+
+/** Phase 8 — Text Prompt Studio: Run adversarial red-team audit */
+export async function runRedTeamAudit(
+  prompt: string,
+  provider?: ProviderConfig,
+  signal?: AbortSignal
+): Promise<import('@/app/api/red-team-audit/route').RedTeamAuditResponse> {
+  const res = await fetch('/api/red-team-audit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, provider }),
+    signal,
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: `Server HTTP ${res.status}` }));
+    throw new Error(errData.error || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+/** Phase 9 — Text Prompt Studio: Generate batch evaluation scenarios */
+export async function generateBatchScenarios(
+  input: PromptInput,
+  signal?: AbortSignal
+): Promise<import('@/app/api/batch-eval-scenarios/route').BatchScenario[]> {
+  const res = await fetch('/api/batch-eval-scenarios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input }),
+    signal,
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data?.scenarios) ? data.scenarios : [];
+}
+
+
 
 

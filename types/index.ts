@@ -42,6 +42,8 @@ export interface AppSettings {
   defaultTone: string;
   /** Default output format. Empty string = no default (uses 'markdown'). */
   defaultOutputFormat: string;
+  /** Default target model for steering output format and token limits. */
+  defaultTargetModel?: TargetModel;
   /** Default character limit (replaces DEFAULT_OUTPUT_CHAR_LIMIT constant). 0 = no limit. */
   defaultCharLimit: number;
 
@@ -74,6 +76,52 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultCharLimit: 0,
 };
 
+
+export type TargetModel = 'claude' | 'gpt' | 'gemini' | 'deepseek' | 'other-or-unsure';
+
+export interface TargetModelOption {
+  value: TargetModel;
+  label: string;
+  description: string;
+  recommendedFormat: 'markdown' | 'xml' | 'json' | 'bullet-points' | 'structured-text';
+  iconName?: string;
+}
+
+export type PromptVariableType = 'string' | 'number' | 'boolean' | 'enum' | 'json';
+
+export interface PromptVariable {
+  name: string;
+  rawSyntax: string; // e.g. "[TARGET_AUDIENCE]" or "{{tone}}"
+  type: PromptVariableType;
+  enumValues?: string[];
+  defaultValue?: string;
+  description?: string;
+  required: boolean;
+  isDeclaredInSchema?: boolean;
+  occurrences: number;
+}
+
+export type VariableLintKind =
+  | 'unclosed-brace'
+  | 'duplicate-name'
+  | 'unused-declaration'
+  | 'undeclared-reference'
+  | 'invalid-type-default';
+
+export interface VariableLintIssue {
+  kind: VariableLintKind;
+  severity: 'warning' | 'error' | 'info';
+  message: string;
+  variableName?: string;
+  position?: { start: number; end: number };
+}
+
+export interface VariableLintReport {
+  variables: PromptVariable[];
+  issues: VariableLintIssue[];
+  hasErrors: boolean;
+  hasWarnings: boolean;
+}
 
 export type ToneType = 
   | 'professional'
@@ -175,6 +223,15 @@ export interface ProviderConfig {
   fallbackModel?: string;
 }
 
+export interface PromptFragment {
+  id: string;
+  title: string;
+  category: 'guardrail' | 'persona' | 'output-spec' | 'technique' | 'custom';
+  content: string;
+  description?: string;
+  createdAt: number;
+}
+
 export interface PromptTemplate {
   id: string;
   name: string;
@@ -191,6 +248,13 @@ export interface PromptTemplate {
   createdAt: number;
 }
 
+export interface FewShotExemplar {
+  id: string;
+  input: string;
+  output: string;
+  explanation?: string;
+}
+
 export interface PromptInput {
   topic: string;
   domainId: string;
@@ -199,13 +263,16 @@ export interface PromptInput {
   framework: FrameworkType;
   targetAudience?: string;
   outputFormat?: 'markdown' | 'json' | 'bullet-points' | 'xml' | 'structured-text';
+  targetModel?: TargetModel;
   includeConstraints: boolean;
   includeExamples: boolean;
+  /** Phase 6 — Synthesized or user-edited few-shot exemplar input/output pairs. */
+  exemplars?: FewShotExemplar[];
   /** When true, the generated prompt instructs its target AI to cite a source or explicitly flag unverified claims instead of stating them as fact. */
   requireEvidence?: boolean;
   additionalNotes?: string;
   /**
-   * Optional hard cap on the length of the ENGINEERED prompt, in characters.
+   * Optional hard cap on the length of the ENGINEERED prompt, in characters or tokens.
    * When set, the generator is instructed to keep its output under this limit.
    * Leave undefined for no limit.
    */
@@ -299,6 +366,10 @@ export interface PromptVersion {
   // F1 — chronological score history for this version (newest last). `quality`
   // mirrors the last entry so older persisted sessions stay fully readable.
   qualityHistory?: PromptQuality[];
+  // Phase 1 — Prompt variables & placeholders detected/declared in this version
+  variables?: PromptVariable[];
+  // Phase 1 — Real-time lint report for variables in this version
+  variableLint?: VariableLintReport;
 }
 
 export interface ThreadMessage {

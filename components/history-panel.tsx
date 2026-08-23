@@ -779,19 +779,37 @@ export function HistoryPanel({
                           if (!verA || !verB) return <span>Select versions to compare.</span>;
 
                           const diffs = computeWordDiff(verA.content, verB.content);
+                          const scoreDelta =
+                            verA.quality && verB.quality
+                              ? verB.quality.overall - verA.quality.overall
+                              : null;
 
                           const renderChunks = (chunks: typeof diffs) =>
                             chunks.map((chunk, idx) => {
                               if (chunk.added) {
                                 return (
-                                  <span key={idx} className="bg-success/25 text-success font-bold px-0.5 rounded">
+                                  <span
+                                    key={idx}
+                                    className={`font-bold px-0.5 rounded ${
+                                      chunk.semanticType === 'constraint'
+                                        ? 'bg-warning/30 text-warning border-b border-warning'
+                                        : chunk.semanticType === 'directive'
+                                        ? 'bg-brand/30 text-brand border-b border-brand'
+                                        : 'bg-success/25 text-success'
+                                    }`}
+                                    title={chunk.semanticType ? `Added ${chunk.semanticType}` : undefined}
+                                  >
                                     {chunk.value}
                                   </span>
                                 );
                               }
                               if (chunk.removed) {
                                 return (
-                                  <span key={idx} className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70">
+                                  <span
+                                    key={idx}
+                                    className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70"
+                                    title={chunk.semanticType ? `Removed ${chunk.semanticType}` : undefined}
+                                  >
                                     {chunk.value}
                                   </span>
                                 );
@@ -799,25 +817,34 @@ export function HistoryPanel({
                               return <span key={idx}>{chunk.value}</span>;
                             });
 
-                          if (diffState.diffMode === 'split') {
-                            // Left: original with removals highlighted. Right: newer with additions highlighted.
-                            const leftChunks = diffs.filter((c) => !c.added);
-                            const rightChunks = diffs.filter((c) => !c.removed);
-                            return (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div className="rounded-lg border border-danger/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-                                  {renderChunks(leftChunks)}
-                                </div>
-                                <div className="rounded-lg border border-success/20 bg-surface-card/60 p-3 text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-                                  {renderChunks(rightChunks)}
-                                </div>
-                              </div>
-                            );
-                          }
-
                           return (
-                            <div className="p-3 rounded-lg bg-surface-code text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">
-                              {renderChunks(diffs)}
+                            <div className="space-y-2">
+                              {scoreDelta !== null && (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-surface-muted border border-border text-xs font-semibold">
+                                  <span>Quality delta:</span>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded font-bold ${
+                                      scoreDelta >= 0 ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'
+                                    }`}
+                                  >
+                                    {scoreDelta >= 0 ? '+' : ''}{scoreDelta} points (v{verA.versionNumber} → v{verB.versionNumber})
+                                  </span>
+                                </div>
+                              )}
+                              {diffState.diffMode === 'split' ? (
+                                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono leading-relaxed max-h-60 overflow-y-auto">
+                                  <div className="p-2.5 rounded-lg bg-surface-input border border-border/70 whitespace-pre-wrap">
+                                    {renderChunks(diffs.filter((c) => !c.added))}
+                                  </div>
+                                  <div className="p-2.5 rounded-lg bg-surface-input border border-border/70 whitespace-pre-wrap">
+                                    {renderChunks(diffs.filter((c) => !c.removed))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="max-h-60 overflow-y-auto p-2.5 rounded-lg bg-surface-input border border-border/70 text-[11px] font-mono leading-relaxed whitespace-pre-wrap">
+                                  {renderChunks(diffs)}
+                                </div>
+                              )}
                             </div>
                           );
                         })()}

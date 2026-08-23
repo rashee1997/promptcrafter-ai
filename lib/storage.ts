@@ -1,8 +1,9 @@
-import { AppSettings, DEFAULT_APP_SETTINGS, CustomPresetEntry, CustomPresetMode, HistoryItem, PromptQuality, PromptTemplate, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
+import { AppSettings, DEFAULT_APP_SETTINGS, CustomPresetEntry, CustomPresetMode, HistoryItem, PromptFragment, PromptQuality, PromptTemplate, ProviderConfig, PromptVersion, Session, TestRun, ThreadMessage } from '@/types';
 import type { StoryBibleCharacterImage } from '@/types/video';
 import { decryptSecret, encryptSecret } from './crypto';
 import { computePromptStats } from './prompt-stats';
 import { blobToDataUrl } from './compression';
+import { extractPromptVariables, lintPromptVariables } from './prompt-variables';
 
 const DB_NAME = 'PromptCrafter_DB';
 const DB_VERSION = 6;
@@ -14,6 +15,7 @@ const STORE_CUSTOM_PRESETS = 'customPresets';
 const STORE_VIDEO_PROJECTS = 'videoProjects';
 const STORE_STORY_BIBLE = 'storyBible';
 const STORE_TEMPLATES = 'templates';
+const STORE_FRAGMENTS = 'fragments';
 const STORE_IMAGE_PROMPTS = 'imagePrompts';
 const STORE_IMAGE_KITS = 'imageKits';
 
@@ -112,6 +114,8 @@ function convertHistoryItemToSession(item: HistoryItem): Session {
         providerName: item.providerName || 'Default Provider',
         modelUsed: item.modelUsed || GEMINI_DEFAULT_MODEL,
         stats,
+        variables: extractPromptVariables(item.output || ''),
+        variableLint: lintPromptVariables(item.output || ''),
       },
     ],
     activeVersionId: v1Id,
@@ -668,7 +672,13 @@ export async function addVersionToSession(
     throw new Error(`Session ${sessionId} not found`);
   }
 
-  const updatedVersions = [...session.versions, version];
+  const populatedVersion: PromptVersion = {
+    ...version,
+    variables: version.variables || extractPromptVariables(version.content || ''),
+    variableLint: version.variableLint || lintPromptVariables(version.content || ''),
+  };
+
+  const updatedVersions = [...session.versions, populatedVersion];
   const updatedMessages = [...session.messages];
 
   if (userMessage) updatedMessages.push(userMessage);
@@ -1121,6 +1131,83 @@ export async function deleteTemplate(id: string): Promise<void> {
     });
   } catch {
     setLocalTemplates(getLocalTemplates().filter((t) => t.id !== id));
+  }
+}
+
+// ── Phase 10: Reusable Prompt Fragment Storage ──────────────────────────────
+
+const FRAGMENTS_STORAGE_KEY = 'pc_saved_fragments';
+
+export const BUILT_IN_FRAGMENTS: PromptFragment[] = [
+  {
+    id: 'frag-anti-laziness',
+    title: 'Anti-Laziness & Zero TODOs',
+    category: 'guardrail',
+    description: 'Strictly forbids placeholders, pseudo-code, and omissions.',
+    content: 'ANTI-LAZINESS DIRECTIVE: Never emit placeholder code, ellipses (`// ...`), `// TODO`, or pseudo-code abbreviations. Every function and type definition must be 100% fully implemented, valid, and copy-paste ready.',
+    createdAt: 1,
+  },
+  {
+    id: 'frag-json-schema',
+    title: 'Strict JSON Schema Enforcement',
+    category: 'output-spec',
+    description: 'Forces pure valid JSON response without conversational wrapper.',
+    content: 'OUTPUT FORMAT DIRECTIVE: Respond with a strictly valid JSON object matching the requested schema. Do NOT include markdown code blocks (```json), conversational pleasantries, or preamble.',
+    createdAt: 2,
+  },
+  {
+    id: 'frag-hallucination-defense',
+    title: 'Hallucination Defense & Evidence',
+    category: 'guardrail',
+    description: 'Instructs the model to flag unverified claims and cite sources.',
+    content: 'FACTUAL INTEGRITY DIRECTIVE: Verify all claims against provided context. If a fact is unknown or uncertain, explicitly state "Unverified" instead of guessing or hallucinating plausible details.',
+    createdAt: 3,
+  },
+  {
+    id: 'frag-executive-voice',
+    title: 'Executive / Decision-Maker Voice',
+    category: 'persona',
+    description: 'High-signal, concise, decision-oriented tone.',
+    content: 'TONE DIRECTIVE: Adopt an executive advisory voice. Front-load conclusions, use bulleted action items, omit fluff, and emphasize ROI, risks, and strategic tradeoffs.',
+    createdAt: 4,
+  },
+];
+
+export function getLocalFragments(): PromptFragment[] {
+  if (typeof window === 'undefined') return BUILT_IN_FRAGMENTS;
+  try {
+    const raw = localStorage.getItem(FRAGMENTS_STORAGE_KEY);
+    if (!raw) return BUILT_IN_FRAGMENTS;
+    const userCustom: PromptFragment[] = JSON.parse(raw);
+    return [...BUILT_IN_FRAGMENTS, ...userCustom];
+  } catch {
+    return BUILT_IN_FRAGMENTS;
+  }
+}
+
+export function saveLocalFragment(fragment: PromptFragment): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getLocalFragments().filter((f) => !BUILT_IN_FRAGMENTS.some((b) => b.id === f.id));
+    const idx = current.findIndex((f) => f.id === fragment.id);
+    if (idx >= 0) {
+      current[idx] = fragment;
+    } else {
+      current.unshift(fragment);
+    }
+    localStorage.setItem(FRAGMENTS_STORAGE_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.warn('saveLocalFragment error:', err);
+  }
+}
+
+export function deleteLocalFragment(id: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getLocalFragments().filter((f) => !BUILT_IN_FRAGMENTS.some((b) => b.id === f.id && b.id !== id));
+    localStorage.setItem(FRAGMENTS_STORAGE_KEY, JSON.stringify(current.filter((f) => f.id !== id)));
+  } catch (err) {
+    console.warn('deleteLocalFragment error:', err);
   }
 }
 

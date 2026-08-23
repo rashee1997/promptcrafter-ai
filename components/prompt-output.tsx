@@ -33,6 +33,8 @@ import {
   Trash2,
   FileText,
   GitCompare,
+  ShieldAlert,
+  Bookmark,
 } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { Expandable } from './expandable';
@@ -40,15 +42,19 @@ import { ConfirmModal } from './confirm-modal';
 import { MarkdownRenderer } from './markdown-renderer';
 import { PromptVersion, ProviderConfig, Session, TestRun } from '@/types';
 import { computePromptStats, unwrapCodeBlock } from '@/lib/prompt-stats';
-import { evaluatePromptQuality, runCaseEvaluation } from '@/lib/ai-client';
+import { estimateModelTokens } from '@/lib/tokenizer';
+import { distillPrompt, evaluatePromptQuality, generateBatchScenarios, runCaseEvaluation } from '@/lib/ai-client';
 import { setVersionQuality, saveTestSuite, saveTestRun } from '@/lib/storage';
 import { auditPlaceholders, fillPlaceholders } from '@/lib/placeholder';
+import { extractPromptVariables, lintPromptVariables, substitutePromptVariables } from '@/lib/prompt-variables';
 import { exportPromptFor, EXPORT_TARGETS, ExportTarget } from '@/lib/export';
 import { heuristicPromptQuality, PASS_THRESHOLD, buildEvaluationContext } from '@/lib/prompt-quality';
 import { buildCostLedger } from '@/lib/ledger';
 import { formatCostDollars } from '@/lib/model-pricing';
 import { computeWordDiff } from '@/lib/diff';
 import { toast } from '@/components/toast';
+import { RedTeamModal } from './red-team-modal';
+import { FragmentDrawer } from './fragment-drawer';
 
 interface PromptOutputProps {
   output: string;
@@ -117,6 +123,15 @@ export function PromptOutput({
   // §9.6b — "what changed" diff panel for the active version
   const [changeDiffOpen, setChangeDiffOpen] = useState(false);
 
+  // Phase 7 — Distillation State
+  const [isDistilling, setIsDistilling] = useState(false);
+
+  // Phase 8 — Red Team Modal State
+  const [redTeamOpen, setRedTeamOpen] = useState(false);
+
+  // Phase 10 — Fragment Drawer State
+  const [fragmentDrawerOpen, setFragmentDrawerOpen] = useState(false);
+
   const outputRef = useRef<HTMLDivElement>(null);
 
   // §9.6 — version picker popover (per-version score bars + "compare" shortcut)
@@ -184,10 +199,11 @@ export function PromptOutput({
   // to the saved version — never to an unsaved draft in the editor.
   const versionPromptText = unwrapCodeBlock(activeVersion?.content || output);
 
-  // F4 — placeholder audit
+  // Phase 1 — Variable Schema & Real-Time Linting
+  const variableReport = useMemo(() => lintPromptVariables(rawPromptText), [rawPromptText]);
   const audit = useMemo(() => auditPlaceholders(rawPromptText), [rawPromptText]);
   const filledPrompt = useMemo(
-    () => fillPlaceholders(rawPromptText, fillValues),
+    () => substitutePromptVariables(rawPromptText, fillValues),
     [rawPromptText, fillValues]
   );
 
@@ -217,6 +233,8 @@ export function PromptOutput({
   }
 
   const { wordCount, charCount, estTokens } = computePromptStats(rawPromptText);
+  const targetModel = currentSession?.originalInput?.targetModel || activeProvider?.model;
+  const modelTokens = useMemo(() => estimateModelTokens(rawPromptText, targetModel), [rawPromptText, targetModel]);
 
   // F1 — real stored quality when available, heuristic otherwise. The heuristic
   // is computed from the saved version, so editing a draft never changes the
@@ -339,6 +357,12 @@ export function PromptOutput({
     if (!suiteInput.trim() || !currentSession) return;
     const updated = await saveTestSuite(currentSession.id, [...testSuite, suiteInput.trim()]);
     setSuiteInput('');
+    onSessionUpdate?.(updated);
+  };
+
+  const handleUpdateSuite = async (newCases: string[]) => {
+    if (!currentSession) return;
+    const updated = await saveTestSuite(currentSession.id, newCases);
     onSessionUpdate?.(updated);
   };
 
@@ -500,9 +524,9 @@ export function PromptOutput({
         {/* Badges: Estimated Token Counter & Quality Score */}
         {!isGenerating && output && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 px-3 py-1 rounded-xl text-brand text-xs font-semibold">
+            <div className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 px-3 py-1 rounded-xl text-brand text-xs font-semibold" title={`${modelTokens.modelLabel} token count`}>
               <Cpu className="w-3.5 h-3.5 text-brand" />
-              <span>{wordCount.toLocaleString()} words</span>
+              <span>{modelTokens.tokens.toLocaleString()} tokens ({modelTokens.modelLabel})</span>
             </div>
             <button
               type="button"
@@ -541,7 +565,7 @@ export function PromptOutput({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="flex items-center gap-1.5 font-semibold text-brand">
             <Cpu className="w-3.5 h-3.5" />
-            <span>{wordCount.toLocaleString()} words</span>
+            <span>{modelTokens.tokens.toLocaleString()} {modelTokens.modelLabel} tokens</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
@@ -551,7 +575,7 @@ export function PromptOutput({
           <span>•</span>
           <div className="flex items-center gap-1 tabular-nums">
             <FileText className="w-3.5 h-3.5 text-text-muted" />
-            <span>~{estTokens.toLocaleString()} tokens</span>
+            <span>{wordCount.toLocaleString()} words</span>
           </div>
           {costChip && (
             <>
@@ -592,6 +616,13 @@ export function PromptOutput({
               <span className="text-[10px] font-medium text-text-muted">
                 → {activeVersion.name}
               </span>
+              {scoreDelta !== null && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                  scoreDelta >= 0 ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'
+                }`}>
+                  {scoreDelta >= 0 ? '+' : ''}{scoreDelta} Quality
+                </span>
+              )}
             </span>
             <ChevronDown className={`w-3.5 h-3.5 text-text-muted transition-transform ${changeDiffOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -600,14 +631,28 @@ export function PromptOutput({
               {changeDiff.map((chunk, idx) => {
                 if (chunk.added) {
                   return (
-                    <span key={idx} className="bg-success/25 text-success font-bold px-0.5 rounded">
+                    <span
+                      key={idx}
+                      className={`font-bold px-0.5 rounded ${
+                        chunk.semanticType === 'constraint'
+                          ? 'bg-warning/30 text-warning border-b border-warning'
+                          : chunk.semanticType === 'directive'
+                          ? 'bg-brand/30 text-brand border-b border-brand'
+                          : 'bg-success/25 text-success'
+                      }`}
+                      title={chunk.semanticType ? `Added ${chunk.semanticType}` : undefined}
+                    >
                       {chunk.value}
                     </span>
                   );
                 }
                 if (chunk.removed) {
                   return (
-                    <span key={idx} className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70">
+                    <span
+                      key={idx}
+                      className="bg-danger/25 text-danger line-through px-0.5 rounded opacity-70"
+                      title={chunk.semanticType ? `Removed ${chunk.semanticType}` : undefined}
+                    >
                       {chunk.value}
                     </span>
                   );
@@ -832,6 +877,57 @@ export function PromptOutput({
             <span>Test</span>
           </button>
 
+          {/* Distill / Compress Button */}
+          {output && !isGenerating && (
+            <button
+              type="button"
+              disabled={isDistilling}
+              onClick={async () => {
+                setIsDistilling(true);
+                try {
+                  const distilled = await distillPrompt(rawPromptText, activeProvider);
+                  if (distilled && onSaveEditVersion) {
+                    onSaveEditVersion(distilled);
+                    toast.success('Prompt distilled', 'Saved as a lean, compressed new revision.');
+                  }
+                } catch (err: any) {
+                  toast.error('Distillation failed', err.message);
+                } finally {
+                  setIsDistilling(false);
+                }
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-code text-text-primary hover:bg-surface-hover border border-border flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+              title="Compress and remove redundant instructions while keeping all constraints"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              <span>{isDistilling ? 'Distilling...' : 'Distill'}</span>
+            </button>
+          )}
+
+          {/* Red Team Audit Button */}
+          {output && !isGenerating && (
+            <button
+              type="button"
+              onClick={() => setRedTeamOpen(true)}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-code text-text-primary hover:bg-surface-hover border border-border flex items-center gap-1.5 transition-all shadow-sm"
+              title="Audit prompt against injection and adversarial jailbreaks"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-danger" />
+              <span>Red-Team</span>
+            </button>
+          )}
+
+          {/* Fragment Library Drawer Button */}
+          <button
+            type="button"
+            onClick={() => setFragmentDrawerOpen(true)}
+            className="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-code text-text-primary hover:bg-surface-hover border border-border flex items-center gap-1.5 transition-all shadow-sm"
+            title="Open reusable prompt fragment library"
+          >
+            <Bookmark className="w-3.5 h-3.5 text-brand" />
+            <span>Fragments</span>
+          </button>
+
           {/* Favorite Toggle */}
           {onToggleFavorite && (
             <button
@@ -900,8 +996,10 @@ export function PromptOutput({
       </div>
 
       {/* F4 — Placeholder audit & variable fill */}
-      {!isGenerating && (audit.keys.length > 0 || audit.issues.length > 0) && (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 space-y-2.5">
+      {!isGenerating && (variableReport.variables.length > 0 || variableReport.issues.length > 0 || audit.keys.length > 0) && (
+        <div className={`rounded-xl border p-4 space-y-2.5 ${
+          variableReport.hasErrors ? 'border-danger/30 bg-danger/5' : 'border-warning/30 bg-warning/5'
+        }`}>
           <button
             type="button"
             onClick={() => setFillOpen((open) => !open)}
@@ -910,14 +1008,14 @@ export function PromptOutput({
           >
             <span className="flex items-center gap-2">
               <Wand2 className="w-4 h-4 text-warning" />
-              <span className="text-xs font-bold text-text-primary">Custom fields</span>
+              <span className="text-xs font-bold text-text-primary">Prompt Variables & Fields</span>
               <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-warning/20 text-warning border border-warning/30">
-                {audit.keys.length} field{audit.keys.length === 1 ? '' : 's'}
+                {variableReport.variables.length} variable{variableReport.variables.length === 1 ? '' : 's'}
               </span>
-              {audit.issues.length > 0 && (
+              {variableReport.issues.length > 0 && (
                 <span className="hidden sm:flex items-center gap-1 text-[10px] font-semibold text-warning">
                   <AlertTriangle className="w-3 h-3" />
-                  {audit.issues.length} item{audit.issues.length === 1 ? '' : 's'} to fix
+                  {variableReport.issues.length} lint warning{variableReport.issues.length === 1 ? '' : 's'}
                 </span>
               )}
             </span>
@@ -925,30 +1023,39 @@ export function PromptOutput({
           </button>
 
           <Expandable open={fillOpen} className="space-y-3 pt-1">
-              {audit.issues.length > 0 && (
-                <ul className="space-y-1">
-                  {audit.issues.map((issue, i) => (
-                    <li key={i} className="text-[11px] text-warning flex gap-1.5">
-                      <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-                      <span>{issue.message}</span>
+              {variableReport.issues.length > 0 && (
+                <ul className="space-y-1 bg-surface-card/60 p-2.5 rounded-lg border border-warning/20">
+                  {variableReport.issues.map((issue, i) => (
+                    <li key={i} className="text-[11px] flex items-start gap-1.5">
+                      <AlertTriangle className={`w-3 h-3 shrink-0 mt-0.5 ${
+                        issue.severity === 'error' ? 'text-danger' : 'text-warning'
+                      }`} />
+                      <span className={issue.severity === 'error' ? 'text-danger' : 'text-warning'}>
+                        {issue.message}
+                      </span>
                     </li>
                   ))}
                 </ul>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {audit.keys.map((key) => {
-                  const sample = audit.tokens.find((t) => t.normalized === key);
+                {variableReport.variables.map((v) => {
+                  const normKey = v.name.toLowerCase().replace(/[^a-z0-9]/g, '');
                   return (
-                    <label key={key} className="block">
-                      <span className="text-[10px] font-semibold text-text-muted block mb-1 uppercase tracking-wide">
-                        {sample?.raw || key}
-                      </span>
+                    <label key={v.name} className="block">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wide">
+                          {v.rawSyntax || `{{${v.name}}}`}
+                        </span>
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-surface-muted text-text-secondary uppercase font-mono">
+                          {v.type}
+                        </span>
+                      </div>
                       <input
                         type="text"
-                        value={fillValues[key] || ''}
-                        onChange={(e) => setFillValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                        placeholder="Value for this field..."
+                        value={fillValues[normKey] || ''}
+                        onChange={(e) => setFillValues((prev) => ({ ...prev, [normKey]: e.target.value }))}
+                        placeholder={v.defaultValue ? `Default: ${v.defaultValue}` : `Value for ${v.name}...`}
                         className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
                       />
                     </label>
@@ -966,7 +1073,7 @@ export function PromptOutput({
                   <span>{copiedType === 'filled' ? 'Copied!' : 'Copy with values'}</span>
                 </button>
                 <span className="text-[10px] text-text-muted">
-                  Unfilled fields stay in brackets so you can spot them before copying.
+                  Unfilled fields stay in place so you can inspect before copying.
                 </span>
               </div>
           </Expandable>
@@ -1060,23 +1167,57 @@ export function PromptOutput({
           </button>
 
           <Expandable open={suiteOpen} className="space-y-3 pt-1">
-              {/* Add case */}
-              <div className="flex gap-2">
-                <textarea
-                  value={suiteInput}
-                  onChange={(e) => setSuiteInput(e.target.value)}
-                  placeholder="Add a sample question or scenario to check against every version…"
-                  className="flex-1 p-2.5 text-xs rounded-xl border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand resize-y min-h-[56px]"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddSuiteCase}
-                  disabled={!suiteInput.trim()}
-                  className="px-3 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-40 flex items-center gap-1.5 transition-colors shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add
-                </button>
+              {/* Add case input */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted">Test cases evaluate your prompt against standard or edge-case inputs:</span>
+                  {currentSession?.originalInput && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          toast.success('Generating scenario matrix...', 'Creating nominal, edge-case, and boundary tests.');
+                          const generated = await generateBatchScenarios(currentSession.originalInput);
+                          if (generated && generated.length > 0) {
+                            const newCases = Array.from(new Set([...testSuite, ...generated.map((g) => g.testInput)]));
+                            handleUpdateSuite(newCases);
+                            toast.success(`Added ${generated.length} test scenarios`);
+                          }
+                        } catch (err: any) {
+                          toast.error('Failed to generate scenarios', err.message);
+                        }
+                      }}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand/10 text-brand hover:bg-brand/20 flex items-center gap-1 transition-colors"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Auto-Generate 6 Scenarios</span>
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={suiteInput}
+                    onChange={(e) => setSuiteInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSuiteCase();
+                      }
+                    }}
+                    placeholder="Type a test input (e.g. 'Summarize this 10-page doc with only 3 bullets') and press Enter"
+                    className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddSuiteCase}
+                    disabled={!suiteInput.trim()}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-card hover:bg-surface-hover border border-border text-text-primary disabled:opacity-40 flex items-center gap-1 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                </div>
               </div>
 
               {/* Case list */}
@@ -1426,6 +1567,32 @@ export function PromptOutput({
           if (onClearOutput) onClearOutput();
         }}
         onCancel={() => setClearConfirmOpen(false)}
+      />
+
+      {/* Phase 8 — Red Team Adversarial Security Audit Modal */}
+      <RedTeamModal
+        isOpen={redTeamOpen}
+        onClose={() => setRedTeamOpen(false)}
+        prompt={rawPromptText}
+        provider={activeProvider}
+        onApplyDefenses={(defenseText) => {
+          if (onRefinePrompt) {
+            onRefinePrompt(defenseText);
+          }
+        }}
+      />
+
+      {/* Phase 10 — Reusable Prompt Fragment Drawer */}
+      <FragmentDrawer
+        isOpen={fragmentDrawerOpen}
+        onClose={() => setFragmentDrawerOpen(false)}
+        onInsertFragment={(fragmentContent) => {
+          if (isEditing) {
+            setEditContent((prev) => prev + fragmentContent);
+          } else if (onSaveEditVersion) {
+            onSaveEditVersion(rawPromptText + fragmentContent);
+          }
+        }}
       />
     </GlassCard>
   );

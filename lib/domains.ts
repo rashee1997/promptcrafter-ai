@@ -385,6 +385,50 @@ export const FRAMEWORK_OPTIONS: { value: FrameworkType; label: string; tag: stri
   },
 ];
 
+export const TARGET_MODEL_OPTIONS: {
+  value: import('@/types').TargetModel;
+  label: string;
+  description: string;
+  recommendedFormat: 'markdown' | 'xml' | 'json' | 'bullet-points' | 'structured-text';
+  dialectDirective: string;
+}[] = [
+  {
+    value: 'claude',
+    label: 'Anthropic Claude',
+    description: 'Optimized for Claude 3.5 & 3.7 Sonnet using XML tag enclosures and explicit structural boundaries.',
+    recommendedFormat: 'xml',
+    dialectDirective: 'TARGET AI DIALECT (Anthropic Claude): Use explicit XML tag encapsulation (e.g. <context>, <instructions>, <guardrails>, <output_format>). Claude adheres strictly to XML-delimited instructions and semantic tags.',
+  },
+  {
+    value: 'gpt',
+    label: 'OpenAI GPT',
+    description: 'Optimized for GPT-4o, o1, and o3-mini using clean Markdown sections and schema specifications.',
+    recommendedFormat: 'markdown',
+    dialectDirective: 'TARGET AI DIALECT (OpenAI GPT): Structure with hierarchical Markdown headers (# System Role, ## Task, ## Constraints). Use developer/system message semantics and clear formatting contracts.',
+  },
+  {
+    value: 'gemini',
+    label: 'Google Gemini',
+    description: 'Optimized for Gemini 2.5 & 3.x Flash/Pro with clearly labeled multimodal context parts and grounding blocks.',
+    recommendedFormat: 'markdown',
+    dialectDirective: 'TARGET AI DIALECT (Google Gemini): Emphasize clearly demarcated grounding context sections and structured part markers. Gemini excels at explicit reference grounding.',
+  },
+  {
+    value: 'deepseek',
+    label: 'DeepSeek',
+    description: 'Optimized for DeepSeek V3 & R1 with explicit reasoning-first scaffolding and deliberation directives.',
+    recommendedFormat: 'markdown',
+    dialectDirective: 'TARGET AI DIALECT (DeepSeek): Include reasoning-first scaffolding (e.g. directing the model to analyze constraints before producing output) to leverage DeepSeek reasoning capabilities.',
+  },
+  {
+    value: 'other-or-unsure',
+    label: 'Universal / Other LLM',
+    description: 'Universal platform-agnostic format compatible with any LLM runtime.',
+    recommendedFormat: 'markdown',
+    dialectDirective: 'TARGET AI DIALECT: Clean, platform-agnostic, universal prompt architecture.',
+  },
+];
+
 export function buildMetaSystemPrompt(input: PromptInput, domain: DomainPreset): string {
   const toneObj = TONE_OPTIONS.find((t) => t.value === input.tone);
   const toneDesc = toneObj?.description || input.tone;
@@ -419,7 +463,8 @@ export function buildMetaSystemPrompt(input: PromptInput, domain: DomainPreset):
       break;
   }
 
-  const selectedFormat = input.outputFormat || 'markdown';
+  const targetModelOpt = TARGET_MODEL_OPTIONS.find((m) => m.value === input.targetModel);
+  const selectedFormat = input.outputFormat || targetModelOpt?.recommendedFormat || 'markdown';
   let formatGuide = '';
   switch (selectedFormat) {
     case 'xml':
@@ -448,7 +493,15 @@ Engineer a single, production-ready, top-tier AI prompt based on the user's requ
 STRICT GENERATION DIRECTIVES:
 1. OUTPUT ONLY THE ENGINEERED PROMPT: Return ONLY the single, complete, production-ready prompt itself. Do NOT include conversational intros (e.g., "Here is your prompt:"), extra meta-explanations, section wrappers (like "## Master System Prompt" or "## Architecture"), or Mermaid diagrams.
 2. NO MERMAID DIAGRAMS: Do NOT output Mermaid charts. Never include Mermaid in the output. Keep the output 100% clean and copy-paste ready.
-3. ILLUSTRATIVE EXAMPLE: ${input.includeExamples ? 'Include ONE short, concrete input/output example block that shows the expected behavior. Place it after the core instructions. Keep it brief (under 150 words) and clearly labeled.' : 'Do NOT include example blocks.'}
+3. ILLUSTRATIVE FEW-SHOT EXAMPLES: ${
+  input.exemplars && input.exemplars.length > 0
+    ? `Embed the following ${input.exemplars.length} few-shot exemplar pair(s) in a clearly demarcated Examples section within the prompt:\n${input.exemplars
+        .map((ex, i) => `--- Example ${i + 1} ---\nInput: ${ex.input}\nExpected Output:\n${ex.output}${ex.explanation ? `\nReasoning: ${ex.explanation}` : ''}`)
+        .join('\n\n')}`
+    : input.includeExamples
+    ? 'Include 2-3 short, concrete edge-case input/output exemplar blocks that demonstrate ideal behavior. Place them after the core instructions and label them clearly.'
+    : 'Do NOT include example blocks.'
+}
 4. ADHERE TO USER-SELECTED OUTPUT FORMAT:
    ${formatGuide}
 5. CONTEXT GROUNDING & NO CODE PLACEHOLDERS:
@@ -471,6 +524,7 @@ Prompt Architecture Configuration:
 - Tone / Style Persona: ${input.tone} (${toneDesc})
 - Target Audience: ${input.targetAudience || 'General Domain Expert'}
 - Requested Output Format: ${selectedFormat}
+${targetModelOpt ? `- Target Model Architecture: ${targetModelOpt.label}\n  ${targetModelOpt.dialectDirective}` : ''}
 ${input.includeConstraints ? `- Include Explicit Negative Constraints & Guardrails: YES` : ''}
 ${input.requireEvidence ? `- Require Evidence for Factual Claims: YES — the generated prompt must instruct the target AI to cite a source or explicitly flag unverified claims, never stating them as established fact.` : ''}
 

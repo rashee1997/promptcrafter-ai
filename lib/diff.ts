@@ -1,7 +1,32 @@
+export type SemanticChangeType = 'directive' | 'constraint' | 'variable' | 'general';
+
 export interface DiffChunk {
   value: string;
   added?: boolean;
   removed?: boolean;
+  semanticType?: SemanticChangeType;
+}
+
+function detectSemanticType(text: string): SemanticChangeType {
+  const lower = text.toLowerCase();
+  if (
+    /(?:never|do not|forbid|prohibit|must not|cannot|without|no\s+(?:todos|ellipses|placeholders|markdown|mermaids))/i.test(
+      lower,
+    )
+  ) {
+    return 'constraint';
+  }
+  if (
+    /(?:must|require|enforce|instruct|directive|format:|step|task|always|strictly)/i.test(
+      lower,
+    )
+  ) {
+    return 'directive';
+  }
+  if (/(\{\{[a-z0-9_\- .]+\}\}|\[[a-z0-9_\- .]+\])/i.test(text)) {
+    return 'variable';
+  }
+  return 'general';
 }
 
 export function computeWordDiff(oldText: string, newText: string): DiffChunk[] {
@@ -14,8 +39,8 @@ export function computeWordDiff(oldText: string, newText: string): DiffChunk[] {
   // Cap DP size to prevent memory lag on extremely long outputs (> 1500 tokens)
   if (n > 1500 || m > 1500) {
     return [
-      { value: oldText, removed: true },
-      { value: newText, added: true },
+      { value: oldText, removed: true, semanticType: detectSemanticType(oldText) },
+      { value: newText, added: true, semanticType: detectSemanticType(newText) },
     ];
   }
 
@@ -41,10 +66,18 @@ export function computeWordDiff(oldText: string, newText: string): DiffChunk[] {
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      rawChunks.push({ value: newWords[j - 1], added: true });
+      rawChunks.push({
+        value: newWords[j - 1],
+        added: true,
+        semanticType: detectSemanticType(newWords[j - 1]),
+      });
       j--;
     } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
-      rawChunks.push({ value: oldWords[i - 1], removed: true });
+      rawChunks.push({
+        value: oldWords[i - 1],
+        removed: true,
+        semanticType: detectSemanticType(oldWords[i - 1]),
+      });
       i--;
     }
   }
@@ -55,7 +88,11 @@ export function computeWordDiff(oldText: string, newText: string): DiffChunk[] {
   for (const chunk of rawChunks) {
     if (result.length > 0) {
       const last = result[result.length - 1];
-      if (last.added === chunk.added && last.removed === chunk.removed) {
+      if (
+        last.added === chunk.added &&
+        last.removed === chunk.removed &&
+        last.semanticType === chunk.semanticType
+      ) {
         last.value += chunk.value;
         continue;
       }
@@ -65,3 +102,35 @@ export function computeWordDiff(oldText: string, newText: string): DiffChunk[] {
 
   return result;
 }
+
+export interface ThreeWayDiffResult {
+  chunksA: DiffChunk[]; // Base -> Version A
+  chunksB: DiffChunk[]; // Version A -> Version B
+  summary: {
+    addedDirectives: number;
+    addedConstraints: number;
+    removedConstraints: number;
+  };
+}
+
+export function computeThreeWayDiff(baseText: string, vAText: string, vBText: string): ThreeWayDiffResult {
+  const chunksA = computeWordDiff(baseText, vAText);
+  const chunksB = computeWordDiff(vAText, vBText);
+
+  let addedDirectives = 0;
+  let addedConstraints = 0;
+  let removedConstraints = 0;
+
+  for (const c of chunksB) {
+    if (c.added && c.semanticType === 'directive') addedDirectives++;
+    if (c.added && c.semanticType === 'constraint') addedConstraints++;
+    if (c.removed && c.semanticType === 'constraint') removedConstraints++;
+  }
+
+  return {
+    chunksA,
+    chunksB,
+    summary: { addedDirectives, addedConstraints, removedConstraints },
+  };
+}
+

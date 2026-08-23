@@ -71,6 +71,7 @@ import { formatProjectContext } from '@/lib/file-upload-utils';
 
 import { deleteVideoProject, getVideoProjects, saveVideoProject } from '@/lib/video-storage';
 import { computePromptStats, generateVersionName, unwrapCodeBlock } from '@/lib/prompt-stats';
+import { extractPromptVariables, lintPromptVariables } from '@/lib/prompt-variables';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<AppTab>('generator');
@@ -397,6 +398,8 @@ export default function HomePage() {
           providerName: activeProvider.name,
           modelUsed: activeProvider.model,
           stats,
+          variables: extractPromptVariables(cleaned),
+          variableLint: lintPromptVariables(cleaned),
         };
 
         const newSession: Session = {
@@ -514,6 +517,8 @@ export default function HomePage() {
           providerName: activeProvider.name,
           modelUsed: activeProvider.model,
           stats,
+          variables: extractPromptVariables(cleaned),
+          variableLint: lintPromptVariables(cleaned),
         };
 
         const userMsg: ThreadMessage = {
@@ -577,6 +582,8 @@ export default function HomePage() {
       providerName: activeProvider.name,
       modelUsed: activeProvider.model,
       stats,
+      variables: extractPromptVariables(cleaned),
+      variableLint: lintPromptVariables(cleaned),
     };
 
     const assistantMsg: ThreadMessage = {

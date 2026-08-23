@@ -36,6 +36,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "js-tiktoken": "^1.0.21",
     "lucide-react": "^1.31.0",
     "mermaid": "^11.16.1",
     "motion": "^12.23.24",
