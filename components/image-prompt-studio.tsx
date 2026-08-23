@@ -25,12 +25,17 @@ import {
 import { getProviderModelList } from '@/lib/storage';
 import { DEFAULT_LOGO_INPUT, LOGO_EXAMPLE_TOPICS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
 import { getKits, saveKit, deleteKit, PromptKit } from '@/lib/image-prompt-kits';
+import { saveCustomImageRecipe } from '@/lib/image-style-recipes';
+import { saveCustomLogoArchetype } from '@/lib/logo-archetypes';
+import { Bookmark, Save } from 'lucide-react';
 import {
   ImagePlatform,
   ImagePromptInput,
   ImagePromptOutputFormat,
   ImagePromptReferenceImage,
   ImageStyleRecipe,
+  ImageStyleRecipeConfig,
+  LogoArchetypeConfig,
   LogoArchetypeRecipe,
   ProviderConfig,
 } from '@/types';
@@ -607,6 +612,70 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     toast.success('Kit saved', `"${kit.name}" can be loaded into any new brief.`);
   };
 
+  /**
+   * Save the current applied form state as a reusable Style Recipe / Brand
+   * Archetype, using the same existing save functions AiTemplateGeneratorModal
+   * calls — so it reappears in StyleRecipePicker identically to an AI-Template
+   * generated recipe.
+   */
+  const handleSaveStyleRecipe = () => {
+    if (!subject.trim()) return;
+    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const label = subject.trim().slice(0, 40);
+    if (mode === 'logo') {
+      const config: LogoArchetypeConfig = {
+        logoType,
+        logoStyle,
+        palette,
+        shapeLanguage: shapeLanguage || '',
+        typography: typography || '',
+        lockup: lockup || '',
+        hiddenMeaning,
+        boldness: boldness || '',
+        usage: [...usage],
+        aspectRatio,
+        negativePrompt: negativePrompt.trim() || undefined,
+      };
+      const archetype: LogoArchetypeRecipe = {
+        id,
+        label,
+        category: 'Custom AI',
+        summary: `Saved brand archetype for: "${label}"`,
+        goal: 'creative',
+        isAiGenerated: true,
+        createdAt: Date.now(),
+        config,
+      };
+      saveCustomLogoArchetype(archetype);
+      toast.success('Style Recipe saved', `"${label}" can be applied from Style Recipe picker.`);
+    } else {
+      const config: ImageStyleRecipeConfig = {
+        style,
+        lighting,
+        camera,
+        composition,
+        colorGrade,
+        mood,
+        aspectRatio,
+        resolution,
+        negativePrompt: negativePrompt.trim() || undefined,
+      };
+      const recipe: ImageStyleRecipe = {
+        id,
+        label,
+        category: 'Custom AI',
+        summary: `Saved style recipe for: "${label}"`,
+        goal: 'stylized',
+        aspectHint: aspectRatio,
+        isAiGenerated: true,
+        createdAt: Date.now(),
+        config,
+      };
+      saveCustomImageRecipe(recipe);
+      toast.success('Style Recipe saved', `"${label}" can be applied from Style Recipe picker.`);
+    }
+  };
+
   /** Load a saved kit into the current form. */
   const handleLoadKit = (kit: PromptKit) => {
     setSubject(kit.subjectDescription);
@@ -672,6 +741,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onSubmit={handleGenerate}
           kits={kits}
           onSaveKit={handleSaveKit}
+          onSaveStyleRecipe={handleSaveStyleRecipe}
           onLoadKit={handleLoadKit}
           onDeleteKit={handleDeleteKit}
           showKitDropdown={showKitDropdown}
@@ -683,6 +753,18 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onSelectLogoArchetype={handleSelectLogoArchetype}
           onOpenAiGenerator={() => setShowAiTemplateModal(true)}
         />
+
+        <div className="flex items-center gap-2 mt-4">
+          <button
+            type="button"
+            onClick={handleSaveStyleRecipe}
+            disabled={!subject.trim()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-brand/20 hover:bg-brand/30 text-brand border border-brand/35 shadow-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save as Style Recipe</span>
+          </button>
+        </div>
 
         {/* ── Right: Output & brief viewer ── */}
         <OutputPanel

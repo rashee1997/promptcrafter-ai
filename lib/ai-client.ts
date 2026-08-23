@@ -5,6 +5,8 @@ import {
   CaseEvaluationResult,
   EvaluateRequest,
   GenerationRequest,
+  ImageConfigAssistRequest,
+  ImageConfigAssistResponse,
   ImageEditRequest,
   ImageEditResult,
   ImagePromptGenerationRequest,
@@ -379,6 +381,27 @@ export async function suggestNegativePrompt(
   } catch (err) {
     console.error('suggestNegativePrompt failed:', err);
     return { suggestion: null };
+  }
+}
+
+/** Image Prompt Studio AI Config Assist — proposes option chips for the Refine / Art direction sections. */
+export async function getImageConfigAssist(
+  request: ImageConfigAssistRequest,
+  signal?: AbortSignal
+): Promise<ImageConfigAssistResponse> {
+  try {
+    const res = await fetch('/api/image-config-assist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return { fields: null };
+    const data = await res.json();
+    return { fields: data?.fields && typeof data.fields === 'object' ? data.fields : null };
+  } catch (err) {
+    console.error('getImageConfigAssist failed:', err);
+    return { fields: null };
   }
 }
 

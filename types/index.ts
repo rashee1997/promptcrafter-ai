@@ -724,6 +724,26 @@ export interface ImageEditRequest {
   mode?: 'image' | 'logo';
 }
 
+/** Request contract for the Image Prompt Studio AI Config Assist endpoint (Refine / Art direction sections). */
+export interface ImageConfigAssistRequest {
+  mode: 'image' | 'logo';
+  section: 'refine' | 'artDirection';
+  /** Current partial brief — same shape already sent to suggest-negative-prompt. */
+  input: ImagePromptInput;
+  /** Capped at 3, same limit as today's reference-image upload. */
+  referenceImages?: { dataUrl: string; purpose: ImagePromptReferenceImage['purpose'] }[];
+}
+
+export interface ImageConfigAssistFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface ImageConfigAssistResponse {
+  /** Null on total failure or unparseable model output — client falls back to static ChipRow presets for the section. */
+  fields: Record<string, ImageConfigAssistFieldOption[]> | null;
+}
+
 /** Response contract for Image Edit instructions. */
 export interface ImageStyleRecipeConfig {
   style?: string;

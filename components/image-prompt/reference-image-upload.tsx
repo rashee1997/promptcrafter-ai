@@ -22,6 +22,8 @@ interface ReferenceImageUploadProps {
   onReverseEngineer?: (img: ImagePromptReferenceImage) => void;
   isReverseEngineering?: boolean;
   reverseEngineeringId?: string | null;
+  /** Condensed layout — smaller thumbnails + single-row purpose chips, for inline chat-card use. Default false preserves the original rendering. */
+  compact?: boolean;
 }
 
 export function ReferenceImageUpload({
@@ -32,6 +34,7 @@ export function ReferenceImageUpload({
   onReverseEngineer,
   isReverseEngineering,
   reverseEngineeringId,
+  compact = false,
 }: ReferenceImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -88,7 +91,7 @@ export function ReferenceImageUpload({
   }, []);
 
   return (
-    <div className="space-y-2">
+    <div className={cn('space-y-2', compact && 'space-y-1.5')}>
       {/* Upload zone */}
       <button
         type="button"
@@ -98,7 +101,8 @@ export function ReferenceImageUpload({
         onDragLeave={handleDragLeave}
         disabled={atCapacity}
         className={cn(
-          'w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-xs font-medium transition-all',
+          'w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed text-xs font-medium transition-all',
+          compact ? 'p-2 text-[11px]' : 'p-3',
           atCapacity
             ? 'border-border/50 text-text-muted cursor-not-allowed opacity-50'
             : isDragging
@@ -106,7 +110,7 @@ export function ReferenceImageUpload({
               : 'border-border text-text-muted hover:border-brand/40 hover:text-brand hover:bg-brand/5 cursor-pointer'
         )}
       >
-        <ImagePlus className="w-4 h-4" />
+        <ImagePlus className={cn(compact ? 'w-3.5 h-3.5' : 'w-4 h-4')} />
         {atCapacity
           ? `Max ${MAX_IMAGES} reference images`
           : images.length === 0
@@ -130,10 +134,18 @@ export function ReferenceImageUpload({
       {images.map((img) => (
         <div
           key={img.id}
-          className="flex items-start gap-2.5 p-2 rounded-lg bg-surface-muted/60 border border-border"
+          className={cn(
+            'flex items-start rounded-lg bg-surface-muted/60 border border-border',
+            compact ? 'gap-2 p-1.5' : 'gap-2.5 p-2'
+          )}
         >
           {/* Thumbnail */}
-          <div className="shrink-0 w-12 h-12 rounded-md overflow-hidden border border-border/60 bg-surface-card">
+          <div
+            className={cn(
+              'shrink-0 rounded-md overflow-hidden border border-border/60 bg-surface-card',
+              compact ? 'w-8 h-8' : 'w-12 h-12'
+            )}
+          >
             <img
               src={img.dataUrl}
               alt="Reference"
@@ -142,8 +154,8 @@ export function ReferenceImageUpload({
           </div>
 
           <div className="flex-1 min-w-0 space-y-1.5">
-            {/* Purpose selector */}
-            <div className="flex flex-wrap gap-1">
+            {/* Purpose selector — single row (horizontal scroll) when compact */}
+            <div className={cn(compact ? 'flex flex-nowrap gap-1 overflow-x-auto no-scrollbar' : 'flex flex-wrap gap-1')}>
               {PURPOSE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -151,6 +163,7 @@ export function ReferenceImageUpload({
                   onClick={() => onUpdatePurpose(img.id, opt.value)}
                   className={cn(
                     'px-1.5 py-0.5 rounded text-[9px] font-semibold border transition-all',
+                    compact && 'shrink-0 whitespace-nowrap',
                     img.purpose === opt.value
                       ? opt.color
                       : 'border-border text-text-muted hover:text-text-secondary'
@@ -160,15 +173,17 @@ export function ReferenceImageUpload({
                 </button>
               ))}
             </div>
-            <p className="text-[9px] text-text-muted leading-tight">
-              {img.purpose === 'subject'
-                ? 'Gemini/Nano Banana will describe this subject from the image.'
-                : img.purpose === 'style'
-                  ? 'Platform sections will reference the visual style of this image.'
-                  : img.purpose === 'redesign-reference'
-                    ? 'The AI will treat this as the current logo to evolve — describe what to keep and modernize.'
-                    : 'Midjourney --cref / Ideogram Character Reference will use this.'}
-            </p>
+            {!compact && (
+              <p className="text-[9px] text-text-muted leading-tight">
+                {img.purpose === 'subject'
+                  ? 'Gemini/Nano Banana will describe this subject from the image.'
+                  : img.purpose === 'style'
+                    ? 'Platform sections will reference the visual style of this image.'
+                    : img.purpose === 'redesign-reference'
+                      ? 'The AI will treat this as the current logo to evolve — describe what to keep and modernize.'
+                      : 'Midjourney --cref / Ideogram Character Reference will use this.'}
+              </p>
+            )}
           </div>
 
             {/* Actions: Reverse engineer & Remove */}
@@ -178,11 +193,14 @@ export function ReferenceImageUpload({
                   type="button"
                   disabled={isReverseEngineering}
                   onClick={() => onReverseEngineer(img)}
-                  className="px-2 py-0.5 rounded text-[9px] font-semibold bg-brand/10 border border-brand/25 text-brand hover:bg-brand/20 transition-all disabled:opacity-50 flex items-center gap-1"
+                  className={cn(
+                    'rounded text-[9px] font-semibold bg-brand/10 border border-brand/25 text-brand hover:bg-brand/20 transition-all disabled:opacity-50 flex items-center gap-1',
+                    compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'
+                  )}
                   title="Reverse engineer this image into a full prompt brief"
                 >
                   <Tag className="w-2.5 h-2.5" />
-                  {isReverseEngineering && reverseEngineeringId === img.id ? 'Analyzing…' : 'Image-to-Prompt'}
+                  {!compact && (isReverseEngineering && reverseEngineeringId === img.id ? 'Analyzing…' : 'Image-to-Prompt')}
                 </button>
               )}
               <button
@@ -198,12 +216,12 @@ export function ReferenceImageUpload({
           </div>
         ))}
 
-      {images.length > 0 && images.length < MAX_IMAGES && (
+      {!compact && images.length > 0 && images.length < MAX_IMAGES && (
         <p className="text-[9px] text-text-muted leading-relaxed">
           Each image gets a purpose tag that changes how platform sections reference it. Too many references dilute the brief.
         </p>
       )}
-      {images.length >= MAX_IMAGES && (
+      {!compact && images.length >= MAX_IMAGES && (
         <p className="text-[9px] text-warning/80 leading-relaxed">
           {MAX_IMAGES} images — the maximum for a focused brief. Remove one to add another.
         </p>

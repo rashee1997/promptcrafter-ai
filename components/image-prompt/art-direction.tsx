@@ -21,6 +21,8 @@ const TYPOGRAPHY_FONT_MAP: Record<string, string> = {
 };
 import { ImagePromptInput } from '@/types';
 import { ChipRow, MultiChipRow } from './chip-row';
+import { SectionToggle } from './section-toggle';
+import { AiConfigAssist } from './ai-config-assist';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
 
 interface ArtDirectionProps {
@@ -34,6 +36,56 @@ interface ArtDirectionProps {
 export function ArtDirection({ state, handlers }: ArtDirectionProps) {
   const { lighting, mood, composition, camera, colorGrade, resolution, negativePrompt, inImageText, additionalNotes, showArtDirection } = state;
   const isLogo = state.mode === 'logo';
+
+  const [artDirectionMode, setArtDirectionMode] = useState<'manual' | 'ai' | undefined>(undefined);
+  const [aiProposalsKey, setAiProposalsKey] = useState(0);
+
+  const buildArtDirectionInput = (): ImagePromptInput => ({
+    subject: state.subject,
+    style: state.style,
+    mode: state.mode,
+    logoType: state.mode === 'logo' ? state.logoType : undefined,
+    logoStyle: state.mode === 'logo' ? state.logoStyle : undefined,
+    palette: state.mode === 'logo' ? state.palette : undefined,
+    brandName: state.mode === 'logo' ? state.brandName.trim() || undefined : undefined,
+    industry: state.mode === 'logo' ? state.industry : undefined,
+    concept: state.mode === 'logo' ? state.concept : undefined,
+    shapeLanguage: state.mode === 'logo' ? state.shapeLanguage : undefined,
+    typography: state.mode === 'logo' ? state.typography : undefined,
+    lockup: state.mode === 'logo' ? state.lockup : undefined,
+    hiddenMeaning: state.mode === 'logo' ? state.hiddenMeaning : undefined,
+    usage: state.mode === 'logo' && state.usage.length > 0 ? [...state.usage] : undefined,
+    boldness: state.mode === 'logo' ? state.boldness : undefined,
+    lighting,
+    mood,
+    composition,
+    camera,
+    colorGrade,
+    resolution,
+    aspectRatio: state.aspectRatio,
+    platforms: state.platforms,
+    negativePrompt: negativePrompt.trim() || undefined,
+    inImageText: inImageText.trim() || undefined,
+    additionalNotes: additionalNotes.trim() || undefined,
+  });
+
+  const handleApplyAiArtDirection = (fieldValues: Record<string, string>) => {
+    if (fieldValues.lighting) handlers.setLighting(fieldValues.lighting);
+    if (fieldValues.mood) handlers.setMood(fieldValues.mood);
+    if (fieldValues.composition) handlers.setComposition(fieldValues.composition);
+    if (fieldValues.camera) handlers.setCamera(fieldValues.camera);
+    if (fieldValues.colorGrade) handlers.setColorGrade(fieldValues.colorGrade);
+    if (fieldValues.resolution) handlers.setResolution(fieldValues.resolution);
+    if (fieldValues.shapeLanguage) handlers.setShapeLanguage(fieldValues.shapeLanguage);
+    if (fieldValues.typography) handlers.setTypography(fieldValues.typography);
+    if (fieldValues.lockup) handlers.setLockup(fieldValues.lockup);
+    if (fieldValues.hiddenMeaning) handlers.setHiddenMeaning(fieldValues.hiddenMeaning);
+    if (fieldValues.boldness) handlers.setBoldness(fieldValues.boldness);
+    if (fieldValues.usage) {
+      const usageArr = fieldValues.usage.split(',').map((s) => s.trim()).filter(Boolean);
+      if (usageArr.length > 0) handlers.setUsage(usageArr);
+    }
+  };
 
   // B1 — one-click negative-prompt suggestions. Manual (button press) only:
   // auto-firing would be too disruptive to overwrite what the user typed.
@@ -128,6 +180,32 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
       </button>
 
       <Expandable open={showArtDirection} id="img-art-direction" className="mt-4 space-y-4">
+        {/* Manual / AI Generated segmented control gates the chip-preset rows below.
+            The in-image-text / negative-prompt / notes inputs are always available. */}
+        <SectionToggle
+          value={artDirectionMode}
+          onChange={(v) => {
+            setArtDirectionMode(v);
+            setAiProposalsKey((k) => k + 1);
+          }}
+          label="Art direction"
+        />
+
+        {/* When on the AI side, AiConfigAssist renders its own chip rows inline
+            (with a Generate button + static fallback on {fields: null}). */}
+        {artDirectionMode === 'ai' && (
+          <AiConfigAssist
+            key={aiProposalsKey}
+            mode={isLogo ? 'logo' : 'image'}
+            section="artDirection"
+            input={buildArtDirectionInput()}
+            referenceImages={state.referenceImages.map((r) => ({ dataUrl: r.dataUrl, purpose: r.purpose }))}
+            onApply={handleApplyAiArtDirection}
+          />
+        )}
+
+        {artDirectionMode !== 'ai' && (
+          <>
         {!isLogo && (
           <ChipRow
             label="Lighting"
@@ -279,6 +357,8 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
           field="resolution"
           mode="both"
         />
+        </>
+        )}
 
         {/* In-image text */}
         <div className="space-y-1.5">

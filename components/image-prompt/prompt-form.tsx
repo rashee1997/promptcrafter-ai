@@ -13,6 +13,7 @@ import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
 import { CHIP_DOTS, ChipRow } from './chip-row';
 import { ReferenceImageUpload } from './reference-image-upload';
+import { SettingsPopover } from './settings-popover';
 import { StyleRecipePicker } from './style-recipe-picker';
 import { StudioFormHandlers, StudioFormState, StudioMode } from './studio-types';
 import { CustomChipEditor, useCustomChipEntry } from './use-custom-chip-entry';
@@ -31,6 +32,8 @@ interface PromptFormProps {
   /** Brand / Subject Kit props */
   kits?: PromptKit[];
   onSaveKit?: () => void;
+  /** Save the currently-applied form config as a reusable Style Recipe / Brand Archetype. */
+  onSaveStyleRecipe?: () => void;
   onLoadKit?: (kit: PromptKit) => void;
   onDeleteKit?: (id: string) => void;
   showKitDropdown?: boolean;
@@ -62,6 +65,7 @@ export function PromptForm({
   onSubmit,
   kits = [],
   onSaveKit,
+  onSaveStyleRecipe,
   onLoadKit,
   onDeleteKit,
   showKitDropdown = false,
@@ -140,6 +144,11 @@ export function PromptForm({
   const styleCustom = useCustomChipEntry({ field: 'style', mode: 'both' });
   const paletteCustom = useCustomChipEntry({ field: 'palette', mode: 'logo' });
   const platformsCustom = useCustomChipEntry({ field: 'platforms', mode: 'both' });
+
+  // Tier-1 collapse: Style & Direction grid starts collapsed (Task 3.3).
+  const [showStyle, setShowStyle] = useState(false);
+  // Inline reference-image attach reveal (Task 3.2.2).
+  const [showRefUploader, setShowRefUploader] = useState(false);
 
   // A value that matches no built-in preset renders as a selected custom chip.
   const styleIsCustom =
@@ -221,8 +230,6 @@ export function PromptForm({
   return (
     <GlassCard variant="default" className="p-5 sm:p-6 space-y-5">
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} onKeyDown={handleKeyDown} className="space-y-5">
-        {/* ── TIER 1 · ESSENTIALS — always visible ── */}
-
         {/* Mode toggle */}
         <div
           role="group"
@@ -232,55 +239,9 @@ export function PromptForm({
           {(['image', 'logo'] as const).map(renderModeButton)}
         </div>
 
-        {/* Purpose routing — "What matters most?" */}
-        <div className="space-y-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            <Route className="w-3.5 h-3.5 text-brand" />
-            What matters most for this {isLogo ? 'logo' : 'image'}?
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {PURPOSE_OPTIONS.map((opt) => {
-              const selected = state.purpose === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    if (selected) {
-                      handlers.setPurpose(undefined);
-                    } else {
-                      handlers.setPurpose(opt.id);
-                      // Auto-suggest: merge suggested platforms into current selection
-                      for (const pid of opt.suggestPlatforms) {
-                        if (!state.platforms.includes(pid)) {
-                          handlers.togglePlatform(pid);
-                        }
-                      }
-                    }
-                  }}
-                  aria-pressed={selected}
-                  className={cn(
-                    'px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
-                    selected
-                      ? 'bg-brand/15 border-brand text-text-primary ring-1 ring-brand/40 shadow-sm'
-                      : 'bg-surface-card/50 border-border text-text-secondary hover:border-brand/40 hover:bg-surface-hover'
-                  )}
-                >
-                  {opt.label}
-                  {selected && <Check className="w-3 h-3 text-brand ml-1 inline-block" />}
-                </button>
-              );
-            })}
-          </div>
-          {/* One-line reason when a purpose is selected */}
-          {state.purpose && (
-            <p className="text-[10px] text-brand font-medium leading-relaxed">
-              {PURPOSE_OPTIONS.find((o) => o.id === state.purpose)?.reason}
-            </p>
-          )}
-        </div>
+        {/* ── TIER 1 · CHAT-CARD — visible on first load ── */}
 
-        {/* Subject hero input */}
+        {/* Subject hero input — autosizing textarea with inline image-attach icon */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label htmlFor="img-subject" className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
@@ -311,7 +272,33 @@ export function PromptForm({
               <span>•</span>
               <span>{state.subject.length} chars</span>
             </span>
+            {/* Inline image-attach icon triggers compact ReferenceImageUpload under the textarea */}
+            <button
+              type="button"
+              onClick={() => setShowRefUploader(!showRefUploader)}
+              aria-label="Attach reference images"
+              aria-expanded={showRefUploader}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-muted transition-colors"
+              title="Attach reference images"
+            >
+              <ImageIcon className="w-4 h-4" />
+            </button>
           </div>
+          {/* Condensed reference uploader revealed by the inline attach icon */}
+          {showRefUploader && (
+            <div className="pt-1">
+              <ReferenceImageUpload
+                images={state.referenceImages}
+                onAdd={handlers.addReferenceImage}
+                onRemove={handlers.removeReferenceImage}
+                onUpdatePurpose={handlers.updateReferenceImagePurpose}
+                onReverseEngineer={onReverseEngineerImage}
+                isReverseEngineering={isReverseEngineering}
+                reverseEngineeringId={reverseEngineeringId}
+                compact={true}
+              />
+            </div>
+          )}
           <div className="flex flex-wrap gap-1.5">
             <div
               className={cn(
@@ -363,72 +350,34 @@ export function PromptForm({
           )}
         </div>
 
-        {/* Brand / Subject Kit — load or save reusable brief presets */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-              <FolderOpen className="w-3.5 h-3.5 text-brand" />
-              Brand / Subject Kit
-            </span>
-            {state.subject.trim() && onSaveKit && (
-              <button
-                type="button"
-                onClick={onSaveKit}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-brand/10 text-brand border border-brand/25 hover:bg-brand/15 transition-colors"
-              >
-                <Save className="w-3 h-3" />
-                Save as Kit
-              </button>
-            )}
+        {/* Bottom control bar — SettingsPopover trigger (relocated Tier 1 controls) + Mode pill (visible at chat-card level per Wave 3.2.2) */}
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <SettingsPopover state={state} handlers={handlers} isLogo={isLogo} />
+          <div className="flex items-center justify-end">
+            {renderModeButton(state.mode)}
           </div>
-          {kits.length > 0 && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={onToggleKitDropdown}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-xl border border-border bg-surface-input text-xs text-text-secondary hover:border-brand/40 transition-colors"
-              >
-                <FolderOpen className="w-3.5 h-3.5 text-brand shrink-0" />
-                <span className="truncate">Load from Kit ({kits.length} saved)</span>
-                <ChevronDown className={cn('w-3.5 h-3.5 ml-auto shrink-0 transition-transform', showKitDropdown && 'rotate-180')} />
-              </button>
-              {showKitDropdown && (
-                <div className="absolute inset-x-0 top-full mt-1 z-30 rounded-xl border border-border bg-surface-card shadow-xl shadow-black/20 max-h-[240px] overflow-y-auto scrollbar-thin">
-                  {kits.map((kit) => (
-                    <div key={kit.id} className="flex items-center gap-2 px-3 py-2 hover:bg-surface-hover transition-colors group">
-                      <button
-                        type="button"
-                        onClick={() => onLoadKit?.(kit)}
-                        className="flex-1 text-left min-w-0"
-                      >
-                        <span className="text-xs font-semibold text-text-primary truncate block">{kit.name}</span>
-                        <span className="text-[10px] text-text-muted truncate block">
-                          {kit.subjectDescription.slice(0, 50)}{kit.subjectDescription.length > 50 ? '…' : ''}
-                        </span>
-                      </button>
-                      {onDeleteKit && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); onDeleteKit(kit.id); }}
-                          className="opacity-0 group-hover:opacity-100 p-1 rounded text-text-muted hover:text-danger transition-all"
-                          aria-label={`Delete kit ${kit.name}`}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Style & Direction Section — Segmented Switcher (Curated Recipes vs Custom Styles) */}
-        <div className="space-y-2.5 pt-0.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex p-0.5 rounded-lg bg-surface-input border border-border text-xs font-semibold">
-              <button
+        {/* Style & Direction — Tier 1, collapsed by default behind existing Expandable (Task 3.3). */}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setShowStyle(!showStyle)}
+            aria-expanded={showStyle}
+            className="flex items-center gap-1.5 text-left group"
+          >
+            <LayoutGrid className="w-4 h-4 text-brand group-hover:text-text-primary transition-colors" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary group-hover:text-text-primary transition-colors">
+              {isLogo ? 'Brand Archetypes & Styles' : 'Style & Direction'}
+            </span>
+          </button>
+          <ChevronDown className={cn('w-4 h-4 transition-transform text-text-muted', showStyle && 'rotate-180')} />
+        </div>
+        <Expandable open={showStyle} id="img-style" className="pt-0.5">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="inline-flex p-0.5 rounded-lg bg-surface-input border border-border text-xs font-semibold">
+                <button
                 type="button"
                 onClick={() => setStyleTab('recipes')}
                 className={cn(
@@ -568,116 +517,7 @@ export function PromptForm({
             </div>
           )}
         </div>
-
-        {/* Aspect ratio */}
-        <div className="space-y-2">
-          <ChipRow
-            label="Aspect ratio"
-            icon={<LayoutGrid className="w-3.5 h-3.5 text-brand" />}
-            options={ASPECT_RATIOS}
-            value={state.aspectRatio}
-            onChange={handlers.setAspectRatio}
-            field="aspectRatio"
-            mode="both"
-          />
-          {/* Live aspect ratio preview frame */}
-          {(() => {
-            const [w, h] = state.aspectRatio.split(':').map(Number);
-            if (!w || !h) return null;
-            const maxW = 120;
-            const maxH = 80;
-            let frameW = maxW;
-            let frameH = (h / w) * maxW;
-            if (frameH > maxH) {
-              frameH = maxH;
-              frameW = (w / h) * maxH;
-            }
-            return (
-              <div className="flex items-center gap-3">
-                <div
-                  className="border-2 border-dashed border-brand/40 rounded-md bg-surface-code flex items-center justify-center"
-                  style={{ width: frameW, height: frameH }}
-                >
-                  <span className="text-[8px] text-text-muted font-mono">
-                    {state.aspectRatio}
-                  </span>
-                </div>
-                <span className="text-[10px] text-text-muted leading-tight">
-                  {ASPECT_RATIOS.find((r) => r.id === state.aspectRatio)?.hint ?? ''}
-                </span>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Output format toggle: Prose / JSON / Both */}
-        <div className="space-y-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-brand" />
-            Output Format
-          </span>
-          <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-surface-sunken border border-border">
-            {(['prose', 'json', 'both'] as const).map((fmt) => {
-              const selected = (state.outputFormat ?? 'prose') === fmt;
-              return (
-                <button
-                  key={fmt}
-                  type="button"
-                  onClick={() => handlers.setOutputFormat(fmt)}
-                  aria-pressed={selected}
-                  className={cn(
-                    'flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold border transition-all',
-                    selected
-                      ? 'bg-surface-card border-brand/40 text-text-primary ring-1 ring-brand/40 shadow-sm'
-                      : 'border-transparent text-text-muted hover:text-text-primary'
-                  )}
-                >
-                  <span className="capitalize">{fmt}</span>
-                  {fmt === 'json' && <span className="text-[9px] text-brand uppercase font-mono">schema</span>}
-                  {fmt === 'both' && <span className="text-[9px] text-text-muted">all</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Reference images — quick upload zone in Tier 1 */}
-        {state.referenceImages.length >= 0 && (
-          <div className="space-y-2">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-              <ImageIcon className="w-3.5 h-3.5 text-brand" />
-              {isLogo ? 'Redesigning an existing logo?' : 'Reference images'}
-              <span className="text-text-muted font-normal normal-case">— optional, session-only</span>
-            </span>
-            {isLogo && (
-              <p className="text-[10px] text-text-muted leading-relaxed">
-                Upload your current logo — the AI will treat it as the brand to evolve, not ignore.
-              </p>
-            )}
-            <ReferenceImageUpload
-              images={state.referenceImages}
-              onAdd={handlers.addReferenceImage}
-              onRemove={handlers.removeReferenceImage}
-              onUpdatePurpose={handlers.updateReferenceImagePurpose}
-              onReverseEngineer={onReverseEngineerImage}
-              isReverseEngineering={isReverseEngineering}
-              reverseEngineeringId={reverseEngineeringId}
-            />
-            {state.referenceImages.length > 0 && (
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={state.keepRefImages}
-                  onChange={(e) => handlers.setKeepRefImages(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded border-border text-brand focus:ring-brand/50"
-                />
-                <span className="text-[10px] text-text-muted leading-tight">
-                  Keep reference images with saved prompt (default: session-only)
-                </span>
-              </label>
-            )}
-          </div>
-        )}
+      </Expandable>
 
         {/* ── TIER 2 · REFINE — single accordion, collapsed by default ── */}
         <div className="border-t border-border pt-4">
