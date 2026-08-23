@@ -8,10 +8,12 @@ import { cn } from '@/lib/utils';
 import { useDynamicExamples } from '@/hooks/use-dynamic-examples';
 import { ASPECT_RATIOS, EXAMPLE_TOPICS, PLATFORM_OPTIONS, PURPOSE_OPTIONS, STYLE_PRESETS } from '@/lib/image-prompts';
 import { LOGO_CONCEPT_PRESETS, LOGO_EXAMPLE_TOPICS, LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS, LOGO_STYLE_PRESETS, checkLogoCliches } from '@/lib/logo-prompts';
-import { ImagePlatform, ImagePromptReferenceImage, ProviderConfig, ImageStyleRecipe, LogoArchetypeRecipe } from '@/types';
+import { ImagePlatform, ImagePromptInput, ImagePromptReferenceImage, ProviderConfig, ImageStyleRecipe, LogoArchetypeRecipe } from '@/types';
 import { ActionBar } from './action-bar';
 import { ArtDirection } from './art-direction';
+import { AiConfigAssist } from './ai-config-assist';
 import { CHIP_DOTS, ChipRow } from './chip-row';
+import { SectionToggle } from './section-toggle';
 import { ReferenceImageUpload } from './reference-image-upload';
 import { SettingsPopover } from './settings-popover';
 import { StyleRecipePicker } from './style-recipe-picker';
@@ -86,6 +88,49 @@ export function PromptForm({
 
   const isLogo = state.mode === 'logo';
   const [styleTab, setStyleTab] = useState<'recipes' | 'styles'>('recipes');
+
+  // Refine Manual/AI toggle + AiConfigAssist remount key
+  const [refineMode, setRefineMode] = useState<'manual' | 'ai' | undefined>(undefined);
+  const [refineAiKey, setRefineAiKey] = useState(0);
+
+  const buildRefineInput = (): ImagePromptInput => ({
+    subject: state.subject,
+    style: state.style,
+    mode: state.mode,
+    purpose: state.purpose,
+    outputFormat: state.outputFormat,
+    platforms: state.platforms,
+    aspectRatio: state.aspectRatio,
+    logoType: state.mode === 'logo' ? state.logoType : undefined,
+    logoStyle: state.mode === 'logo' ? state.logoStyle : undefined,
+    palette: state.mode === 'logo' ? state.palette : undefined,
+    brandName: state.mode === 'logo' ? state.brandName.trim() || undefined : undefined,
+    industry: state.mode === 'logo' ? state.industry : undefined,
+    concept: state.mode === 'logo' ? state.concept : undefined,
+    shapeLanguage: state.mode === 'logo' ? state.shapeLanguage : undefined,
+    typography: state.mode === 'logo' ? state.typography : undefined,
+    lockup: state.mode === 'logo' ? state.lockup : undefined,
+    hiddenMeaning: state.mode === 'logo' ? state.hiddenMeaning : undefined,
+    usage: state.mode === 'logo' && state.usage.length > 0 ? [...state.usage] : undefined,
+    boldness: state.mode === 'logo' ? state.boldness : undefined,
+  });
+
+  const handleApplyAiRefine = (fieldValues: Record<string, string>) => {
+    if (fieldValues.platforms) {
+      fieldValues.platforms
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .forEach((p) => {
+          const platformId = p as ImagePlatform;
+          if (!state.platforms.includes(platformId)) handlers.togglePlatform(platformId);
+        });
+    }
+    if (fieldValues.industry && isLogo) handlers.setIndustry(fieldValues.industry);
+    if (fieldValues.logoType && isLogo) handlers.setLogoType(fieldValues.logoType);
+    if (fieldValues.concept && isLogo) handlers.setConcept(fieldValues.concept);
+    if (fieldValues.palette && isLogo) handlers.setPalette(fieldValues.palette);
+  };
 
   const exampleTopics = isLogo ? LOGO_EXAMPLE_TOPICS : EXAMPLE_TOPICS;
   // Pre-flight cliché check — client-side keyword scan before generation
@@ -737,7 +782,25 @@ export function PromptForm({
               </div>
             )}
 
-            {/* Platform dialects */}
+            {/* Refine Manual / AI Generated toggle — gates the platform dialects chip row. */}
+            <SectionToggle
+              value={refineMode}
+              onChange={(v) => { setRefineMode(v); setRefineAiKey((k) => k + 1); }}
+              label="Refine"
+            />
+
+            {refineMode === 'ai' && (
+              <AiConfigAssist
+                key={refineAiKey}
+                mode={isLogo ? 'logo' : 'image'}
+                section="refine"
+                input={buildRefineInput()}
+                referenceImages={state.referenceImages.map((r) => ({ dataUrl: r.dataUrl, purpose: r.purpose }))}
+                onApply={handleApplyAiRefine}
+              />
+            )}
+
+            {refineMode !== 'ai' && (
             <div className="space-y-2">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
                 <Cpu className="w-3.5 h-3.5 text-brand" />
@@ -841,11 +904,26 @@ export function PromptForm({
                 )}
               </div>
             </div>
+          )}
           </Expandable>
         </div>
 
         {/* ── TIER 3 · ART DIRECTION — existing accordion (now with negative-prompt Suggest) ── */}
         <ArtDirection state={state} handlers={handlers} />
+
+        {/* Save as Style Recipe */}
+        {onSaveStyleRecipe && state.subject.trim() && (
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={onSaveStyleRecipe}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-brand/20 hover:bg-brand/30 text-brand border border-brand/35 shadow-xs transition-all"
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+              <span>Save as Style Recipe</span>
+            </button>
+          </div>
+        )}
 
         {/* Sticky action bar */}
         <ActionBar

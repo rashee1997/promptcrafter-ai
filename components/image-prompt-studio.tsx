@@ -754,18 +754,6 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
           onOpenAiGenerator={() => setShowAiTemplateModal(true)}
         />
 
-        <div className="flex items-center gap-2 mt-4">
-          <button
-            type="button"
-            onClick={handleSaveStyleRecipe}
-            disabled={!subject.trim()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-brand/20 hover:bg-brand/30 text-brand border border-brand/35 shadow-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>Save as Style Recipe</span>
-          </button>
-        </div>
-
         {/* ── Right: Output & brief viewer ── */}
         <OutputPanel
           isGenerating={isGenerating}
