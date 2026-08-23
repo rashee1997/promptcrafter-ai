@@ -131,10 +131,10 @@ export function Navbar({
 
             {/* Step 2 — Right-hand status controls: always single row, collapse at xl- */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">
-              {/* Always-visible settings shortcut */}
+              {/* Settings shortcut — hidden at xl+ where the wider provider pill group takes over */}
               <button
                 onClick={() => handleTabClick('settings')}
-                className="p-2 rounded-xl bg-surface-muted text-text-secondary hover:bg-surface-hover transition-colors border border-border"
+                className="xl:hidden p-2 rounded-xl bg-surface-muted text-text-secondary hover:bg-surface-hover transition-colors border border-border"
                 aria-label="Connection & settings"
                 title="Connection & settings"
               >
