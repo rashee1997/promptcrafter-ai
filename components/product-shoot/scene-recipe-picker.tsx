@@ -199,14 +199,14 @@ export function SceneRecipePicker({
               <div>
                 {/* Header: Title + Goal badge */}
                 <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
                     <RecipeIcon name={recipe.iconName} />
-                    <span className="text-xs font-bold text-text-primary">
+                    <span className="text-xs font-bold text-text-primary truncate">
                       {recipe.label}
                     </span>
                   </div>
                   <span
-                    className={`text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded-full border ${goalMeta.bg} ${goalMeta.text} ${goalMeta.border} shrink-0`}
+                    className={`text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded-full border ${goalMeta.bg} ${goalMeta.text} ${goalMeta.border} shrink-0 max-w-[60%] truncate`}
                   >
                     {goalMeta.label}
                   </span>
@@ -218,16 +218,16 @@ export function SceneRecipePicker({
               </div>
 
               {/* Meta row */}
-              <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-text-muted font-mono">
-                <span className="flex items-center gap-1">
+              <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between gap-1.5 text-[10px] text-text-muted font-mono min-w-0">
+                <span className="flex items-center gap-1 shrink-0">
                   <Clock className="w-3 h-3 text-text-muted" />
                   ~{recipe.durationHint}s
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 shrink-0">
                   <AspectIcon ratio={recipe.aspectHint} />
                   {recipe.aspectHint}
                 </span>
-                <span className="text-[10px] text-text-muted/80 truncate max-w-[80px]">
+                <span className="text-[10px] text-text-muted/80 truncate min-w-0 flex-1 text-right" title={recipe.category}>
                   {recipe.category}
                 </span>
               </div>

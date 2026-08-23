@@ -322,9 +322,9 @@ export function ProductShootStudio({
       </AnimatePresence>
 
       {/* Main Two-Column Studio Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left column — Form & Controls */}
-        <div className="w-full lg:col-span-5 xl:col-span-5 min-w-0 space-y-5">
+      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-24">
+        {/* Left column — Form & Controls (independent scroll context, mirrors right column) */}
+        <div className="w-full lg:col-span-5 xl:col-span-5 min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto no-scrollbar scroll-smooth space-y-5">
           {/* 1. Product Reference Upload */}
           <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-4 sm:p-5 shadow-sm">
             <ProductUploadPanel images={images} onImagesChange={setImages} />
@@ -351,95 +351,8 @@ export function ProductShootStudio({
             onToggle={() => setShowCreativeControls(!showCreativeControls)}
           />
 
-          {/* Sticky Generate Action Bar */}
-          <div className="sticky bottom-3 z-20 pt-2">
-            <div className="flex flex-col gap-2.5 rounded-2xl border border-border/80 bg-surface-card/95 backdrop-blur-xl p-3.5 shadow-2xl shadow-black/20">
-              {/* Status Chips */}
-              <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-text-secondary">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span
-                    className={`px-2 py-0.5 rounded-md font-mono border ${
-                      images.length > 0
-                        ? 'bg-brand/10 border-brand/25 text-brand font-semibold'
-                        : 'bg-surface-muted border-border text-text-muted'
-                    }`}
-                  >
-                    📸 {images.length} {images.length === 1 ? 'image' : 'images'}
-                  </span>
-                  {selectedRecipeId && (
-                    <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-medium text-text-primary">
-                      🎬 {selectedRecipeId === SURPRISE_RECIPE_ID ? "Director's Choice" : (getRecipeById(selectedRecipeId)?.label || 'Recipe')}
-                    </span>
-                  )}
-                  <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-mono">
-                    {creativeControls.aspectRatio}
-                  </span>
-                  {creativeControls.generationMode === 'campaign-3shot' && (
-                    <span className="px-2 py-0.5 rounded-md bg-accent/10 border border-accent/25 text-accent font-semibold">
-                      3-Shot Arc
-                    </span>
-                  )}
-                </div>
-
-                {!canGenerate && !isGenerating && (
-                  <span className="text-[11px] text-warning font-medium">
-                    {images.length === 0
-                      ? 'Add product image'
-                      : !brief.name.trim()
-                        ? 'Add product name'
-                        : !selectedRecipeId
-                          ? 'Select scene recipe'
-                          : ''}
-                  </span>
-                )}
-              </div>
-
-              {/* Primary Action Button (Solid Brand Color) */}
-              <div className="flex items-center gap-2">
-                <motion.button
-                  type="button"
-                  onClick={() => handleGenerate()}
-                  disabled={!canGenerate || isGenerating}
-                  whileTap={canGenerate && !isGenerating ? { scale: 0.985 } : undefined}
-                  className={`
-                    flex-1 flex items-center justify-center gap-2 rounded-xl px-5 py-3.5
-                    text-sm font-bold transition-all duration-200 min-h-[48px]
-                    ${
-                      canGenerate && !isGenerating
-                        ? 'bg-brand hover:bg-brand-hover active:bg-brand-active text-white shadow-[0_8px_24px_var(--shadow-glow)] cursor-pointer'
-                        : 'bg-surface-muted text-text-muted cursor-not-allowed opacity-60'
-                    }
-                  `}
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span className="truncate">Directing Commercial Shot Package...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 text-white fill-white" />
-                      <span>Generate Shot Package</span>
-                      <kbd className="ml-1.5 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-90">
-                        ⌘⏎
-                      </kbd>
-                    </>
-                  )}
-                </motion.button>
-
-                {isGenerating && (
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-3.5 py-3.5 rounded-xl border border-border bg-surface-input hover:bg-surface-muted text-xs font-semibold text-text-muted hover:text-danger transition-colors min-h-[48px]"
-                    title="Cancel Generation"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Spacer so last control has breathing room above the fixed Generate bar */}
+          <div className="h-2" aria-hidden="true" />
         </div>
 
         {/* Right column — Output & Dialect Deck */}
@@ -453,6 +366,98 @@ export function ProductShootStudio({
               onSave={handleSaveToGallery}
               isSaved={isSaved}
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Fixed Generate Action Bar — pinned to viewport bottom, renders once outside scrolling flow */}
+      <div className="fixed bottom-3 left-0 right-0 z-30 px-3 sm:px-6 pointer-events-none">
+        <div className="mx-auto max-w-3xl pointer-events-auto">
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-border/80 bg-surface-card/95 backdrop-blur-xl p-3.5 shadow-2xl shadow-black/20">
+            {/* Status Chips */}
+            <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-text-secondary">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span
+                  className={`px-2 py-0.5 rounded-md font-mono border ${
+                    images.length > 0
+                      ? 'bg-brand/10 border-brand/25 text-brand font-semibold'
+                      : 'bg-surface-muted border-border text-text-muted'
+                  }`}
+                >
+                  📸 {images.length} {images.length === 1 ? 'image' : 'images'}
+                </span>
+                {selectedRecipeId && (
+                  <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-medium text-text-primary">
+                    🎬 {selectedRecipeId === SURPRISE_RECIPE_ID ? "Director's Choice" : (getRecipeById(selectedRecipeId)?.label || 'Recipe')}
+                  </span>
+                )}
+                <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-mono">
+                  {creativeControls.aspectRatio}
+                </span>
+                {creativeControls.generationMode === 'campaign-3shot' && (
+                  <span className="px-2 py-0.5 rounded-md bg-accent/10 border border-accent/25 text-accent font-semibold">
+                    3-Shot Arc
+                  </span>
+                )}
+              </div>
+
+              {!canGenerate && !isGenerating && (
+                <span className="text-[11px] text-warning font-medium">
+                  {images.length === 0
+                    ? 'Add product image'
+                    : !brief.name.trim()
+                      ? 'Add product name'
+                      : !selectedRecipeId
+                        ? 'Select scene recipe'
+                        : ''}
+                </span>
+              )}
+            </div>
+
+            {/* Primary Action Button (Solid Brand Color) */}
+            <div className="flex items-center gap-2">
+              <motion.button
+                type="button"
+                onClick={() => handleGenerate()}
+                disabled={!canGenerate || isGenerating}
+                whileTap={canGenerate && !isGenerating ? { scale: 0.985 } : undefined}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 rounded-xl px-5 py-3.5
+                  text-sm font-bold transition-all duration-200 min-h-[48px]
+                  ${
+                    canGenerate && !isGenerating
+                      ? 'bg-brand hover:bg-brand-hover active:bg-brand-active text-white shadow-[0_8px_24px_var(--shadow-glow)] cursor-pointer'
+                      : 'bg-surface-muted text-text-muted cursor-not-allowed opacity-60'
+                  }
+                `}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span className="truncate">Directing Commercial Shot Package...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 text-white fill-white" />
+                    <span>Generate Shot Package</span>
+                    <kbd className="ml-1.5 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-90">
+                      ⌘⏎
+                    </kbd>
+                  </>
+                )}
+              </motion.button>
+
+              {isGenerating && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-3.5 py-3.5 rounded-xl border border-border bg-surface-input hover:bg-surface-muted text-xs font-semibold text-text-muted hover:text-danger transition-colors min-h-[48px]"
+                  title="Cancel Generation"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

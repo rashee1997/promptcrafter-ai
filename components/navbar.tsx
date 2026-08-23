@@ -147,7 +147,7 @@ export function Navbar({
                 <button
                   onClick={() => handleTabClick('settings')}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-muted border border-border hover:border-brand/50 text-text-secondary transition-colors"
-                  title="Active connection"
+                  title={`Active connection: ${activeProvider.name}`}
                 >
                   <div className="w-2 h-2 rounded-full bg-success" />
                   <Cpu className="w-3.5 h-3.5 text-brand" />
@@ -163,7 +163,7 @@ export function Navbar({
                     <button
                       onClick={() => setModelMenuOpen((open) => !open)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono bg-surface-muted border border-border hover:border-brand/50 text-text-secondary transition-colors"
-                      title="Choose model"
+                      title={`Model: ${activeModel || activeProvider.model}`}
                       aria-expanded={modelMenuOpen}
                       aria-haspopup="menu"
                     >
