@@ -213,6 +213,9 @@ export function PromptOutput({
     [rawPromptText, exportTarget]
   );
 
+  const targetModel = currentSession?.originalInput?.targetModel || activeProvider?.model;
+  const modelTokens = useMemo(() => estimateModelTokens(rawPromptText, targetModel), [rawPromptText, targetModel]);
+
   if (!output && !isGenerating && !currentSession) {
     return (
       <GlassCard variant="subtle" className="p-8 text-center flex flex-col items-center justify-center min-h-[360px]">
@@ -233,8 +236,6 @@ export function PromptOutput({
   }
 
   const { wordCount, charCount, estTokens } = computePromptStats(rawPromptText);
-  const targetModel = currentSession?.originalInput?.targetModel || activeProvider?.model;
-  const modelTokens = useMemo(() => estimateModelTokens(rawPromptText, targetModel), [rawPromptText, targetModel]);
 
   // F1 — real stored quality when available, heuristic otherwise. The heuristic
   // is computed from the saved version, so editing a draft never changes the
