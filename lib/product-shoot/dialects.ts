@@ -199,7 +199,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
           title: 'The Hook',
           goal: 'Visual Surprise & Attention Stop',
           durationSeconds: 3,
-          prompt: extractSection(shot1Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot1Raw.slice(0, 200),
+          prompt: extractSection(shot1Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot1Raw.trim(),
           foleyCue: extractSection(shot1Raw, 'Audio Cue:', ['Overlay:', '###']) || 'Dynamic whoosh stinger on impact',
           onScreenText: extractSection(shot1Raw, 'Overlay:', ['###', '##']) || 'Look closer.',
         },
@@ -208,7 +208,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
           title: 'Sensory Demo',
           goal: 'Product in Action & Texture Reveal',
           durationSeconds: 4,
-          prompt: extractSection(shot2Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot2Raw.slice(0, 200),
+          prompt: extractSection(shot2Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot2Raw.trim(),
           foleyCue: extractSection(shot2Raw, 'Audio Cue:', ['Overlay:', '###']) || 'Crisp tactile product dispensing sound',
           onScreenText: extractSection(shot2Raw, 'Overlay:', ['###', '##']) || 'Instant transformation.',
         },
@@ -217,7 +217,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
           title: 'Brand CTA Endframe',
           goal: 'Brand Memorability & Conversion',
           durationSeconds: 3,
-          prompt: extractSection(shot3Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot3Raw.slice(0, 200),
+          prompt: extractSection(shot3Raw, 'Prompt:', ['Audio Cue:', 'Overlay:', '###']) || shot3Raw.trim(),
           foleyCue: extractSection(shot3Raw, 'Audio Cue:', ['Overlay:', '###']) || 'Brand signature audio chime',
           onScreenText: extractSection(shot3Raw, 'Overlay:', ['###', '##']) || 'Shop Now · Free Shipping',
         },
@@ -240,7 +240,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
         timecodeRange: '0s–5s',
         beatTitle: 'Initial Hook & Approach',
         continuityAnchor: 'Frame 0 Anchor: Reference Image Product Position',
-        extensionPrompt: extractSection(beat1Raw, 'Prompt:', ['End-Frame State:', 'Instruction:', '###']) || beat1Raw.slice(0, 250),
+        extensionPrompt: extractSection(beat1Raw, 'Prompt:', ['End-Frame State:', 'Instruction:', '###']) || beat1Raw.trim(),
         modelInstruction: extractSection(beat1Raw, 'Instruction:', ['###', '##']) || 'Standard Initial Generation (Duration: 5s)',
       });
     }
@@ -251,7 +251,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
         timecodeRange: '5s–10s',
         beatTitle: 'Extension & Fluid Evolution',
         continuityAnchor: extractSection(beat2Raw, 'Continuity Anchor:', ['Prompt:', '###']) || 'Lock product position & lighting from second 5',
-        extensionPrompt: extractSection(beat2Raw, 'Prompt:', ['Instruction:', '###']) || beat2Raw.slice(0, 250),
+        extensionPrompt: extractSection(beat2Raw, 'Prompt:', ['Instruction:', '###']) || beat2Raw.trim(),
         modelInstruction: extractSection(beat2Raw, 'Instruction:', ['###', '##']) || 'Runway / Luma: Select Extend from last frame. Kling: Prompt 2.',
       });
     }
@@ -262,7 +262,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
         timecodeRange: '10s–15s',
         beatTitle: 'Resolution & Hero Hold',
         continuityAnchor: extractSection(beat3Raw, 'Continuity Anchor:', ['Prompt:', '###']) || 'Smooth deceleration into final locked frame',
-        extensionPrompt: extractSection(beat3Raw, 'Prompt:', ['Instruction:', '###']) || beat3Raw.slice(0, 250),
+        extensionPrompt: extractSection(beat3Raw, 'Prompt:', ['Instruction:', '###']) || beat3Raw.trim(),
         modelInstruction: extractSection(beat3Raw, 'Instruction:', ['###', '##']) || 'Final extension pass with stabilized framing.',
       });
     }
@@ -299,7 +299,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
   }
 
   return {
-    mainPrompt: mainPrompt || raw.slice(0, 500),
+    mainPrompt: mainPrompt || raw.trim(),
     negativePrompt: negativePrompt || 'distorted label, morphed text, extra products, warped packaging, blurry details, duplicate bottle',
     runwayPrompt: runwayPrompt || undefined,
     klingPrompt: klingPrompt || undefined,

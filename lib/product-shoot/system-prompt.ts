@@ -259,6 +259,24 @@ export function buildProductShootUserMessage(
       customDirectives.push(`USER NEGATIVE CONSTRAINTS: ${creativeControls.negativeConstraints}`);
     }
 
+    // Dialect filtering — only ask the model for enabled platform sections
+    if (creativeControls.enabledDialects && creativeControls.enabledDialects.length > 0) {
+      const ALL_DIALECTS = ['master', 'runway', 'kling', 'veo', 'luma', 'minimax'] as const;
+      const disabled = ALL_DIALECTS.filter((d) => !creativeControls.enabledDialects!.includes(d as any));
+      if (disabled.length > 0) {
+        customDirectives.push(
+          `PLATFORM DIALECT OVERRIDE: The director has disabled the following platform sections — do NOT generate them: ${disabled.join(', ').toUpperCase()}. Only output dialect sections for: ${creativeControls.enabledDialects.join(', ').toUpperCase()}.`
+        );
+      }
+    }
+
+    // Extension beats toggle
+    if (creativeControls.extensionBeatsEnabled === false) {
+      customDirectives.push(
+        'EXTENSION BEATS OVERRIDE: Do NOT generate the "Sequential Clip Extensions & Continuity Handoffs" section. The director has disabled multi-beat chaining for this generation.'
+      );
+    }
+
     if (customDirectives.length > 0) {
       parts.push(
         '',

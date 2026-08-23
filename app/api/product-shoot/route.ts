@@ -136,14 +136,45 @@ export async function POST(req: NextRequest) {
       return new Response(customStream, { headers: STREAM_HEADERS });
     }
 
-    // For OpenAI-compatible providers without native image support,
-    // build a text-only user message with an image description prefix.
-    const textOnlyUserMessage =
-      '[Note: The user uploaded product reference images that cannot be rendered by this model. ' +
-      'The images should be treated as the canonical product reference — describe the product ' +
-      'exactly as shown in the attached images: its shape, colour, logo, label, packaging, ' +
-      'and proportions must remain exactly as depicted.]\n\n' +
-      userMessage;
+    // For OpenAI-compatible providers without native image support, attempt a
+    // Gemini vision pre-pass to extract a concrete product description, then
+    // inject it as ground truth into the text-only message.
+    let textOnlyUserMessage: string;
+
+    const visionApiKey = process.env.GEMINI_API_KEY;
+    if (visionApiKey) {
+      try {
+        const visionAi = new GoogleGenAI({ apiKey: visionApiKey });
+        const visionResult = await visionAi.models.generateContent({
+          model: GEMINI_DEFAULT_MODEL,
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                ...geminiImageParts,
+                {
+                  text: 'Describe this product precisely for a commercial video director. Include: exact shape and form factor, all colours (primary, secondary, accent), material and finish (matte/gloss/metallic), logo text and placement, label copy and typography style, cap/nozzle/closure details, and overall proportions. Be specific and concrete — avoid vague adjectives.',
+                },
+              ],
+            },
+          ],
+        });
+        const visionDescription = visionResult.text ?? '';
+        textOnlyUserMessage =
+          '[Vision Pre-Pass: The following product description was extracted from the reference images by a dedicated vision model. Use it as ground truth for the product appearance.]\n\n' +
+          visionDescription +
+          '\n\n' +
+          userMessage;
+      } catch {
+        textOnlyUserMessage =
+          '[Note: Your active model cannot read images directly, and no fallback vision model is configured server-side. This output was generated from your text brief alone — the product\'s actual appearance from the reference photo was not used.]\n\n' +
+          userMessage;
+      }
+    } else {
+      textOnlyUserMessage =
+        '[Note: Your active model cannot read images directly, and no fallback vision model is configured server-side. This output was generated from your text brief alone — the product\'s actual appearance from the reference photo was not used.]\n\n' +
+        userMessage;
+    }
 
     return await handleOpenAIProviderRequest(provider, [
       { role: 'system', content: systemInstruction },

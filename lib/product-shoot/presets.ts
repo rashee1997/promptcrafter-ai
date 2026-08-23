@@ -495,7 +495,7 @@ export const TARGET_DURATION_PRESETS: DurationPreset[] = [
   {
     id: '15s-chained',
     label: '15s (2-Clip Chain)',
-    badge: 'Seamless Extension',
+    badge: 'Continuous Extension',
     description: '0-5s Opening + 5-10s Extension from last frame with continuity anchor',
     clipCount: 2,
   },

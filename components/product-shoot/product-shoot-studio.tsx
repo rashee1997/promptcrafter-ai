@@ -114,9 +114,9 @@ export function ProductShootStudio({
         visionPrePass = true;
         visionNote =
           `Note: Your active model (${activeProvider.model}) does not support direct image inputs. ` +
-          `A vision analysis pre-pass was performed using the built-in Gemini to extract ` +
-          `an accurate product description from your uploaded reference images. The creative shot package ` +
-          `was generated from this ground truth.`;
+          `A Gemini vision model was used server-side to extract a product description from your reference images, ` +
+          `which was then injected as ground truth for the generation. If no server-side Gemini key is configured, ` +
+          `the output notes this and falls back to your text brief alone.`;
       }
 
       let fullText = '';
