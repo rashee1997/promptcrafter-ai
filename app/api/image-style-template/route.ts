@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: TemplateGenerationRequest = await req.json();
-    const { provider, prompt, mode = 'image', contextCategory } = body;
+    const { provider, prompt, mode = 'image', contextCategory, customStyles, negativePrompt, constraints, temperature, styleWeight } = body;
 
     promptText = prompt || '';
     modeType = mode;
@@ -101,6 +101,22 @@ export async function POST(req: NextRequest) {
     }
 
     const isLogo = mode === 'logo';
+
+    const customStyleList = (customStyles && customStyles.length > 0)
+      ? `\n\nAdditionally, the following user-defined style options are valid beyond the enums above:\n${customStyles.map((s) => `- "${s}"`).join('\n')}`
+      : '';
+
+    const constraintsBlock = (constraints && Object.keys(constraints).length > 0)
+      ? `\n\nUSER-DEFINED CONSTRAINTS (weight toward these during synthesis):\n${Object.entries(constraints).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
+      : '';
+
+    const negativePromptBlock = negativePrompt
+      ? `\n\nNEGATIVE PROMPT / AVOIDANCE INSTRUCTIONS:\n${negativePrompt}`
+      : '';
+
+    const styleWeightBlock = (styleWeight !== undefined && styleWeight >= 0 && styleWeight <= 1)
+      ? `\n\nSTYLE INTENSITY: the generated style values should feel ${Math.round(styleWeight * 100)}% dominant and ${Math.round((1 - styleWeight) * 100)}% open to interpretation.`
+      : '';
 
     const systemInstruction = `You are PromptCrafter's Master Visual Architect & Brand Identity Director.
 The user wants to generate a complete, production-grade ${isLogo ? 'Brand Identity Archetype Template' : 'Visual Scene Style Recipe'} based on their creative prompt: "${prompt.trim()}".
@@ -132,6 +148,8 @@ Valid option IDs:
 - category: one of 'Editorial & Fashion' | 'Cinematic & Film' | '3D & CGI' | 'Fine Art & Graphic' | 'Sci-Fi & Cyberpunk' | 'Architecture & Spaces' | 'Custom AI'
 - goal: 'photoreal' | 'cinematic' | 'artistic' | 'cgi' | 'stylized' | 'retro' | 'editorial'
 - iconName: Lucide icon name, e.g. 'Crown', 'Zap', 'Sparkles', 'Clapperboard', 'Flame', 'Droplets', 'Square', 'Palette', 'Smile'`}
+
+${customStyleList}${constraintsBlock}${negativePromptBlock}${styleWeightBlock}
 
 Return ONLY a clean valid JSON object with NO markdown fence or extra commentary.`;
 
@@ -222,7 +240,7 @@ ${isLogo ? `{
             config: {
               systemInstruction,
               responseMimeType: 'application/json',
-              temperature: 0.7,
+              temperature: temperature ?? 0.7,
             },
           });
           return res.text || '';

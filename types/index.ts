@@ -812,6 +812,16 @@ export interface TemplateGenerationRequest {
   prompt: string;
   mode: 'image' | 'logo';
   contextCategory?: string;
+  /** User-provided style names appended to the valid option list so AI isn't restricted to hardcoded enums. */
+  customStyles?: string[];
+  /** Instructions on what the generated template should avoid. */
+  negativePrompt?: string;
+  /** Free-form constraints the model should weight toward (e.g. { "minimalism": "high", "colorfulness": "low" }). */
+  constraints?: Record<string, string | number>;
+  /** Temperature override for generation creativity (defaults to 0.7 on the server). */
+  temperature?: number;
+  /** How strongly the generated style should dominate (0–1). */
+  styleWeight?: number;
 }
 
 /** Response contract for AI-Assisted Template generation */

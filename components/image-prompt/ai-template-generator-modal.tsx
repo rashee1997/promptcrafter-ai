@@ -63,6 +63,11 @@ export function AiTemplateGeneratorModal({
   const [generatedImageRecipe, setGeneratedImageRecipe] = useState<ImageStyleRecipe | null>(null);
   const [generatedLogoArchetype, setGeneratedLogoArchetype] = useState<LogoArchetypeRecipe | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  // Configurable generation settings (not hardcoded)
+  const [customStyles, setCustomStyles] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
+  const [temperature, setTemperature] = useState(0.7);
+  const [styleWeight, setStyleWeight] = useState(0.8);
 
   if (!isOpen) return null;
 
@@ -81,6 +86,11 @@ export function AiTemplateGeneratorModal({
         provider: activeProvider,
         prompt: prompt.trim(),
         mode,
+        customStyles: customStyles.split(',').map((s) => s.trim()).filter(Boolean),
+        negativePrompt: negativePrompt.trim() || undefined,
+        temperature,
+        styleWeight,
+        constraints: { intensity: styleWeight },
       });
 
       if (isLogo && res.archetype) {
@@ -202,6 +212,77 @@ export function AiTemplateGeneratorModal({
               ))}
             </div>
           </div>
+
+          {/* Generation Settings */}
+          <details className="group mt-4">
+            <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-text-secondary hover:text-text-primary">
+              <Layers className="w-4 h-4 text-text-muted group-open:rotate-90 transition-transform" />
+              <span>Generation Settings</span>
+              <span className="ml-auto text-[10px] text-text-muted uppercase tracking-wider">optional</span>
+            </summary>
+            <div className="mt-3 space-y-3 p-3 rounded-xl bg-surface-muted/40 border border-border/40 animate-accordion-down">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                  Custom Styles (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={customStyles}
+                  onChange={(e) => setCustomStyles(e.target.value)}
+                  placeholder="e.g., neo-brutalism, vapor-glow, organic-minimal"
+                  className="w-full px-3 py-2 rounded-lg bg-surface-input border border-border/80 text-sm text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand/50 transition-all"
+                />
+                <p className="text-[10px] text-text-muted mt-1">User-defined styles appended to valid options beyond hardcoded enums.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                  Negative Prompt (what to avoid)
+                </label>
+                <input
+                  type="text"
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                  placeholder="e.g., oversaturated, messy, watermark, text, signature"
+                  className="w-full px-3 py-2 rounded-lg bg-surface-input border border-border/80 text-sm text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand/50 transition-all"
+                />
+                <p className="text-[10px] text-text-muted mt-1">Instructions on what the generated template should avoid.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                    Temperature <span className="font-mono text-brand ml-1">{temperature.toFixed(1)}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1.5"
+                    step="0.1"
+                    value={temperature}
+                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-surface-input rounded-full appearance-none accent-brand"
+                  />
+                  <p className="text-[10px] text-text-muted mt-1">Creativity level (0 = deterministic, 1.5 = very creative).</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                    Style Weight <span className="font-mono text-brand ml-1">{Math.round(styleWeight * 100)}%</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={styleWeight}
+                    onChange={(e) => setStyleWeight(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-surface-input rounded-full appearance-none accent-brand"
+                  />
+                  <p className="text-[10px] text-text-muted mt-1">How dominant the generated style should feel.</p>
+                </div>
+              </div>
+            </div>
+          </details>
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
