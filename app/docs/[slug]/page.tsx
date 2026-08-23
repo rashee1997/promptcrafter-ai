@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import DocsLayout from '@/app/docs/layout';
 import { getDocBySlug, getAllDocs } from '@/lib/docs-content';
-import MarkdownRenderer from '@/components/markdown-renderer';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 
 export const metadata: Metadata = {
   title: 'Documentation',
