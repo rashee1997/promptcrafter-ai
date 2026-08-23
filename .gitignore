@@ -11,3 +11,5 @@ coverage/
 .gjc/
 .claude/
 skills-lock.json
+.qwen/
+.serena/
