@@ -20,7 +20,11 @@ const nextConfig: NextConfig = {
     ],
   },
   transpilePackages: ['motion'],
-  webpack: (config, {dev}) => {
+
+  // Include markdown files as pages – same as blog posts.
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md'],
+
+  webpack: (config, { dev }) => {
     // HMR is disabled via the DISABLE_HMR env var.
     // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
     if (dev && process.env.DISABLE_HMR === 'true') {

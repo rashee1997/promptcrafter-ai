@@ -28,6 +28,7 @@ import {
   Moon,
   ImagePlus,
   Clapperboard,
+  BookOpen,
 } from 'lucide-react';
 import {
   AttachmentPayload,
@@ -840,6 +841,14 @@ export default function HomePage() {
       group: 'Appearance',
       run: () => setDarkMode((mode) => !mode),
     },
+    {
+      id: 'docs',
+      label: 'Open documentation',
+      hint: 'View feature guides and reference docs',
+      icon: <BookOpen className="w-4 h-4" />,
+      group: 'Navigate',
+      run: () => setActiveTab('docs'),
+    },
   ];
 
   return (
@@ -856,10 +865,6 @@ export default function HomePage() {
         <Navbar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          activeProvider={activeProvider}
-          activeModel={activeProvider.model}
-          onSelectActiveModel={handleSelectActiveModel}
-          historyCount={sessions.length}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
           onOpenPalette={() => setPaletteOpen(true)}
@@ -1087,6 +1092,25 @@ export default function HomePage() {
                 setDarkMode={setDarkMode}
                 onImportSessions={handleImportSessions}
               />
+              </motion.div>
+            )}
+            {activeTab === 'docs' && (
+              <motion.div
+                key="docs"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                className="max-w-4xl mx-auto"
+              >
+                <script
+                  dangerouslySetInnerHTML={{
+                    __html: `window.location.href = '/docs';`
+                  }}
+                />
+                <p className="text-center text-text-secondary py-8">
+                  Redirecting to documentation...
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
