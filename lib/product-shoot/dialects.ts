@@ -293,7 +293,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
       'Switch to dramatic chiaroscuro rim lighting with deep shadows',
       'Add high-speed fluid splash crown around product base',
       'Convert to vertical 9:16 UGC creator unboxing style',
-      'Elevate product on polished Carrara marble plinth',
+      'Rest product on veined Carrara marble, camera low to catch the cold stone reflection',
       'Change to ultra slow-motion 120fps macro lens sweep'
     );
   }

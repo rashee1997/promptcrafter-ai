@@ -588,7 +588,7 @@ export function OutputPanel({
                         <div className="flex items-center gap-2">
                           <Timer className="w-4 h-4 text-brand" />
                           <h3 className="text-xs font-bold uppercase tracking-wider text-brand">
-                            Multi-Beat Temporal Chaining (Seamless Model Extension)
+                            Multi-Beat Temporal Chaining (Cross-Clip Continuity)
                           </h3>
                         </div>
                         <p className="text-xs text-text-secondary leading-relaxed">

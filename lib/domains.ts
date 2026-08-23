@@ -440,7 +440,7 @@ export function buildMetaSystemPrompt(input: PromptInput, domain: DomainPreset):
       break;
   }
 
-  return `You are PromptCrafter, an elite World-Class Prompt Engineer, Meta-Prompt Designer, and AI System Architect.
+  return `You are PromptCrafter, a prompt engineer specializing in meta-prompt design and AI system architecture.
 
 YOUR MISSION:
 Engineer a single, production-ready, top-tier AI prompt based on the user's requirements.

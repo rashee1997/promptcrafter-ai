@@ -14,13 +14,13 @@ export const SCENE_RECIPES: SceneRecipe[] = [
     label: 'E-Commerce Hero',
     goal: 'hero',
     summary:
-      'Product stays centered, elevated and dominant. Editorial studio lighting with slow orbit.',
+      'Product stays centered, raised and commanding the frame. Editorial studio lighting with slow orbit.',
     durationHint: 8,
     aspectHint: '16:9',
     category: 'Commercial',
     iconName: 'Crown',
     creativeDirection:
-      'Stage a premium product hero commercial. The product sits center-frame, dominant and elevated. ' +
+      'Stage a premium product hero commercial. The product sits center-frame, prominent and commanding. ' +
       'Use a slow orbit or gentle push-in to showcase dimensionality. Lighting is editorial — ' +
       'one key light with soft fill, creating defined highlights on the product surface. ' +
       'Background is minimal: a gradient wash, a textured surface, or a subtle architectural plinth ' +
@@ -92,7 +92,7 @@ export const SCENE_RECIPES: SceneRecipe[] = [
     category: 'Luxury',
     iconName: 'Flame',
     creativeDirection:
-      'High-end luxury commercial aesthetic. The product is elevated on a monolithic raw stone or polished ' +
+      'High-end luxury commercial aesthetic. The product is perched atop a monolithic raw stone or polished ' +
       'black obsidian plinth. Extreme chiaroscuro lighting — razor-sharp golden or silver rim lights carve ' +
       'the silhouette out of a deep velvety shadow. The camera cranes upwards in a heroic low-angle reveal.',
     bestFor: 'Perfume, watches, jewelry, premium cosmetics, spirits',

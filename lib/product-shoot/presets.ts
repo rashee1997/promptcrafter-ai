@@ -42,7 +42,7 @@ export const CAMERA_MOTION_PRESETS: OptionPreset[] = [
     id: 'orbit-360',
     label: 'Orbital 360°',
     description: 'Smooth full circular sweep showing every angle',
-    keyword: 'seamless 360-degree orbital camera rotation around the product',
+    keyword: 'one continuous, unbroken 360-degree orbital camera rotation around the product, no visible cut',
   },
   {
     id: 'macro-dolly-in',
@@ -142,7 +142,7 @@ export const SURFACE_PRESETS: OptionPreset[] = [
     id: 'raw-concrete',
     label: 'Architectural Concrete',
     description: 'Brutalist matte textured concrete with architectural lines',
-    keyword: 'elevated on a brutalist textured raw concrete geometric plinth with clean architectural edges',
+    keyword: 'set upon a brutalist textured raw concrete geometric plinth with clean architectural edges',
   },
   {
     id: 'warm-sand',
