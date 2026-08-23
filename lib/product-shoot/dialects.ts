@@ -319,7 +319,7 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
 /** Helper to extract a subsection between markdown headers. */
 function extractSection(text: string, headerName: string, stopHeaders: string[]): string {
   const headerRegex = new RegExp(
-    `(?:##+\\s*|#+\\s*|\\*\\*\\s*)?${escapeRegExp(headerName)}[^\\n\\r]*[\\n\\r]+`,
+    `(?:##+\\s*|#+\\s*)?${escapeRegExp(headerName)}[^\\n\\r]*[\\n\\r]+`,
     'i'
   );
   const match = headerRegex.exec(text);
@@ -331,7 +331,7 @@ function extractSection(text: string, headerName: string, stopHeaders: string[])
   // Build stop pattern from stopHeaders
   const stopPatterns = stopHeaders.map((h) => escapeRegExp(h)).join('|');
   const stopRegex = new RegExp(
-    `(?:[\\n\\r]+(?:##+|#+|\\*\\*|###+)\\s*(?:${stopPatterns}))`,
+    `(?:[\\n\\r]+(?:##+|#+|###+)\\s*(?:${stopPatterns}))`,
     'i'
   );
 
