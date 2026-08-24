@@ -886,31 +886,46 @@ export default function HomePage() {
           tabIndex={-1}
           className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 md:pb-8"
         >
-          {/* Static intro block — server-rendered into the initial HTML for SEO/AEO */}
-          <section aria-labelledby="home-intro-heading" className="mb-6 lg:mb-8 max-w-3xl">
-            <h1
-              id="home-intro-heading"
-              className="text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-text-primary"
-            >
-              Create clear prompts, refine them, and keep every version
-            </h1>
-            <p className="mt-3 text-sm sm:text-base text-text-secondary leading-relaxed">
-              Describe what you want, and PromptCrafter writes a complete prompt, checks its quality,
-              and lets you test and adjust it before you use it. Every change is saved as a new
-              version you can compare and reuse. No account needed — your work stays in your browser.
-            </p>
-            <p className="mt-2 text-xs sm:text-sm text-text-muted">
-              See how it works in the{' '}
-              <Link href="/blog" className="font-semibold text-brand hover:underline">
-                blog
-              </Link>
-              , or read the{' '}
-              <Link href="/faq" className="font-semibold text-brand hover:underline">
-                FAQ
-              </Link>
-              .
-            </p>
-          </section>
+          {/* Hero / intro block — full version only on the generator tab; compact
+              single-line strip on all other tabs to save vertical space. */}
+          {activeTab === 'generator' ? (
+            <section aria-labelledby="home-intro-heading" className="mb-6 lg:mb-8 max-w-3xl">
+              <h1
+                id="home-intro-heading"
+                className="text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-text-primary"
+              >
+                Create clear prompts, refine them, and keep every version
+              </h1>
+              <p className="mt-3 text-sm sm:text-base text-text-secondary leading-relaxed">
+                Describe what you want, and PromptCrafter writes a complete prompt, checks its quality,
+                and lets you test and adjust it before you use it. Every change is saved as a new
+                version you can compare and reuse. No account needed — your work stays in your browser.
+              </p>
+              <p className="mt-2 text-xs sm:text-sm text-text-muted">
+                See how it works in the{' '}
+                <Link href="/blog" className="font-semibold text-brand hover:underline">
+                  blog
+                </Link>
+                , or read the{' '}
+                <Link href="/faq" className="font-semibold text-brand hover:underline">
+                  FAQ
+                </Link>
+                .
+              </p>
+            </section>
+          ) : (
+            <div className="mb-4 flex items-center gap-2">
+              <h1 className="text-sm font-bold text-text-primary tracking-tight">PromptCrafter AI</h1>
+              <span className="text-[11px] text-text-muted">\u2022</span>
+              <span className="text-[11px] text-text-muted">
+                {activeTab === 'image' && 'Image Studio'}
+                {activeTab === 'video' && 'Video Studio'}
+                {activeTab === 'history' && 'Saved Prompts'}
+                {activeTab === 'settings' && 'Settings'}
+                {activeTab === 'docs' && 'Documentation'}
+              </span>
+            </div>
+          )}
 
           <AnimatePresence mode="wait" initial={false}>
             {activeTab === 'generator' && (

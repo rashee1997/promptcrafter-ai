@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BookOpenCheck, Camera, ChevronDown, Eraser, Eye, Gauge, Globe, LayoutGrid, Monitor, Package, Palette, Search, SlidersHorizontal, Sparkles, Triangle, Type } from 'lucide-react';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,17 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
 
   const [artDirectionMode, setArtDirectionMode] = useState<'manual' | 'ai' | undefined>(undefined);
   const [aiProposalsKey, setAiProposalsKey] = useState(0);
+
+  // Auto-scroll the accordion header into view when expanded, accounting
+  // for the sticky action bar that may obscure the top of newly visible content.
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (showArtDirection && toggleRef.current) {
+      requestAnimationFrame(() => {
+        toggleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  }, [showArtDirection]);
 
   const buildArtDirectionInput = (): ImagePromptInput => ({
     subject: state.subject,
@@ -165,11 +176,12 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
   return (
     <div className="border-t border-border pt-4">
       <button
+        ref={toggleRef}
         type="button"
         onClick={() => handlers.setShowArtDirection(!showArtDirection)}
         aria-expanded={showArtDirection}
         aria-controls="img-art-direction"
-        className="w-full flex items-center justify-between gap-2 text-left group"
+        className="w-full flex items-center justify-between gap-2 text-left group scroll-mt-28"
       >
         <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary group-hover:text-brand transition-colors">
           <SlidersHorizontal className="w-4 h-4 text-brand" />

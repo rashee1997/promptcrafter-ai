@@ -359,6 +359,8 @@ export function PromptForm({
                   key={ex}
                   type="button"
                   onClick={() => handlers.setSubject(ex)}
+                  title={ex}
+                  aria-label={ex}
                   className="px-2 py-1 rounded-lg text-[10px] font-medium bg-surface-muted border border-border text-text-muted hover:text-brand hover:border-brand/40 transition-colors"
                 >
                   {ex.length > 46 ? `${ex.slice(0, 46)}…` : ex}

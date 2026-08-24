@@ -255,6 +255,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       setPlatforms((prev) =>
         prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
       ),
+    setPlatforms: (next) => setPlatforms(next),
     setNegativePrompt,
     setInImageText,
     setAdditionalNotes,
