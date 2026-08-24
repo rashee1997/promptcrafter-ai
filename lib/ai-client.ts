@@ -398,7 +398,10 @@ export async function getImageConfigAssist(
     });
     if (!res.ok) return { fields: null };
     const data = await res.json();
-    return { fields: data?.fields && typeof data.fields === 'object' ? data.fields : null };
+    return {
+      fields: data?.fields && typeof data.fields === 'object' ? data.fields : null,
+      ...(Array.isArray(data?.lintIssues) && data.lintIssues.length > 0 && { lintIssues: data.lintIssues }),
+    };
   } catch (err) {
     console.error('getImageConfigAssist failed:', err);
     return { fields: null };

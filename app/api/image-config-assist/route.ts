@@ -116,7 +116,7 @@ function parseFieldsResponse(raw: string, fieldKeys: string[]): Record<string, I
 /** Flag options whose value contains a banned buzzword/filler token. */
 function lintFieldOptions(fields: Record<string, ImageConfigAssistFieldOption[]>): ImagePromptLintIssue[] {
   const issues: ImagePromptLintIssue[] = [];
-  for (const options of Object.values(fields)) {
+  for (const [field, options] of Object.entries(fields)) {
     for (const option of options) {
       const lower = option.value.toLowerCase();
       const bannedMatch = BANNED_BUZZWORDS.find((bw) => lower.includes(bw));
@@ -124,6 +124,7 @@ function lintFieldOptions(fields: Record<string, ImageConfigAssistFieldOption[]>
         issues.push({
           severity: 'warning',
           rule: 'banned-buzzword',
+          field,
           message: `"${bannedMatch}" in "${option.value}" — often ignored by models.`,
         });
       }
@@ -139,10 +140,10 @@ export async function POST(req: NextRequest) {
     const section = body.section === 'artDirection' ? 'artDirection' : 'refine';
     const input = (body.input || {}) as ImagePromptInput;
     const allFieldKeys = FIELD_DOMAIN[section][mode];
-    const requestedFieldKeys = Array.isArray(body.targetFields)
+    const fieldKeys = Array.isArray(body.targetFields)
       ? allFieldKeys.filter((k) => body.targetFields!.includes(k))
-      : [];
-    const fieldKeys = requestedFieldKeys.length > 0 ? requestedFieldKeys : allFieldKeys;
+      : allFieldKeys;
+    if (fieldKeys.length === 0) return NextResponse.json({ fields: null });
 
     try {
       const apiKey = process.env.GEMINI_API_KEY;

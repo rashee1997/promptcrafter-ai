@@ -731,6 +731,8 @@ export interface ImagePromptLintIssue {
   rule: string;
   message: string;
   suggestion?: string;
+  /** AI config assist field key this issue belongs to (e.g. "lighting"); absent for general prompt-quality issues. */
+  field?: string;
 }
 
 /** Request contract for the Image Prompt Studio AI Config Assist endpoint (Refine / Art direction sections). */

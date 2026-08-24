@@ -277,7 +277,7 @@ export function AiConfigAssist({ mode, section, input, referenceImages, onApply 
     if (response.fields?.[field]) {
       setFields((prev) => ({ ...prev, [field]: response.fields![field] }));
       setLintIssues((prev) => [
-        ...prev.filter((issue) => !issue.message.includes(`"${field}"`)),
+        ...prev.filter((issue) => issue.field !== field),
         ...(response.lintIssues ?? []),
       ]);
     }
