@@ -76,12 +76,11 @@ import { extractPromptVariables, lintPromptVariables } from '@/lib/prompt-variab
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<AppTab>('generator');
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
-    }
-    return true;
-  });
+  // Default false to match SSR output; actual theme (set by the inline
+  // script in layout.tsx to avoid flash-of-wrong-theme) is read into state
+  // in the mount effect below instead of here, so the very first client
+  // render matches the server-rendered HTML and avoids a hydration mismatch.
+  const [darkMode, setDarkMode] = useState<boolean>(false);
 
   // Storage state
   const [providers, setProviders] = useState<ProviderConfig[]>([DEFAULT_BUILTIN_PROVIDER]);
@@ -141,8 +140,19 @@ export default function HomePage() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync dark mode
+  // Read the actual theme after mount — the inline script in layout.tsx
+  // already applied the correct `dark` class before hydration to avoid a
+  // flash of the wrong theme; this just brings React state in sync with it
+  // without re-triggering a class/localStorage write for the initial value.
+  const themeSynced = useRef(false);
   useEffect(() => {
+    setDarkMode(document.documentElement.classList.contains('dark'));
+    themeSynced.current = true;
+  }, []);
+
+  // Sync dark mode (skips the initial mount value, which is applied above)
+  useEffect(() => {
+    if (!themeSynced.current) return;
     if (darkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
