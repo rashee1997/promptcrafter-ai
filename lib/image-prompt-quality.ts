@@ -1,13 +1,7 @@
-import { ImagePlatform, ImagePromptInput } from '@/types';
+import { ImagePlatform, ImagePromptInput, ImagePromptLintIssue } from '@/types';
 import { ImagePromptSections } from './image-prompts';
 
-export interface ImagePromptLintIssue {
-  severity: 'warning' | 'info' | 'error';
-  platform?: ImagePlatform | 'master' | 'universal';
-  rule: string;
-  message: string;
-  suggestion?: string;
-}
+export type { ImagePromptLintIssue };
 
 export interface ImagePromptScorecard {
   overallScore: number; // 0-100
@@ -27,7 +21,7 @@ export interface ImagePromptScorecard {
 }
 
 /** Buzzwords and filler tokens that dilute prompt intent across modern models. */
-const BANNED_BUZZWORDS = [
+export const BANNED_BUZZWORDS = [
   'photorealistic',
   'hyperrealistic',
   'ultra realistic',

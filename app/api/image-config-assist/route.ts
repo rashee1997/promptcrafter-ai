@@ -1,7 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { withModelFallback } from '@/lib/model-fallback';
-import { ImageConfigAssistRequest, ImagePromptInput, ProviderConfig } from '@/types';
+import { BANNED_BUZZWORDS } from '@/lib/image-prompt-quality';
+import { ImageConfigAssistFieldOption, ImageConfigAssistRequest, ImagePromptInput, ImagePromptLintIssue, ProviderConfig } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -90,21 +91,45 @@ function buildInlineImageParts(referenceImages: ImageConfigAssistRequest['refere
 }
 
 /** Strip a ```json fence if the model wraps its output despite responseMimeType. */
-function parseFieldsResponse(raw: string, fieldKeys: string[]): Record<string, { value: string; label: string }[]> | null {
+function parseFieldsResponse(raw: string, fieldKeys: string[]): Record<string, ImageConfigAssistFieldOption[]> | null {
   const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
   if (!cleaned) return null;
   const parsed = JSON.parse(cleaned);
   if (!parsed || typeof parsed !== 'object') return null;
-  const fields: Record<string, { value: string; label: string }[]> = {};
+  const fields: Record<string, ImageConfigAssistFieldOption[]> = {};
   for (const key of fieldKeys) {
     const options = parsed[key];
     if (!Array.isArray(options)) continue;
-    const cleanOptions = options
+    const cleanOptions: ImageConfigAssistFieldOption[] = options
       .filter((o) => o && typeof o.value === 'string' && typeof o.label === 'string')
-      .map((o) => ({ value: o.value, label: o.label }));
+      .map((o) => ({
+        value: o.value,
+        label: o.label,
+        ...(typeof o.hint === 'string' && o.hint.trim() && { hint: o.hint.trim() }),
+        confidence: typeof o.confidence === 'number' && o.confidence >= 0 && o.confidence <= 1 ? o.confidence : 0.7,
+      }));
     if (cleanOptions.length > 0) fields[key] = cleanOptions;
   }
   return Object.keys(fields).length > 0 ? fields : null;
+}
+
+/** Flag options whose value contains a banned buzzword/filler token. */
+function lintFieldOptions(fields: Record<string, ImageConfigAssistFieldOption[]>): ImagePromptLintIssue[] {
+  const issues: ImagePromptLintIssue[] = [];
+  for (const options of Object.values(fields)) {
+    for (const option of options) {
+      const lower = option.value.toLowerCase();
+      const bannedMatch = BANNED_BUZZWORDS.find((bw) => lower.includes(bw));
+      if (bannedMatch) {
+        issues.push({
+          severity: 'warning',
+          rule: 'banned-buzzword',
+          message: `"${bannedMatch}" in "${option.value}" — often ignored by models.`,
+        });
+      }
+    }
+  }
+  return issues;
 }
 
 export async function POST(req: NextRequest) {
@@ -113,14 +138,18 @@ export async function POST(req: NextRequest) {
     const mode = body.mode === 'logo' ? 'logo' : 'image';
     const section = body.section === 'artDirection' ? 'artDirection' : 'refine';
     const input = (body.input || {}) as ImagePromptInput;
-    const fieldKeys = FIELD_DOMAIN[section][mode];
+    const allFieldKeys = FIELD_DOMAIN[section][mode];
+    const requestedFieldKeys = Array.isArray(body.targetFields)
+      ? allFieldKeys.filter((k) => body.targetFields!.includes(k))
+      : [];
+    const fieldKeys = requestedFieldKeys.length > 0 ? requestedFieldKeys : allFieldKeys;
 
     try {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) throw new Error('Server environment variable GEMINI_API_KEY is missing.');
 
       const digest = buildBriefDigest(input, mode);
-      const systemInstruction = `You are PromptCrafter's Image Prompt Studio config assistant. Given this ${mode} brief, propose 3-5 editable option chips for EACH of these fields: ${fieldKeys.join(', ')}. Each option needs a short "value" (preset id / raw setting string) and a human-readable "label". Options must be specific to the brief, not generic boilerplate. Respond with ONLY a JSON object shaped as { "<fieldKey>": [{ "value": string, "label": string }, ...], ... } covering exactly these keys: ${fieldKeys.join(', ')}. No commentary, no markdown fences.`;
+      const systemInstruction = `You are PromptCrafter's Image Prompt Studio config assistant. Given this ${mode} brief, propose 3-5 editable option chips for EACH of these fields: ${fieldKeys.join(', ')}. Each option needs a "value" (preset id / raw setting string), a human-readable "label", an optional "hint" (1-sentence tooltip explaining when to pick it), and a "confidence" (0-1 float reflecting how well it fits the brief; omit if unsure). Options must be specific to the brief, not generic boilerplate. Respond with ONLY a JSON object shaped as { "<fieldKey>": [{ "value": string, "label": string, "hint"?: string, "confidence"?: number }, ...], ... } covering exactly these keys: ${fieldKeys.join(', ')}. No commentary, no markdown fences.`;
       const userText = `Mode: ${mode}\nSection: ${section}\nBrief:\n${digest || '(no settings selected yet)'}\n\nPropose option chips for: ${fieldKeys.join(', ')}`;
 
       const ai = new GoogleGenAI({
@@ -152,7 +181,8 @@ export async function POST(req: NextRequest) {
 
       const jsonText = response.text?.trim() || '';
       const fields = parseFieldsResponse(jsonText, fieldKeys);
-      return NextResponse.json({ fields });
+      const lintIssues = fields ? lintFieldOptions(fields) : [];
+      return NextResponse.json({ fields, ...(lintIssues.length > 0 && { lintIssues }) });
     } catch (err) {
       console.error('Image-config-assist failed, falling back to static presets:', err);
       return NextResponse.json({ fields: null });
