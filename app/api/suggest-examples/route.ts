@@ -25,7 +25,16 @@ const SUGGEST_PROVIDER: ProviderConfig = {
   maxTokens: 300,
 };
 
-const SUGGEST_SYSTEM_PROMPT = `You are an example-topic curator for PromptCrafter's prompt studio. Given the module and the user's current settings, suggest N short, concrete, varied example prompts (subjects/topics) that a user could click to fill the main input. Each must be a single line, 6-18 words, no numbering, no quotes, no markdown. They must make sense with the settings already chosen (e.g. if industry=coffee-shop and mark-type=lettermark, the logo examples should be coffee-brand lettermark subjects, not random other industries). If no settings are selected yet, return generically strong examples for the module/domain like a curated static list would. Respond with ONLY the examples, one per line, no commentary.`;
+const SUGGEST_SYSTEM_PROMPT_BASE = `You are an example-topic curator for PromptCrafter's prompt studio. Given the module and the user's current settings, suggest N short, concrete, varied example prompts (subjects/topics) that a user could click to fill the main input. Each must be a single line, 6-18 words, no numbering, no quotes, no markdown. They must make sense with the settings already chosen (e.g. if industry=coffee-shop and mark-type=lettermark, the logo examples should be coffee-brand lettermark subjects, not random other industries). If no settings are selected yet, return generically strong examples for the module/domain like a curated static list would. Respond with ONLY the examples, one per line, no commentary.`;
+
+/** Per-module vocabulary guardrail appended to the base prompt — keeps image
+ * (photography scenes) and logo (vector brand marks) examples from bleeding
+ * into each other's vocabulary. */
+const MODULE_CONSTRAINTS: Record<'text' | 'image' | 'logo', string> = {
+  text: '',
+  image: ' Examples describe photographic/illustrated scenes: subject + action + setting (e.g. lighting, camera angle, mood) — never brand-identity or logo language.',
+  logo: ' Examples are brand-mark concepts for a VECTOR LOGO, never a photographed scene: name the business/brand type plus a distinctive visual concept (e.g. "Wordmark for an artisan bakery using a rising-steam ligature", "Geometric monogram for a fintech app, navy and gold"). NEVER use photography vocabulary (lighting, camera, lens, golden hour, cinematic) — logos are flat vector marks, not photographs.',
+};
 
 /** Compact digest of whatever the user has already picked — empty fields are skipped, never padded. */
 function buildContextDigest(body: SuggestExamplesRequest): string {
@@ -106,6 +115,7 @@ export async function POST(req: NextRequest) {
     const count = Math.min(8, Math.max(1, body.count ?? 4));
 
     const digest = buildContextDigest(body);
+    const systemPrompt = SUGGEST_SYSTEM_PROMPT_BASE + MODULE_CONSTRAINTS[mode];
     const userMessage = `Module: ${mode}${digest ? `\nCurrent settings: ${digest}` : ''}\n\nSuggest ${count} example topics:`;
 
     let raw = '';
@@ -114,7 +124,7 @@ export async function POST(req: NextRequest) {
         runNonStreamingCompletion(
           SUGGEST_PROVIDER,
           [
-            { role: 'system', content: SUGGEST_SYSTEM_PROMPT },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage },
           ],
           { temperature: 0.9, maxTokens: 300 }

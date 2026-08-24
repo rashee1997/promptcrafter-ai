@@ -744,6 +744,46 @@ export interface ImageConfigAssistResponse {
   fields: Record<string, ImageConfigAssistFieldOption[]> | null;
 }
 
+/** Request contract for the Logo Prompt Studio AI Critique endpoint. */
+export interface LogoCritiqueRequest {
+  input: ImagePromptInput;
+}
+
+export interface LogoPrincipleScore {
+  principle: 'simplicity' | 'memorability' | 'versatility' | 'appropriateness' | 'distinctiveness' | 'timelessness' | 'colorDiscipline';
+  /** 0-100. */
+  score: number;
+  /** One to two sentence actionable note. */
+  feedback: string;
+}
+
+export interface LogoCritiqueResponse {
+  /** Null on total failure or unparseable model output — client shows nothing rather than garbage. */
+  overallScore: number | null;
+  principles: LogoPrincipleScore[];
+  /** Single highest-leverage fix. */
+  topRecommendation: string;
+}
+
+/** Request contract for the Logo Prompt Studio AI Lockup/Variation Suggestor endpoint. */
+export interface LogoVariationRequest {
+  input: ImagePromptInput;
+}
+
+export interface LogoVariationSuggestion {
+  /** Must be a member of LOGO_LOCKUP_PRESETS ids — server drops any suggestion that isn't. */
+  lockupType: string;
+  /** Real-world use case this lockup solves, e.g. "Favicon / app icon". */
+  useCase: string;
+  /** Why this lockup suits this specific brief. */
+  reasoning: string;
+}
+
+export interface LogoVariationResponse {
+  /** Null on total failure or unparseable model output — client shows nothing rather than garbage. */
+  variations: LogoVariationSuggestion[] | null;
+}
+
 /** Response contract for Image Edit instructions. */
 export interface ImageStyleRecipeConfig {
   style?: string;

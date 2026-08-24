@@ -10,6 +10,10 @@ import {
   ImageEditRequest,
   ImageEditResult,
   ImagePromptGenerationRequest,
+  LogoCritiqueRequest,
+  LogoCritiqueResponse,
+  LogoVariationRequest,
+  LogoVariationResponse,
   ImagePromptRedoRequest,
   ImageToPromptRequest,
   ImageToPromptResult,
@@ -402,6 +406,53 @@ export async function getImageConfigAssist(
   } catch (err) {
     console.error('getImageConfigAssist failed:', err);
     return { fields: null };
+  }
+}
+
+/** Logo Prompt Studio AI Critique — scores a brief against the seven logo design principles. */
+export async function getLogoCritique(
+  request: LogoCritiqueRequest,
+  signal?: AbortSignal
+): Promise<LogoCritiqueResponse> {
+  const empty: LogoCritiqueResponse = { overallScore: null, principles: [], topRecommendation: '' };
+  try {
+    const res = await fetch('/api/logo-critique', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return empty;
+    const data = await res.json();
+    return {
+      overallScore: typeof data?.overallScore === 'number' ? data.overallScore : null,
+      principles: Array.isArray(data?.principles) ? data.principles : [],
+      topRecommendation: typeof data?.topRecommendation === 'string' ? data.topRecommendation : '',
+    };
+  } catch (err) {
+    console.error('getLogoCritique failed:', err);
+    return empty;
+  }
+}
+
+/** Logo Prompt Studio AI Lockup Variation Suggestor — proposes a coherent lockup/variation set for the brief. */
+export async function getLogoVariations(
+  request: LogoVariationRequest,
+  signal?: AbortSignal
+): Promise<LogoVariationResponse> {
+  try {
+    const res = await fetch('/api/logo-variations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return { variations: null };
+    const data = await res.json();
+    return { variations: Array.isArray(data?.variations) ? data.variations : null };
+  } catch (err) {
+    console.error('getLogoVariations failed:', err);
+    return { variations: null };
   }
 }
 

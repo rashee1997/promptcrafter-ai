@@ -23,6 +23,8 @@ import { ImagePromptInput } from '@/types';
 import { ChipRow, MultiChipRow } from './chip-row';
 import { SectionToggle } from './section-toggle';
 import { AiConfigAssist } from './ai-config-assist';
+import { LogoCritiquePanel } from './logo-critique-panel';
+import { LogoVariationSuggestor } from './logo-variation-suggestor';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
 
 interface ArtDirectionProps {
@@ -178,8 +180,9 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
         </div>
         <ChevronDown className={cn('w-4 h-4 transition-transform', showArtDirection && 'rotate-180')} />
       </button>
-
       <Expandable open={showArtDirection} id="img-art-direction" className="mt-4 space-y-4">
+        {isLogo && <LogoCritiquePanel input={buildArtDirectionInput()} />}
+
         {/* Manual / AI Generated segmented control gates the chip-preset rows below.
             The in-image-text / negative-prompt / notes inputs are always available. */}
         <SectionToggle
@@ -270,6 +273,13 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             onChange={(id) => handlers.setLockup(state.lockup === id ? undefined : id)}
             field="lockup"
             mode="logo"
+          />
+        )}
+        {isLogo && (
+          <LogoVariationSuggestor
+            input={buildArtDirectionInput()}
+            currentLockup={state.lockup}
+            onSelect={(id) => handlers.setLockup(id)}
           />
         )}
         {isLogo && (
