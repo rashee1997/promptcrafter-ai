@@ -863,13 +863,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-white flex flex-col justify-between">
-      {/* Dynamic Atmospheric Light Glow Orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand/15 rounded-full blur-[120px] dark:animate-orb-drift" />
-        <div className="absolute top-1/3 right-[-10%] w-[45%] h-[45%] bg-brand/10 rounded-full blur-[120px] dark:animate-orb-drift [animation-delay:-15s]" />
-        <div className="absolute bottom-[-10%] left-1/3 w-[50%] h-[50%] bg-brand/10 rounded-full blur-[120px] dark:animate-orb-drift [animation-delay:-30s]" />
-      </div>
-
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Navigation Bar */}
         <Navbar

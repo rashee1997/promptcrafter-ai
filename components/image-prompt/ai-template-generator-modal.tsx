@@ -207,7 +207,7 @@ export function AiTemplateGeneratorModal({
                   onClick={() => setPrompt(idea)}
                   className="px-2.5 py-1 text-[11px] rounded-lg bg-surface-muted/60 hover:bg-brand/10 hover:text-brand border border-border/50 text-text-secondary text-left transition-colors truncate max-w-full"
                 >
-                  "{idea}"
+                &quot;{idea}&quot;
                 </button>
               ))}
             </div>
@@ -379,7 +379,7 @@ export function AiTemplateGeneratorModal({
                   <span className="text-[10px] font-semibold text-brand block mb-0.5 uppercase tracking-wider">
                     Ready-to-Use Sample Prompt
                   </span>
-                  "{generatedImageRecipe.config.sampleFullPrompt}"
+                  &quot;{generatedImageRecipe.config.sampleFullPrompt}&quot;
                 </div>
               )}
 

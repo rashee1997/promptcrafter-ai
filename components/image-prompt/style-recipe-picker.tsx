@@ -155,7 +155,7 @@ export function StyleRecipePicker({
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-surface-card border border-border/70 hover:border-brand/40 text-text-secondary hover:text-text-primary transition-colors shrink-0"
         >
           <Dices className="w-3.5 h-3.5 text-brand" />
-          <span>Director's Pick</span>
+          <span>Director&apos;s Pick</span>
         </button>
 
         <button

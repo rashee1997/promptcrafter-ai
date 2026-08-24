@@ -14,19 +14,19 @@ export function GlassCard({
   ...props
 }: GlassCardProps) {
   const baseStyles =
-    'relative rounded-3xl border transition-all duration-300 backdrop-blur-2xl';
+    'relative rounded-[var(--radius)] border transition-all duration-150';
 
   const variantStyles = {
     default:
-      'bg-surface-card/80 border-border shadow-2xl shadow-brand/5',
+      'bg-surface-card border-border shadow-sm',
     hoverable:
-      'bg-surface-card/80 border-border shadow-lg hover:shadow-2xl hover:-translate-y-0.5 hover:border-brand/40 cursor-pointer',
+      'bg-surface-card border-border shadow-sm hover:shadow-md cursor-pointer',
     glowing:
-      'bg-gradient-to-b from-surface-elevated to-brand-muted/50 border-brand/50 shadow-2xl shadow-brand/10 dark:shadow-orb',
+      'bg-surface-card border-border shadow-md',
     subtle:
-      'bg-surface-card/50 border-border shadow-sm',
+      'bg-surface-muted border-border',
     accent:
-      'bg-brand/10 border-brand/30 shadow-md',
+      'bg-surface-elevated border-border shadow-sm',
   };
 
   return (

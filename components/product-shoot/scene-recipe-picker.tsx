@@ -154,7 +154,7 @@ export function SceneRecipePicker({
               <div className="flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-brand" />
                 <span className="text-xs font-bold text-text-primary">
-                  Director's Choice
+                  Director&apos;s Choice
                 </span>
               </div>
               <span className="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/25">
