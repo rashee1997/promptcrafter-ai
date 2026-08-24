@@ -24,6 +24,13 @@ import {
 } from '@/lib/ai-client';
 import { getProviderModelList } from '@/lib/storage';
 import { DEFAULT_LOGO_INPUT, LOGO_EXAMPLE_TOPICS, LOGO_STYLE_PRESETS } from '@/lib/logo-prompts';
+import {
+  clearSavedLogoPrompts,
+  deleteSavedLogoPrompt,
+  getSavedLogoPrompts,
+  migrateLogoPromptsOutOfImageGallery,
+  saveLogoPrompt,
+} from '@/lib/logo-gallery';
 import { getKits, saveKit, deleteKit, PromptKit } from '@/lib/image-prompt-kits';
 import { saveCustomImageRecipe } from '@/lib/image-style-recipes';
 import { saveCustomLogoArchetype } from '@/lib/logo-archetypes';
@@ -43,6 +50,7 @@ import { AiTemplateGeneratorModal } from './image-prompt/ai-template-generator-m
 import { OutputPanel } from './image-prompt/output-panel';
 import { PromptForm } from './image-prompt/prompt-form';
 import { SavedGallery } from './image-prompt/saved-gallery';
+import { LogoGallery } from './image-prompt/logo-gallery';
 import { StudioFormHandlers, StudioFormState, StudioMode } from './image-prompt/studio-types';
 import { StudioHeader } from './image-prompt/studio-header';
 
@@ -109,6 +117,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
 
   // ── Saved gallery ──
   const [savedPrompts, setSavedPrompts] = useState<SavedImagePrompt[]>([]);
+  const [savedLogos, setSavedLogos] = useState<SavedImagePrompt[]>([]);
 
   // ── Version history (last N sections snapshots for comparison) ──
   const [previousSections, setPreviousSections] = useState<ImagePromptSections | null>(null);
@@ -121,7 +130,9 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [showKitDropdown, setShowKitDropdown] = useState(false);
 
   useEffect(() => {
+    migrateLogoPromptsOutOfImageGallery();
     setSavedPrompts(getSavedImagePrompts());
+    setSavedLogos(getSavedLogoPrompts());
     setKits(getKits());
 
     // Cleanup abort controllers on unmount (Fix D8)
@@ -382,7 +393,7 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     // so the gallery can preview/copy every platform prompt and restore it.
     const { raw: _raw, ...sectionsCopy } = sections;
     const item: SavedImagePrompt = {
-      id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: mode === 'logo' ? `logo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` : `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: subject.trim().slice(0, 60),
       subject: subject.trim(),
       styleLabel,
@@ -396,8 +407,13 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       referenceImages: keepRefImages && referenceImages.length > 0 ? referenceImages : undefined,
       createdAt: Date.now(),
     };
-    setSavedPrompts(saveImagePrompt(item));
-    toast.success('Saved to gallery', 'Reopen, preview, copy, or reuse it anytime.');
+    if (mode === 'logo') {
+      setSavedLogos(saveLogoPrompt(item));
+      toast.success('Saved to logo gallery', 'Reopen, preview, copy, or reuse it anytime.');
+    } else {
+      setSavedPrompts(saveImagePrompt(item));
+      toast.success('Saved to gallery', 'Reopen, preview, copy, or reuse it anytime.');
+    }
   };
 
   /** Restore a saved brief into the form (gallery → edit loop). */
@@ -726,6 +742,10 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setSavedPrompts(deleteSavedImagePrompt(id));
   };
 
+  const handleDeleteSavedLogo = (id: string) => {
+    setSavedLogos(deleteSavedLogoPrompt(id));
+  };
+
   return (
     <div className="space-y-6">
       <StudioHeader platformCount={platforms.length} mode={mode} />
@@ -779,13 +799,24 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
       </div>
 
       {/* ── Saved gallery (history) ── */}
-      {savedPrompts.length > 0 && (
-        <SavedGallery
-          items={savedPrompts}
-          onDelete={handleDeleteSaved}
-          onClear={() => setSavedPrompts(clearSavedImagePrompts())}
-          onRestore={handleRestore}
-        />
+      {mode === 'logo' ? (
+        savedLogos.length > 0 && (
+          <LogoGallery
+            items={savedLogos}
+            onDelete={handleDeleteSavedLogo}
+            onClear={() => setSavedLogos(clearSavedLogoPrompts())}
+            onRestore={handleRestore}
+          />
+        )
+      ) : (
+        savedPrompts.length > 0 && (
+          <SavedGallery
+            items={savedPrompts}
+            onDelete={handleDeleteSaved}
+            onClear={() => setSavedPrompts(clearSavedImagePrompts())}
+            onRestore={handleRestore}
+          />
+        )
       )}
 
       {/* ── AI Template Architect Modal ── */}

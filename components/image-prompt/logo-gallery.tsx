@@ -4,9 +4,10 @@ import React, { useMemo, useState } from 'react';
 import { Check, ChevronDown, Copy, History, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buildOutputTabs, ImagePromptSections, PLATFORM_OPTIONS, SavedImagePrompt } from '@/lib/image-prompts';
+import { LOGO_INDUSTRY_PRESETS, LOGO_MARK_TYPES, LOGO_PALETTE_PRESETS } from '@/lib/logo-prompts';
 import { useInlineCopy } from '@/lib/use-inline-copy';
 
-interface SavedGalleryProps {
+interface LogoGalleryProps {
   items: SavedImagePrompt[];
   onDelete: (id: string) => void;
   onClear: () => void;
@@ -36,13 +37,13 @@ function savedSections(item: SavedImagePrompt): ImagePromptSections {
 }
 
 /**
- * History & gallery for image prompts: searchable, expandable previews of
- * every saved brief, per-section copy buttons, and one-click reuse back into
- * the studio. Research-backed UX: recognition over recall (labels + previews
- * instead of memory), feedback near the action (inline "Copied ✓"), and a
- * gallery → edit loop like Midjourney/Leonardo.
+ * History & gallery for logo briefs: searchable, expandable previews of
+ * every saved brief, per-section copy buttons, brand metadata (name, mark
+ * type, industry, palette), and one-click reuse back into the studio.
+ * Self-contained clone of `SavedGallery` for the image gallery, kept
+ * separate because logo cards surface brand-specific metadata.
  */
-export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalleryProps) {
+export function LogoGallery({ items, onDelete, onClear, onRestore }: LogoGalleryProps) {
   const [query, setQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { copiedKey, copy } = useInlineCopy();
@@ -51,9 +52,11 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
     const q = query.trim().toLowerCase();
     if (!q) return items;
     return items.filter((item) => {
-      const hay = `${item.title} ${item.subject} ${item.styleLabel} ${item.platforms
-        .map((p) => PLATFORM_OPTIONS.find((o) => o.id === p)?.label ?? p)
-        .join(' ')}`.toLowerCase();
+      const industryLabel = LOGO_INDUSTRY_PRESETS.find((i) => i.id === item.input?.industry)?.label ?? '';
+      const markTypeLabel = LOGO_MARK_TYPES.find((m) => m.id === item.input?.logoType)?.label ?? '';
+      const platformLabels = item.platforms.map((p) => PLATFORM_OPTIONS.find((o) => o.id === p)?.label ?? p).join(' ');
+      const hay =
+        `${item.title} ${item.subject} ${item.styleLabel} ${item.input?.brandName ?? ''} ${industryLabel} ${markTypeLabel} ${platformLabels}`.toLowerCase();
       return hay.includes(q);
     });
   }, [items, query]);
@@ -64,7 +67,7 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
           <History className="w-3.5 h-3.5 text-brand" />
-          Saved briefs
+          Saved logo briefs
           <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-surface-muted border border-border text-text-muted">
             {items.length}
           </span>
@@ -77,7 +80,7 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search briefs…"
-              aria-label="Search saved briefs"
+              aria-label="Search saved logo briefs"
               className="w-44 sm:w-56 pl-8 pr-3 py-1.5 rounded-lg text-xs bg-surface-input border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/70 transition-shadow"
             />
           </div>
@@ -95,7 +98,9 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
       {/* Grid */}
       {filtered.length === 0 ? (
         <p className="text-xs text-text-muted py-4 text-center">
-          {items.length === 0 ? 'No saved briefs yet — generate one and hit "Save to gallery".' : 'No saved briefs match your search.'}
+          {items.length === 0
+            ? 'No saved logo briefs yet — generate one in Logo mode and hit "Save to gallery".'
+            : 'No saved logo briefs match your search.'}
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -104,6 +109,11 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
             const tabs = buildOutputTabs(pseudo);
             const expanded = expandedId === item.id;
             const masterCopied = copiedKey === `${item.id}:master`;
+
+            const markTypeLabel = LOGO_MARK_TYPES.find((m) => m.id === item.input?.logoType)?.label ?? item.input?.logoType;
+            const industryLabel = LOGO_INDUSTRY_PRESETS.find((i) => i.id === item.input?.industry)?.label;
+            const paletteColors = LOGO_PALETTE_PRESETS.find((p) => p.id === item.input?.palette)?.colors;
+            const paletteName = LOGO_PALETTE_PRESETS.find((p) => p.id === item.input?.palette)?.label;
 
             return (
               <div
@@ -119,6 +129,34 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
                     {item.styleLabel} · {item.aspectRatio} · {timeAgo(item.createdAt)}
                   </p>
                 </div>
+
+                {/* Brand metadata */}
+                {(item.input?.brandName || markTypeLabel || industryLabel || paletteColors) && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {item.input?.brandName && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-brand/15 text-brand border border-brand/25">
+                        {item.input.brandName}
+                      </span>
+                    )}
+                    {markTypeLabel && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-surface-muted text-text-secondary border border-border">
+                        {markTypeLabel}
+                      </span>
+                    )}
+                    {industryLabel && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-surface-muted text-text-secondary border border-border">
+                        {industryLabel}
+                      </span>
+                    )}
+                    {paletteColors && (
+                      <span className="flex items-center gap-0.5" aria-label={`${paletteName ?? 'Palette'} colors`}>
+                        {paletteColors.map((c) => (
+                          <span key={c} className="w-2.5 h-2.5 rounded-full border border-border/60" style={{ backgroundColor: c }} />
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Platform chips — colored dot + label for quick scanning */}
                 <div className="flex flex-wrap gap-1">
@@ -192,7 +230,6 @@ export function SavedGallery({ items, onDelete, onClear, onRestore }: SavedGalle
                     <div className="absolute inset-x-0 bottom-0 h-6 rounded-b-lg bg-gradient-to-t from-surface-code to-transparent pointer-events-none" />
                   )}
                 </div>
-
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 mt-auto pt-1">
                   <button
