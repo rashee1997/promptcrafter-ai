@@ -28,6 +28,10 @@ import {
   SuggestNegativePromptRequest,
   SuggestNegativePromptResponse,
   TestPromptRequest,
+  ProductShootConfigAssistRequest,
+  ProductShootConfigAssistResponse,
+  ProductShootRecipeSuggestRequest,
+  ProductShootRecipeSuggestResponse,
 } from '@/types';
 import type { VideoCharacter, VideoLocation } from '@/types/video';
 import type {
@@ -406,6 +410,48 @@ export async function getImageConfigAssist(
   } catch (err) {
     console.error('getImageConfigAssist failed:', err);
     return { fields: null };
+  }
+}
+
+/** Product Shoot Studio AI art-direction assist — proposes preset ids for the seven chip rows. */
+export async function getProductShootConfigAssist(
+  request: ProductShootConfigAssistRequest,
+  signal?: AbortSignal
+): Promise<ProductShootConfigAssistResponse> {
+  try {
+    const res = await fetch('/api/product-shoot/config-assist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return { fields: null };
+    const data = await res.json();
+    return { fields: data?.fields && typeof data.fields === 'object' ? data.fields : null };
+  } catch (err) {
+    console.error('getProductShootConfigAssist failed:', err);
+    return { fields: null };
+  }
+}
+
+/** Product Shoot Studio AI scene-recipe suggestion — generates a fresh, product-specific recipe. */
+export async function suggestProductShootRecipe(
+  request: ProductShootRecipeSuggestRequest,
+  signal?: AbortSignal
+): Promise<ProductShootRecipeSuggestResponse> {
+  try {
+    const res = await fetch('/api/product-shoot/suggest-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return { recipe: null };
+    const data = await res.json();
+    return { recipe: data?.recipe && typeof data.recipe === 'object' ? data.recipe : null };
+  } catch (err) {
+    console.error('suggestProductShootRecipe failed:', err);
+    return { recipe: null };
   }
 }
 
