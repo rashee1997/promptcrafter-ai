@@ -77,6 +77,16 @@ function buildInlineImageParts(referenceImages: ProductShootConfigAssistRequest[
   return parts;
 }
 
+/** Fisher-Yates shuffle — randomizes preset id order so the model isn't nudged toward whichever id happens to be listed first. */
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 /** Strip a ```json fence if the model wraps its output despite responseMimeType. */
 function parseFieldsResponse(raw: string, fieldKeys: readonly string[]): Record<string, { value: string; label: string }[]> | null {
   const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
@@ -92,14 +102,19 @@ function parseFieldsResponse(raw: string, fieldKeys: readonly string[]): Record<
   for (const key of fieldKeys) {
     const options = (parsed as Record<string, unknown>)[key];
     if (!Array.isArray(options)) continue;
-    const allowed = ALLOWED_IDS[key];
+    // Accept either a known preset id or a short freeform creative phrase the
+    // model invented for this product — ChipSelector/system-prompt already
+    // fall back to rendering/using the raw value when it isn't a preset id,
+    // the same path manual custom chip entries take.
     const cleanOptions = (options as unknown[])
       .filter((o): o is { value: string; label: string } =>
-        Boolean(o) && typeof o === 'object' && typeof (o as Record<string, unknown>).value === 'string' &&
+        Boolean(o) && typeof o === 'object' &&
+        typeof (o as Record<string, unknown>).value === 'string' &&
         typeof (o as Record<string, unknown>).label === 'string' &&
-        Boolean(allowed) && (o as Record<string, unknown>).value as string in allowed
+        ((o as Record<string, unknown>).value as string).trim().length > 0 &&
+        ((o as Record<string, unknown>).value as string).length <= 120
       )
-      .map((o) => ({ value: o.value, label: o.label }));
+      .map((o) => ({ value: o.value.trim(), label: o.label.trim() }));
     if (cleanOptions.length > 0) fields[key] = cleanOptions;
   }
   return Object.keys(fields).length > 0 ? fields : null;
@@ -117,12 +132,18 @@ export async function POST(req: NextRequest) {
       const digest = buildBriefDigest(brief);
       const fieldList = FIELD_DOMAIN.join(', ');
       const allowedIdsPerField = FIELD_DOMAIN.map((field) => {
-        const ids = Object.keys(ALLOWED_IDS[field] || {}).sort();
+        const ids = shuffle(Object.keys(ALLOWED_IDS[field] || {}));
         return `${field}: ${ids.join(' | ')}`;
       }).join('\n');
 
-      const systemInstruction = `You are PromptCrafter's Product Shoot Studio art-direction assistant. Given this product brief and reference images, choose the 3 best options for EACH field. You MUST pick values only from the allowed id list given for that field — never invent an id. Respond with ONLY a JSON object shaped as { "<fieldKey>": [{ "value": "<allowed id>", "label": "<short human label>" }, ...] } covering exactly these keys: ${fieldList}. No commentary, no markdown fences.`;
-      const userText = `Product brief:\n${digest || '(no settings selected yet)'}\n\nAllowed preset ids per field:\n${allowedIdsPerField}\n\nPropose 3 best options for each field.`;
+      const systemInstruction = `You are PromptCrafter's Product Shoot Studio art-direction assistant. Given this product brief and reference images, propose 3 options for EACH field.
+
+At least 2 of the 3 options per field must be bespoke ideas you invent specifically for THIS product — read its category, description, selling point, and audience, and let those drive the choice (e.g. a supplement's physics/FX or surface should reflect its ingredients or use-case, not a generic template). Do not default to overused tropes (water splashes, marble slabs, flower petals, sand) unless the product itself genuinely calls for them. A bespoke option's "value" is a short freeform descriptive phrase (under 12 words, same concrete/sensory style as a cinematography keyword) — never invent an id string for it.
+
+At most 1 of the 3 options per field may instead reuse one of the platform's built-in presets — its "value" MUST then be exactly one of the allowed ids listed below for that field, never invented.
+
+Respond with ONLY a JSON object shaped as { "<fieldKey>": [{ "value": "<bespoke phrase OR allowed id>", "label": "<short human label>" }, ...] } covering exactly these keys: ${fieldList}. No commentary, no markdown fences.`;
+      const userText = `Product brief:\n${digest || '(no settings selected yet)'}\n\nBuilt-in preset ids available per field (use sparingly — prefer bespoke ideas tailored to this product):\n${allowedIdsPerField}\n\nPropose 3 options for each field, mostly bespoke to this exact product.`;
 
       const ai = new GoogleGenAI({
         apiKey,
@@ -144,7 +165,7 @@ export async function POST(req: NextRequest) {
             config: {
               systemInstruction,
               responseMimeType: 'application/json',
-              temperature: 0.5,
+              temperature: 0.9,
             },
           })
         ),

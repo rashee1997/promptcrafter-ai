@@ -8,6 +8,26 @@ import type { SceneRecipe } from '@/lib/product-shoot/types';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+/**
+ * Randomly assigned per request to push the model off its single highest-probability
+ * "golden hour + marble slab" completion — otherwise low-temperature convergence makes
+ * every suggestion for a given brief nearly identical.
+ */
+const CREATIVE_ANGLES = [
+  'high-contrast studio darkness with a single hard spotlight',
+  'bold saturated color-block background, no naturalistic setting',
+  'kinetic motion blur and dynamic action, product mid-movement',
+  'stark minimalist negative space, product isolated and small in frame',
+  'gritty industrial or urban texture (concrete, metal, exposed brick)',
+  'playful surreal scale distortion (miniature world or giant product)',
+  'retro film-grain aesthetic with period-accurate props and color grade',
+  'macro abstract textures where the product is barely recognizable at first',
+  'night-time neon-lit environment, no daylight at all',
+  'raw unstyled everyday context (kitchen counter, gym bag, desk clutter)',
+  'geometric symmetry and architectural framing',
+  'nature-adjacent but non-cliché (frost, stone, moss, bark — not water or florals)',
+];
+
 /** Compact digest of the brief — only the fields the user actually set. */
 function buildBriefDigest(brief: unknown): string {
   const b = brief && typeof brief === 'object' ? (brief as Record<string, unknown>) : {};
@@ -42,14 +62,16 @@ export async function POST(req: NextRequest) {
 
       const digest = buildBriefDigest(brief);
 
-      const systemInstruction = `You are PromptCrafter's Product Shoot Studio creative director. Given a product brief and optional reference images, invent a fresh, product-specific scene recipe — a unique creative concept and shooting direction. Do NOT reuse generic presets. Create something bespoke that aligns with the product's category, audience, and key selling point. Respond with ONLY a JSON object shaped as { "label": string, "summary": string, "creativeDirection": string, "rationale": string } where:
+      const angle = CREATIVE_ANGLES[Math.floor(Math.random() * CREATIVE_ANGLES.length)];
+
+      const systemInstruction = `You are PromptCrafter's Product Shoot Studio creative director. Given a product brief and optional reference images, invent a fresh, product-specific scene recipe — a unique creative concept and shooting direction. Do NOT reuse generic presets. Create something bespoke that aligns with the product's category, audience, and key selling point. Avoid overused tropes (golden-hour backlighting, travertine/marble slabs, drifting mist, dew droplets) unless the assigned creative angle specifically calls for them — lean into the angle instead. Respond with ONLY a JSON object shaped as { "label": string, "summary": string, "creativeDirection": string, "rationale": string } where:
 - label: 2-4 word scene title (e.g. "Liquid Cascade Reveal", "Intimate Ritual Close-Up")
 - summary: 1-2 sentence hook (e.g. "Water pours in slow motion, revealing the product through a veil of liquid.")
 - creativeDirection: 2-3 paragraph detailed shooting direction, including camera movement, lighting approach, surface/environment, and timing
 - rationale: max 140 characters explaining why this concept fits the brief
 No commentary, no markdown fences.`;
 
-      const userText = `Product brief:\n${digest || '(no settings selected yet)'}\n\nInvent a fresh, bespoke scene recipe for this product.`;
+      const userText = `Product brief:\n${digest || '(no settings selected yet)'}\n\nCreative angle for this concept: ${angle}\n\nInvent a fresh, bespoke scene recipe for this product built around that angle.`;
 
       const ai = new GoogleGenAI({
         apiKey,
@@ -71,7 +93,7 @@ No commentary, no markdown fences.`;
             config: {
               systemInstruction,
               responseMimeType: 'application/json',
-              temperature: 0.7, // Slightly higher creativity.
+              temperature: 1.0, // High creativity — paired with a randomized angle to break convergence.
             },
           })
         ),

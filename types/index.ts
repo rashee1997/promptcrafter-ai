@@ -756,7 +756,12 @@ export interface ProductShootConfigAssistRequest {
 }
 
 export interface ProductShootConfigAssistFieldOption {
-  /** MUST be a preset id from the matching list in lib/product-shoot/presets.ts. */
+  /**
+   * A preset id from the matching list in lib/product-shoot/presets.ts, OR a
+   * short freeform descriptive phrase (same style as a preset's `keyword`)
+   * the model invented for this specific product — falls through to raw text
+   * in the prompt builder exactly like a manual custom chip value does.
+   */
   value: string;
   label: string;
 }
