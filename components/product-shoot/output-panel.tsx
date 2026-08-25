@@ -101,8 +101,13 @@ function formatAdStrategy(ad: import('@/lib/product-shoot/types').AdStrategyPack
   const lines: string[] = [];
   if (ad.smp) lines.push(`SMP: "${ad.smp}"`, '');
   if (ad.voiceoverScript) lines.push(`Voiceover Script:\n${ad.voiceoverScript}`, '');
-  const { hook, benefit, cta } = ad.onScreenCaptions;
-  lines.push(`On-Screen Text (OST):\n  0–3s Hook: ${hook}\n  3–7s Value: ${benefit}\n  7–10s CTA: ${cta}`);
+  const { hook, hookStyle, benefit, benefitStyle, cta, ctaStyle } = ad.onScreenCaptions;
+  lines.push(
+    `On-Screen Text (OST):\n` +
+    `  0–3s Hook: ${hook}${hookStyle ? ` — Style: ${hookStyle}` : ''}\n` +
+    `  3–7s Value: ${benefit}${benefitStyle ? ` — Style: ${benefitStyle}` : ''}\n` +
+    `  7–10s CTA: ${cta}${ctaStyle ? ` — Style: ${ctaStyle}` : ''}`
+  );
   return lines.join('\n').trim();
 }
 
@@ -652,14 +657,23 @@ export function OutputPanel({
                           <div className="p-3 rounded-xl bg-surface-code border border-border">
                             <div className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1">0–3s Hook</div>
                             <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.hook}</div>
+                            {sections.adStrategy.onScreenCaptions.hookStyle && (
+                              <div className="text-[10px] text-text-muted mt-1.5 leading-relaxed">{sections.adStrategy.onScreenCaptions.hookStyle}</div>
+                            )}
                           </div>
                           <div className="p-3 rounded-xl bg-surface-code border border-border">
                             <div className="text-[10px] font-bold text-brand uppercase tracking-wider mb-1">3–7s Value</div>
                             <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.benefit}</div>
+                            {sections.adStrategy.onScreenCaptions.benefitStyle && (
+                              <div className="text-[10px] text-text-muted mt-1.5 leading-relaxed">{sections.adStrategy.onScreenCaptions.benefitStyle}</div>
+                            )}
                           </div>
                           <div className="p-3 rounded-xl bg-surface-code border border-border">
                             <div className="text-[10px] font-bold text-success uppercase tracking-wider mb-1">7–10s CTA</div>
                             <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.cta}</div>
+                            {sections.adStrategy.onScreenCaptions.ctaStyle && (
+                              <div className="text-[10px] text-text-muted mt-1.5 leading-relaxed">{sections.adStrategy.onScreenCaptions.ctaStyle}</div>
+                            )}
                           </div>
                         </div>
                       </div>

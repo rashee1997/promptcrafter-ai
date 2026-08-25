@@ -105,9 +105,10 @@ distorted label, warped typography, morphed logo, extra bottles, duplicate caps,
 "[Direct, rhythmic voiceover script ready for voice AI generation, matching the video pacing]"
 
 ### On-Screen Text (OST) Overlays
-- **0–3s Hook**: [Punchy 3-word hook headline]
-- **3–7s Value**: [Core feature / benefit callout]
-- **7–10s CTA**: [Clean end-card call to action]
+Each overlay needs literal caption text AND a concrete typography/motion direction — these prompts are fed to video models that render on-screen text, so vague captions with no styling produce plain, static, illegible text.
+- **0–3s Hook**: [Punchy 3-word hook headline] — Style: [Typeface weight/mood, size relative to frame, color/contrast against the plate, exact entrance animation (e.g. "kinetic type snaps in with a quick scale-up and settles"), screen position]
+- **3–7s Value**: [Core feature / benefit callout] — Style: [Typeface weight/mood, size, color/contrast, entrance/exit animation and timing, screen position]
+- **7–10s CTA**: [Clean end-card call to action] — Style: [Typeface weight/mood, size, color/contrast, entrance animation and hold behavior, screen position]
 
 ## 3-Shot Campaign Storyboard
 ### Shot 1: The Hook (3s)
