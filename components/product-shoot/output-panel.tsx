@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Copy,
@@ -26,6 +26,8 @@ interface OutputPanelProps {
   output: string;
   isGenerating: boolean;
   visionPrePassNote: string | null;
+  /** Warning shown when a save stripped image thumbnails due to a storage quota limit. */
+  saveNotice?: string | null;
   onRemix?: (suggestion: string) => void;
   onSave?: () => void;
   isSaved?: boolean;
@@ -186,6 +188,7 @@ export function OutputPanel({
   output,
   isGenerating,
   visionPrePassNote,
+  saveNotice,
   onRemix,
   onSave,
   isSaved,
@@ -198,7 +201,7 @@ export function OutputPanel({
   const [viewMode, setViewMode] = useState<'tabs' | 'grid'>('tabs');
 
   // Parse structured sections
-  const sections = parseProductShootOutput(output);
+  const sections = useMemo(() => parseProductShootOutput(output), [output]);
 
   // Auto-scroll during streaming
   useEffect(() => {
@@ -310,6 +313,23 @@ export function OutputPanel({
             <Info className="w-4 h-4 text-brand mt-0.5 shrink-0" />
             <p className="text-xs text-text-secondary leading-relaxed">
               {visionPrePassNote}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Storage quota fallback notice */}
+      <AnimatePresence>
+        {saveNotice && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-start gap-2.5 rounded-xl bg-warning-muted border border-warning/30 p-3.5"
+          >
+            <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+            <p className="text-xs text-text-secondary leading-relaxed">
+              {saveNotice}
             </p>
           </motion.div>
         )}
