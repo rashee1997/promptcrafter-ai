@@ -80,7 +80,7 @@ export function ActionBar({
           disabled={isGenerating || !state.subject.trim()}
           className={cn(
             'w-full py-3 px-6 rounded-xl font-bold text-sm bg-brand',
-            'hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2.5',
+            'hover:bg-brand-hover text-[var(--brand-foreground)] shadow-glow flex items-center justify-center gap-2.5',
             'disabled:opacity-50 transition-all duration-300 transform active:scale-[0.985]'
           )}
         >

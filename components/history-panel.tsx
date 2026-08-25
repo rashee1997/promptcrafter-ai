@@ -230,14 +230,14 @@ export function HistoryPanel({
       <GlassCard variant="default" className="p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/20">
-              <History className="w-5 h-5" />
+            <div className="p-1.5 rounded bg-surface-muted text-text-secondary border border-border">
+              <History className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-text-primary">
+              <h2 className="text-sm font-semibold text-text-primary">
                 Saved prompts
               </h2>
-              <p className="text-xs text-text-muted">
+              <p className="text-[11px] text-text-muted mt-0.5">
                 {sessions.length} saved prompt{sessions.length === 1 ? '' : 's'} · {sessions.reduce((acc, s) => acc + s.versions.length, 0)} version{sessions.reduce((acc, s) => acc + s.versions.length, 0) === 1 ? '' : 's'}
               </p>
             </div>
@@ -248,15 +248,15 @@ export function HistoryPanel({
             <button
               onClick={handleExportSessions}
               disabled={sessions.length === 0}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-card/80 border border-border hover:border-brand/40 text-text-secondary flex items-center gap-1.5 transition-colors disabled:opacity-40"
+              className="px-2.5 py-1.5 rounded text-[11px] font-medium bg-surface-muted border border-border hover:bg-surface-hover text-text-secondary flex items-center gap-1.5 transition-colors disabled:opacity-40"
               title="Export saved prompts"
             >
-              <Download className="w-3.5 h-3.5 text-brand" />
+              <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Export</span>
             </button>
 
-            <label className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-card/80 border border-border hover:border-brand/40 text-text-secondary flex items-center gap-1.5 cursor-pointer transition-colors">
-              <Upload className="w-3.5 h-3.5 text-brand" />
+            <label className="px-2.5 py-1.5 rounded text-[11px] font-medium bg-surface-muted border border-border hover:bg-surface-hover text-text-secondary flex items-center gap-1.5 cursor-pointer transition-colors">
+              <Upload className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Import</span>
               <input
                 type="file"
@@ -269,7 +269,7 @@ export function HistoryPanel({
             {sessions.length > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-danger/10 border border-danger/20 text-danger hover:bg-danger/20 flex items-center gap-1.5 transition-colors"
+                className="px-2.5 py-1.5 rounded text-[11px] font-medium bg-surface-muted border border-border hover:bg-danger/10 hover:text-danger hover:border-danger/30 text-text-secondary flex items-center gap-1.5 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Clear All</span>
@@ -279,17 +279,17 @@ export function HistoryPanel({
         </div>
 
         {/* Search Bar & Filter Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
           {/* Search Box */}
           <div className="relative sm:col-span-1">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-text-muted" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search saved prompts..."
               aria-label="Search sessions"
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
 
@@ -299,7 +299,7 @@ export function HistoryPanel({
             <select
               value={selectedDomainFilter}
               onChange={(e) => setSelectedDomainFilter(e.target.value)}
-              className="w-full p-2 text-xs rounded-xl border border-border bg-surface-card text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
+              className="w-full p-1.5 text-xs rounded border border-border bg-surface-input text-text-primary focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="all">All use cases</option>
               {DOMAIN_PRESETS.map((d) => (
@@ -314,10 +314,10 @@ export function HistoryPanel({
           <button
             onClick={() => setFavoritesOnly(!favoritesOnly)}
             aria-pressed={favoritesOnly}
-            className={`px-3 py-2 rounded-xl text-xs font-medium border flex items-center justify-center gap-2 transition-all ${
+            className={`px-3 py-1.5 rounded text-xs font-medium border flex items-center justify-center gap-2 transition-colors ${
               favoritesOnly
-                ? 'bg-warning/20 border-warning/40 text-warning font-semibold'
-                : 'bg-surface-card border-border text-text-secondary'
+                ? 'bg-warning/10 border-warning/30 text-warning'
+                : 'bg-surface-muted border-border text-text-secondary hover:bg-surface-hover'
             }`}
           >
             <Star className={`w-3.5 h-3.5 ${favoritesOnly ? 'fill-current' : ''}`} />
@@ -335,7 +335,7 @@ export function HistoryPanel({
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event('pc:new-prompt'))}
-            className="mt-5 px-4 py-2 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-white shadow-glow transition-all active:scale-[0.985]"
+            className="mt-5 px-4 py-2 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] shadow-glow transition-all active:scale-[0.985]"
           >
             Create a prompt
           </button>
@@ -602,7 +602,7 @@ export function HistoryPanel({
                             <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/60">
                               <button
                                 onClick={() => onSelectSession(session, ver.id)}
-                                className="px-3 py-1 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-brand-hover flex items-center gap-1 shadow-sm transition-colors"
+                                className="px-3 py-1 rounded-lg text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover flex items-center gap-1 shadow-sm transition-colors"
                               >
                                 <Sparkles className="w-3 h-3" />
                                 <span>Open</span>
@@ -696,7 +696,7 @@ export function HistoryPanel({
                         }}
                         className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
                           isDiffActive
-                            ? 'bg-brand text-white border-brand'
+                            ? 'bg-brand text-[var(--brand-foreground)] border-brand'
                             : 'bg-surface-code text-text-secondary hover:bg-surface-hover border-border'
                         }`}
                         aria-pressed={isDiffActive}
@@ -762,7 +762,7 @@ export function HistoryPanel({
                                 aria-pressed={diffState.diffMode === mode}
                                 className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
                                   diffState.diffMode === mode
-                                    ? 'bg-brand text-white shadow-sm'
+                                    ? 'bg-brand text-[var(--brand-foreground)] shadow-sm'
                                     : 'text-text-secondary hover:text-text-primary'
                                 }`}
                               >

@@ -201,7 +201,7 @@ export function CharacterReferencePanel({
               disabled={!character.imagePrompt}
               aria-label={`Copy ${character.name || 'character'} image prompt`}
               className={cn(
-                'inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white transition-all',
+                'inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-[var(--brand-foreground)] transition-all',
                 'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985]',
                 copied && 'from-success to-success bg-none',
                 !character.imagePrompt && 'opacity-40 cursor-not-allowed shadow-none'
@@ -457,7 +457,7 @@ export function CharacterReferencePanel({
                 )}
               />
               {entry.isPrimary && (
-                <span className="absolute -top-1.5 -left-1.5 rounded-full bg-brand text-white p-0.5 shadow-glow" title="Primary reference">
+                <span className="absolute -top-1.5 -left-1.5 rounded-full bg-brand text-[var(--brand-foreground)] p-0.5 shadow-glow" title="Primary reference">
                   <Star className="w-2.5 h-2.5 fill-current" aria-hidden="true" />
                 </span>
               )}

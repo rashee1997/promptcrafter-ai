@@ -219,17 +219,14 @@ export function PromptOutput({
   if (!output && !isGenerating && !currentSession) {
     return (
       <GlassCard variant="subtle" className="p-8 text-center flex flex-col items-center justify-center min-h-[360px]">
-        <div className="w-16 h-16 rounded-2xl bg-brand/10  text-brand flex items-center justify-center mb-4 border border-brand/20">
-          <Sparkles className="w-8 h-8" />
+        <div className="w-12 h-12 rounded bg-surface-muted text-text-muted flex items-center justify-center mb-4">
+          <Sparkles className="w-6 h-6" />
         </div>
-        <h3 className="text-xl font-bold tracking-tight text-text-primary">
+        <h3 className="text-lg font-semibold tracking-tight text-text-primary">
           Create your first prompt
         </h3>
-        <p className="mt-2 text-xs text-text-muted max-w-md leading-relaxed">
+        <p className="mt-2 text-sm text-text-secondary max-w-md leading-relaxed">
           Describe what you want to create, pick a use case, and click Create Prompt.
-        </p>
-        <p className="mt-1 text-[11px] text-text-muted max-w-md leading-relaxed">
-          Every prompt gets a quality score, live tests, and version history — so you can prove it works.
         </p>
       </GlassCard>
     );
@@ -490,33 +487,33 @@ export function PromptOutput({
   const maxCaseCols = matrixRuns.reduce((max, r) => Math.max(max, r.cases.length), 0);
 
   return (
-    <GlassCard variant="glowing" className="p-5 sm:p-6 space-y-4">
+    <GlassCard variant="default" className="p-4 sm:p-5 space-y-4">
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/20">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded bg-surface-muted text-text-secondary border border-border">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-bold text-text-primary">
+              <h3 className="text-sm font-semibold text-text-primary">
                 Your prompt
               </h3>
 
               {activeVersion && (
-                <span className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-brand/15 text-brand border border-brand/30 flex items-center gap-1">
+                <span className="px-1.5 py-0.5 text-[11px] font-medium rounded bg-surface-muted text-text-secondary border border-border flex items-center gap-1">
                   <GitCommit className="w-3 h-3" />
                   v{activeVersion.versionNumber}: {activeVersion.name}
                 </span>
               )}
 
               {isGenerating && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-brand animate-pulse">
+                <span className="flex items-center gap-1 text-[11px] font-medium text-brand">
                   <RefreshCw className="w-3 h-3 animate-spin" /> Generating…
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-text-muted">
+            <p className="text-[11px] text-text-muted mt-0.5">
               Created with {activeVersion?.providerName || activeProvider.name}
             </p>
           </div>
@@ -525,29 +522,29 @@ export function PromptOutput({
         {/* Badges: Estimated Token Counter & Quality Score */}
         {!isGenerating && output && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-brand/10 border border-brand/20 px-3 py-1 rounded-xl text-brand text-xs font-semibold" title={`${modelTokens.modelLabel} token count`}>
-              <Cpu className="w-3.5 h-3.5 text-brand" />
-              <span>{modelTokens.tokens.toLocaleString()} tokens ({modelTokens.modelLabel})</span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-surface-muted border border-border text-text-secondary" title={`${modelTokens.modelLabel} token count`}>
+              <Cpu className="w-3 h-3" />
+              <span>{modelTokens.tokens.toLocaleString()} tokens</span>
             </div>
             <button
               type="button"
               onClick={() => setScoreOpen((open) => !open)}
-              className={`flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
                 scoreOpen
-                  ? 'bg-brand text-white border-brand'
-                  : 'bg-success/10 border-success/20 text-success hover:bg-success/20'
+                  ? 'bg-surface-elevated text-text-primary border-border'
+                  : 'bg-surface-muted text-text-secondary border-border hover:bg-surface-hover'
               }`}
               title="Open the quality score"
               aria-expanded={scoreOpen}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <CheckCircle2 className={`w-3 h-3 ${displayScore >= PASS_THRESHOLD ? 'text-success' : displayScore >= 50 ? 'text-warning' : 'text-danger'}`} />
               <span>
-                Quality: {displayScore}/100
-                {quality?.source === 'heuristic' && <span className="ml-1 text-[9px] font-bold uppercase tracking-wide opacity-70">est.</span>}
+                Score: {displayScore}
+                {quality?.source === 'heuristic' && <span className="ml-0.5 opacity-70">*</span>}
               </span>
               {scoreDelta !== null && (
                 <span
-                  className={`text-[10px] font-bold ${
+                  className={`font-bold ${
                     scoreDelta >= 0 ? 'text-success' : 'text-danger'
                   }`}
                   title={`vs previous version (${scoreDelta >= 0 ? '+' : ''}${scoreDelta})`}
@@ -562,27 +559,22 @@ export function PromptOutput({
       </div>
 
       {/* Analytics Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-text-muted bg-surface-muted p-2.5 rounded-xl border border-border/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-text-muted">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <div className="flex items-center gap-1.5 font-semibold text-brand">
-            <Cpu className="w-3.5 h-3.5" />
-            <span>{modelTokens.tokens.toLocaleString()} {modelTokens.modelLabel} tokens</span>
-          </div>
-          <span>•</span>
           <div className="flex items-center gap-1">
-            <Layers className="w-3.5 h-3.5 text-text-muted" />
-            <span>{charCount.toLocaleString()} characters</span>
+            <Layers className="w-3 h-3" />
+            <span>{charCount.toLocaleString()} chars</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1 tabular-nums">
-            <FileText className="w-3.5 h-3.5 text-text-muted" />
+            <FileText className="w-3 h-3" />
             <span>{wordCount.toLocaleString()} words</span>
           </div>
           {costChip && (
             <>
               <span>•</span>
               <div className="flex items-center gap-1">
-                <span>≈ {costChip} / 1k runs</span>
+                <span>≈ {costChip} / 1k</span>
               </div>
             </>
           )}
@@ -781,7 +773,7 @@ export function PromptOutput({
             onClick={handleScoreVersion}
             disabled={isScoring || isEditing}
             title={isEditing ? 'Save or cancel your edit before reviewing the saved version' : 'Score the saved version with the AI judge'}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50 flex items-center gap-1.5 transition-colors shadow-sm"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover disabled:opacity-50 flex items-center gap-1.5 transition-colors shadow-sm"
           >
             {isScoring ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Gauge className="w-3.5 h-3.5" />}
             <span>{isScoring ? 'Reviewing…' : 'Run AI Review'}</span>
@@ -795,7 +787,7 @@ export function PromptOutput({
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            className="w-full h-[320px] p-4 rounded-xl border border-brand/50 bg-surface-code text-text-primary font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand selection:bg-brand selection:text-white"
+            className="w-full h-[320px] p-4 rounded-xl border border-brand/50 bg-surface-code text-text-primary font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand selection:bg-brand selection:text-[var(--brand-foreground)]"
             placeholder="Edit the prompt…"
           />
           <div className="flex items-center justify-end gap-2">
@@ -810,7 +802,7 @@ export function PromptOutput({
             <button
               type="button"
               onClick={handleSaveEdit}
-              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover shadow-glow flex items-center gap-1.5 transition-colors"
+              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover shadow-glow flex items-center gap-1.5 transition-colors"
             >
               <Save className="w-3.5 h-3.5" />
               <span>Save as New Version</span>
@@ -821,7 +813,7 @@ export function PromptOutput({
         <div
           ref={outputRef}
           aria-busy={isGenerating}
-          className="relative rounded-xl border border-border bg-surface-code text-text-primary p-4 min-h-[280px] max-h-[500px] overflow-y-auto selection:bg-brand selection:text-white scroll-smooth font-mono text-xs leading-relaxed"
+          className="relative rounded-xl border border-border bg-surface-code text-text-primary p-4 min-h-[280px] max-h-[500px] overflow-y-auto selection:bg-brand selection:text-[var(--brand-foreground)] scroll-smooth font-mono text-xs leading-relaxed"
         >
           {isGenerating ? (
             /* Stable streaming view: raw text grows in place + live caret.
@@ -846,7 +838,7 @@ export function PromptOutput({
           <button
             type="button"
             onClick={() => handleCopy(rawPromptText, 'prompt')}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center gap-2 transition-all active:scale-95"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] shadow-glow flex items-center gap-2 transition-all active:scale-95"
           >
             {copiedType === 'prompt' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
             <span>{copiedType === 'prompt' ? 'Copied!' : 'Copy'}</span>
@@ -1068,7 +1060,7 @@ export function PromptOutput({
                 <button
                   type="button"
                   onClick={() => handleCopy(filledPrompt, 'filled')}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover flex items-center gap-1.5 transition-colors shadow-sm"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   {copiedType === 'filled' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedType === 'filled' ? 'Copied!' : 'Copy with values'}</span>
@@ -1110,7 +1102,7 @@ export function PromptOutput({
                     title={t.hint}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
                       exportTarget === t.value
-                        ? 'bg-brand text-white border-brand'
+                        ? 'bg-brand text-[var(--brand-foreground)] border-brand'
                         : 'bg-surface-card text-text-secondary border-border hover:bg-surface-hover'
                     }`}
                     aria-pressed={exportTarget === t.value}
@@ -1130,7 +1122,7 @@ export function PromptOutput({
                 <button
                   type="button"
                   onClick={() => handleCopy(exportedText, 'export')}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover flex items-center gap-1.5 transition-colors shadow-sm"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   {copiedType === 'export' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedType === 'export' ? 'Copied!' : 'Copy'}</span>
@@ -1245,7 +1237,7 @@ export function PromptOutput({
                   type="button"
                   onClick={handleRunSuite}
                   disabled={suiteRunning}
-                  className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                  className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
                 >
                   {suiteRunning ? (
                     <>
@@ -1423,7 +1415,7 @@ export function PromptOutput({
                             <span
                               className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
                                 isActive
-                                  ? 'bg-brand text-white'
+                                  ? 'bg-brand text-[var(--brand-foreground)]'
                                   : 'bg-surface-muted text-text-secondary border border-border'
                               }`}
                             >
@@ -1494,7 +1486,7 @@ export function PromptOutput({
                     onClick={() => onSelectVersion && onSelectVersion(ver.id)}
                     className={`shrink-0 px-2.5 py-1 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
                       isActive
-                        ? 'bg-brand text-white border-brand shadow-sm'
+                        ? 'bg-brand text-[var(--brand-foreground)] border-brand shadow-sm'
                         : 'bg-surface-code/60 text-text-secondary border-border/80 hover:bg-surface-hover'
                     }`}
                     aria-pressed={isActive}
@@ -1502,7 +1494,7 @@ export function PromptOutput({
                     <span className="font-bold">v{ver.versionNumber}</span>
                     <span className="max-w-[120px] truncate">{ver.name}</span>
                     {ver.quality && (
-                      <span className={`text-[9px] font-black ${isActive ? 'text-white/80' : ver.quality.overall >= 75 ? 'text-success' : ver.quality.overall >= 50 ? 'text-warning' : 'text-danger'}`}>
+                      <span className={`text-[9px] font-black ${isActive ? 'text-[var(--brand-foreground)]' : ver.quality.overall >= 75 ? 'text-success' : ver.quality.overall >= 50 ? 'text-warning' : 'text-danger'}`}>
                         {ver.quality.overall}
                       </span>
                     )}
@@ -1541,7 +1533,7 @@ export function PromptOutput({
             <button
               type="submit"
               disabled={!refineInstruction.trim() || isGenerating}
-              className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-brand text-white hover:bg-brand-hover disabled:opacity-40 transition-colors shadow-sm"
+              className="absolute right-2.5 bottom-3.5 p-2 rounded-lg bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover disabled:opacity-40 transition-colors shadow-sm"
               title="Submit changes"
               aria-label="Submit changes"
             >

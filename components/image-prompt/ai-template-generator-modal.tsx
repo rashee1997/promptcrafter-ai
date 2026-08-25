@@ -207,7 +207,7 @@ export function AiTemplateGeneratorModal({
                   onClick={() => setPrompt(idea)}
                   className="px-2.5 py-1 text-[11px] rounded-lg bg-surface-muted/60 hover:bg-brand/10 hover:text-brand border border-border/50 text-text-secondary text-left transition-colors truncate max-w-full"
                 >
-                  "{idea}"
+                &quot;{idea}&quot;
                 </button>
               ))}
             </div>
@@ -296,7 +296,7 @@ export function AiTemplateGeneratorModal({
             <button
               type="submit"
               disabled={isGenerating || !prompt.trim()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand text-white hover:bg-brand/90 disabled:opacity-50 shadow-[0_4px_12px_var(--shadow-glow)] transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand/90 disabled:opacity-50 shadow-[0_4px_12px_var(--shadow-glow)] transition-all"
             >
               {isGenerating ? (
                 <>
@@ -334,7 +334,7 @@ export function AiTemplateGeneratorModal({
                     <span className="text-xs font-bold text-text-primary">
                       {generatedImageRecipe.label}
                     </span>
-                    <span className="text-[9px] uppercase font-semibold px-2 py-0.5 rounded-full bg-brand text-white">
+                    <span className="text-[9px] uppercase font-semibold px-2 py-0.5 rounded-full bg-brand text-[var(--brand-foreground)]">
                       AI Generated
                     </span>
                   </div>
@@ -379,7 +379,7 @@ export function AiTemplateGeneratorModal({
                   <span className="text-[10px] font-semibold text-brand block mb-0.5 uppercase tracking-wider">
                     Ready-to-Use Sample Prompt
                   </span>
-                  "{generatedImageRecipe.config.sampleFullPrompt}"
+                  &quot;{generatedImageRecipe.config.sampleFullPrompt}&quot;
                 </div>
               )}
 
@@ -397,7 +397,7 @@ export function AiTemplateGeneratorModal({
                 <button
                   type="button"
                   onClick={handleApplyAndClose}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-brand/90 shadow-[0_2px_8px_var(--shadow-glow)] transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand/90 shadow-[0_2px_8px_var(--shadow-glow)] transition-all"
                 >
                   <span>Apply to Studio Form</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -418,7 +418,7 @@ export function AiTemplateGeneratorModal({
                     <span className="text-xs font-bold text-text-primary">
                       {generatedLogoArchetype.label}
                     </span>
-                    <span className="text-[9px] uppercase font-semibold px-2 py-0.5 rounded-full bg-brand text-white">
+                    <span className="text-[9px] uppercase font-semibold px-2 py-0.5 rounded-full bg-brand text-[var(--brand-foreground)]">
                       AI Archetype
                     </span>
                   </div>
@@ -471,7 +471,7 @@ export function AiTemplateGeneratorModal({
                 <button
                   type="button"
                   onClick={handleApplyAndClose}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-brand/90 shadow-[0_2px_8px_var(--shadow-glow)] transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand/90 shadow-[0_2px_8px_var(--shadow-glow)] transition-all"
                 >
                   <span>Apply to Studio Form</span>
                   <ArrowRight className="w-3.5 h-3.5" />

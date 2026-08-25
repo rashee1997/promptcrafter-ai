@@ -179,26 +179,27 @@ export function TestPromptModal({
         aria-modal="true"
         aria-labelledby="test-prompt-title"
         aria-busy={isLoading || abRunning}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-surface-code/70 backdrop-blur-lg focus:outline-none"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-surface-page/80 backdrop-blur-sm focus:outline-none"
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 10 }}
+          initial={{ opacity: 0, scale: 0.98, y: 5 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 10 }}
+          exit={{ opacity: 0, scale: 0.98, y: 5 }}
+          transition={{ duration: 0.2 }}
           className="w-full max-w-5xl max-h-[90vh] flex flex-col"
         >
-          <GlassCard variant="glowing" className="p-6 flex flex-col h-full max-h-[85vh] overflow-hidden">
+          <GlassCard variant="default" className="p-4 sm:p-6 flex flex-col h-full max-h-[85vh] overflow-hidden shadow-lg border-border">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-border shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-brand/10 text-brand border border-brand/20">
-                  <Bot className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-3 border-b border-border shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded bg-surface-muted text-text-secondary border border-border">
+                  <Bot className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 id="test-prompt-title" className="text-lg font-bold text-text-primary flex items-center gap-2">
+                  <h3 id="test-prompt-title" className="text-sm font-semibold text-text-primary">
                     Test your prompt
                   </h3>
-                  <p className="text-xs text-text-muted">
+                  <p className="text-[11px] text-text-muted mt-0.5">
                     See how your prompt responds with {provider.name}
                   </p>
                 </div>
@@ -206,10 +207,10 @@ export function TestPromptModal({
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl text-text-muted hover:text-text-primary dark:hover:text-text-primary hover:bg-surface-hover transition-colors"
+                className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
                 aria-label="Close dialog"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -218,16 +219,16 @@ export function TestPromptModal({
               {/* Left Pane: Test Controls & Prompt Preview */}
               <div className="flex flex-col gap-3 overflow-y-auto pr-1">
                 <div>
-                  <label className="text-xs font-semibold text-text-secondary mb-1 block">
+                  <label className="text-[11px] font-semibold text-text-muted mb-1 block uppercase tracking-wide">
                     Your prompt
                   </label>
-                  <div className="p-3 rounded-xl bg-surface-muted dark:bg-surface-muted border border-border text-xs font-mono text-text-secondary max-h-40 overflow-y-auto leading-relaxed">
+                  <div className="p-3 rounded bg-surface-input border border-border text-xs font-mono text-text-secondary max-h-40 overflow-y-auto leading-relaxed">
                     <MarkdownRenderer content={generatedPrompt} highlightPlaceholders={true} />
                   </div>
                 </div>
 
                 <div className="flex-1 flex flex-col min-h-[140px]">
-                  <label htmlFor="test-input" className="text-xs font-semibold text-text-secondary mb-1 block">
+                  <label htmlFor="test-input" className="text-[11px] font-semibold text-text-muted mb-1 block uppercase tracking-wide">
                     Sample input
                   </label>
                   <textarea
@@ -235,23 +236,23 @@ export function TestPromptModal({
                     value={testInput}
                     onChange={(e) => setTestInput(e.target.value)}
                     placeholder="Enter an example question or scenario to test your prompt with…"
-                    className="w-full flex-1 p-3 text-xs rounded-xl border border-border bg-surface-card text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand min-h-[100px] resize-none"
+                    className="w-full flex-1 p-3 text-xs rounded border border-border bg-surface-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand min-h-[100px] resize-none"
                   />
                 </div>
 
                 <button
                   onClick={handleRunTest}
                   disabled={isLoading || abRunning}
-                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2 disabled:opacity-50 transition-all shrink-0"
+                  className="w-full py-2 px-3 rounded font-semibold text-xs bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors shrink-0"
                 >
                   {isLoading ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       <span>Running test…</span>
                     </>
                   ) : (
                     <>
-                      <Play className="w-4 h-4 fill-current" />
+                      <Play className="w-3.5 h-3.5 fill-current" />
                       <span>Run test</span>
                     </>
                   )}
@@ -280,7 +281,7 @@ export function TestPromptModal({
                               aria-pressed={selected}
                               className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
                                 selected
-                                  ? 'bg-brand text-white border-brand'
+                                  ? 'bg-brand text-[var(--brand-foreground)] border-brand'
                                   : 'bg-surface-card text-text-secondary border-border hover:bg-surface-hover'
                               }`}
                               title={`${p.name} · ${p.model}`}

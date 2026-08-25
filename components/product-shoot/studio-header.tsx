@@ -96,6 +96,7 @@ export function StudioHeader({
               setShowModelMenu(!showModelMenu);
               setShowExamplesMenu(false);
             }}
+            title={activeProvider.model || 'Gemini Flash'}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-border bg-surface-card hover:bg-surface-muted/60 text-xs font-medium text-text-primary transition-colors min-h-[36px]"
             aria-expanded={showModelMenu}
             aria-haspopup="true"

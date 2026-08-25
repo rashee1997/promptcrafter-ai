@@ -201,7 +201,7 @@ export function CommandPalette({ isOpen, onClose, actions }: CommandPaletteProps
       <span
         className={cn(
           'shrink-0 w-7 h-7 rounded-lg flex items-center justify-center',
-          globalActive ? 'bg-brand text-white' : 'bg-surface-muted text-text-muted'
+          globalActive ? 'bg-brand text-[var(--brand-foreground)]' : 'bg-surface-muted text-text-muted'
         )}
         aria-hidden="true"
       >

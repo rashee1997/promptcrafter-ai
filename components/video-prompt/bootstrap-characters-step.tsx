@@ -94,7 +94,7 @@ export function BootstrapCharactersStep({
           onClick={onConfirm}
           disabled={busy || data.length === 0}
           className={cn(
-            'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
+            'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-[var(--brand-foreground)]',
             'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all self-end',
             (busy || data.length === 0) && 'opacity-50 cursor-not-allowed'
           )}

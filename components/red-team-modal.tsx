@@ -117,7 +117,7 @@ export function RedTeamModal({ isOpen, onClose, prompt, provider, onApplyDefense
                   <button
                     type="button"
                     onClick={handleApply}
-                    className="px-3 py-1.5 rounded-lg bg-brand text-white font-bold flex items-center gap-1.5 shadow-sm hover:bg-brand-hover"
+                    className="px-3 py-1.5 rounded-lg bg-brand text-[var(--brand-foreground)] font-bold flex items-center gap-1.5 shadow-sm hover:bg-brand-hover"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Apply Suggested Defenses</span>

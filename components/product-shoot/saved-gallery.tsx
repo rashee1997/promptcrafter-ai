@@ -40,6 +40,7 @@ export function SavedGallery({
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const filtered = savedShoots.filter((item) => {
     if (onlyFavorites && !item.isFavorite) return false;
@@ -165,7 +166,7 @@ export function SavedGallery({
                     <button
                       type="button"
                       onClick={() => onReuse(shoot)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hover shadow-sm transition-all min-h-[32px]"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand text-[var(--brand-foreground)] text-xs font-semibold hover:bg-brand-hover shadow-sm transition-all min-h-[32px]"
                       title="Load this brief, recipe and controls into the active canvas"
                     >
                       <RotateCcw className="w-3 h-3" />
@@ -203,12 +204,23 @@ export function SavedGallery({
                     {/* Delete */}
                     <button
                       type="button"
-                      onClick={() => onDelete(shoot.id)}
-                      className="p-1.5 rounded-lg border border-border bg-surface-input hover:bg-surface-muted text-text-muted hover:text-danger transition-colors"
-                      title="Delete saved shoot"
-                      aria-label="Delete saved shoot"
+                      onClick={() => {
+                        if (confirmDeleteId === shoot.id) {
+                          onDelete(shoot.id);
+                          setConfirmDeleteId(null);
+                        } else {
+                          setConfirmDeleteId(shoot.id);
+                        }
+                      }}
+                      className={
+                        confirmDeleteId === shoot.id
+                          ? 'px-2 py-1.5 rounded-lg border border-danger/40 bg-danger-muted text-danger text-[10px] font-semibold transition-colors'
+                          : 'p-1.5 rounded-lg border border-border bg-surface-input hover:bg-surface-muted text-text-muted hover:text-danger transition-colors'
+                      }
+                      title={confirmDeleteId === shoot.id ? 'Click again to confirm' : 'Delete saved shoot'}
+                      aria-label={confirmDeleteId === shoot.id ? 'Confirm delete saved shoot' : 'Delete saved shoot'}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      {confirmDeleteId === shoot.id ? 'Confirm' : <Trash2 className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 </div>

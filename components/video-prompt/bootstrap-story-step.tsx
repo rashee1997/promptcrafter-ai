@@ -217,7 +217,7 @@ export function BootstrapStoryStep({
             onClick={onConfirm}
             disabled={busy}
             className={cn(
-              'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
+              'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-[var(--brand-foreground)]',
               'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all',
               busy && 'opacity-50 cursor-not-allowed'
             )}

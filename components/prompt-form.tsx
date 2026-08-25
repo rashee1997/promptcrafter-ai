@@ -416,7 +416,7 @@ export function PromptForm({
                         aria-pressed={selectedFrameworkCategory === cat}
                         className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
                           selectedFrameworkCategory === cat
-                            ? 'bg-brand text-white font-semibold shadow-sm'
+                            ? 'bg-brand text-[var(--brand-foreground)] font-semibold shadow-sm'
                             : 'text-text-secondary hover:text-text-primary'
                         }`}
                       >
@@ -550,7 +550,7 @@ export function PromptForm({
                         aria-pressed={selectedToneCategory === cat}
                         className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all ${
                           selectedToneCategory === cat
-                            ? 'bg-brand text-white font-semibold shadow-sm'
+                            ? 'bg-brand text-[var(--brand-foreground)] font-semibold shadow-sm'
                             : 'text-text-secondary hover:text-text-primary'
                         }`}
                       >
@@ -571,13 +571,13 @@ export function PromptForm({
                         aria-pressed={isSelected}
                         className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-brand text-white border-brand shadow-md shadow-brand/20 font-semibold'
+                            ? 'bg-brand text-[var(--brand-foreground)] border-brand shadow-md shadow-brand/20 font-semibold'
                             : 'bg-surface-card/60 border-border text-text-secondary hover:bg-surface-hover'
                         }`}
                         title={`${t.label} (${t.category}): ${t.description}`}
                       >
                         <span>{t.label}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[var(--brand-foreground)] shrink-0" />}
                       </button>
                     );
                   })}
@@ -831,7 +831,7 @@ export function PromptForm({
                                 setIsSynthesizingExemplars(false);
                                 if (result.length > 0) setExemplars(result);
                               }}
-                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-brand-hover disabled:opacity-50 transition-colors flex items-center gap-1"
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover disabled:opacity-50 transition-colors flex items-center gap-1"
                             >
                               <Sparkles className="w-3 h-3" />
                               <span>{isSynthesizingExemplars ? 'Synthesizing...' : 'Synthesize 3 Exemplars'}</span>
@@ -919,23 +919,23 @@ export function PromptForm({
 
         {/* Sticky Action Bar: Generate is always visible */}
         <div className="sticky bottom-3 z-20">
-          <div className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface-card/90 backdrop-blur-md p-3 shadow-xl shadow-black/15">
+          <div className="flex flex-col gap-2.5 rounded border border-border bg-surface-card p-4 shadow-md">
             {/* Current selection summary */}
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-text-secondary">
-              <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-text-secondary font-medium">
+              <span className="flex items-center gap-1 px-2 py-1 rounded bg-surface-muted border border-border">
                 <Zap className="w-3 h-3 text-warning" />
                 {selectedDomain.name}
               </span>
-              <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">{selectedFrameworkLabel}</span>
-              <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">{selectedToneLabel}</span>
-              <span className="px-2 py-1 rounded-md bg-surface-muted border border-border capitalize">{outputFormat.replace('-', ' ')}</span>
+              <span className="px-2 py-1 rounded bg-surface-muted border border-border">{selectedFrameworkLabel}</span>
+              <span className="px-2 py-1 rounded bg-surface-muted border border-border">{selectedToneLabel}</span>
+              <span className="px-2 py-1 rounded bg-surface-muted border border-border capitalize">{outputFormat.replace('-', ' ')}</span>
               {outputCharLimit.trim() && (
-                <span className="px-2 py-1 rounded-md bg-surface-muted border border-border">
+                <span className="px-2 py-1 rounded bg-surface-muted border border-border">
                   ≤ {outputCharLimit.toLocaleString()} chars
                 </span>
               )}
               {activeProvider && onSelectActiveModel && providerModels.length > 0 && (
-                <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border">
+                <span className="flex items-center gap-1 px-2 py-1 rounded bg-surface-muted border border-border">
                   <Cpu className="w-3 h-3 text-brand shrink-0" />
                   <select
                     value={activeProvider.model}
@@ -957,7 +957,7 @@ export function PromptForm({
                 <button
                   type="button"
                   onClick={() => setShowStyle(true)}
-                  className="ml-auto text-brand hover:underline font-medium"
+                  className="ml-auto text-accent hover:underline"
                 >
                   Customize
                 </button>
@@ -968,18 +968,18 @@ export function PromptForm({
             <button
               type="submit"
               disabled={isGenerating || !topic.trim()}
-              className="w-full py-3 px-6 rounded-xl font-bold text-sm bg-brand hover:bg-brand-hover text-white shadow-glow flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all duration-300 transform active:scale-[0.985]"
+              className="w-full py-2.5 px-4 rounded font-semibold text-sm bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
             >
               {isGenerating ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-surface-page/30 border-t-surface-page rounded-full animate-spin" />
                   <span>Creating…</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-5 h-5" />
+                  <Sparkles className="w-4 h-4" />
                   <span>Create Prompt</span>
-                  <kbd className="ml-1 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-80">
+                  <kbd className="ml-1 rounded border border-surface-page/25 bg-surface-page/10 px-1 text-[10px] opacity-80">
                     ⌘⏎
                   </kbd>
                 </>

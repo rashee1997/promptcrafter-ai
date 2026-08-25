@@ -120,7 +120,7 @@ export function FragmentDrawer({ isOpen, onClose, onInsertFragment }: FragmentDr
                 type="button"
                 onClick={handleSave}
                 disabled={!title.trim() || !content.trim()}
-                className="w-full py-1.5 rounded-lg bg-brand text-white font-semibold disabled:opacity-50"
+                className="w-full py-1.5 rounded-lg bg-brand text-[var(--brand-foreground)] font-semibold disabled:opacity-50"
               >
                 Save Fragment
               </button>

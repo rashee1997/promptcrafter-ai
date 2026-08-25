@@ -35,6 +35,7 @@ import { getKits, saveKit, deleteKit, PromptKit } from '@/lib/image-prompt-kits'
 import { saveCustomImageRecipe } from '@/lib/image-style-recipes';
 import { saveCustomLogoArchetype } from '@/lib/logo-archetypes';
 import { Bookmark, Save } from 'lucide-react';
+import { ConfirmModal } from './confirm-modal';
 import {
   ImagePlatform,
   ImagePromptInput,
@@ -104,6 +105,13 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [showAiTemplateModal, setShowAiTemplateModal] = useState(false);
 
+  // ── Mode-switch guard (save/discard generated or in-progress work) ──
+  const [pendingMode, setPendingMode] = useState<StudioMode | null>(null);
+
+  /** True when the current form has work worth saving before a mode switch. */
+  const hasUnsavedStudioWork = () =>
+    Boolean(sections || streamingText || subject.trim());
+
   // ── Reverse-engineering state ──
   const [isReverseEngineering, setIsReverseEngineering] = useState(false);
   const [reverseEngineeringId, setReverseEngineeringId] = useState<string | null>(null);
@@ -144,10 +152,31 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
 
   /** Switching modes swaps the brief anatomy; logos are square-first artifacts. */
   const handleSetMode = (next: StudioMode) => {
+    if (next === mode) return;
+    // Don't silently bleed a normal image prompt into logo mode (or vice versa).
+    // Ask the user to save or discard before switching.
+    if (hasUnsavedStudioWork()) {
+      setPendingMode(next);
+      return;
+    }
+    applyMode(next);
+  };
+
+  /** Perform the mode switch and reset the fields scoped to the OTHER mode. */
+  const applyMode = (next: StudioMode) => {
     setMode(next);
     setSelectedRecipeId(null);
-    if (next === 'logo') setAspectRatio('1:1');
-    else setAspectRatio(DEFAULT_IMAGE_INPUT.aspectRatio);
+    if (next === 'logo') {
+      // A normal image prompt must NOT carry into logo mode.
+      setSubject('');
+      setStyle(DEFAULT_IMAGE_INPUT.style);
+      setStreamingText('');
+      setSections(null);
+      setActiveTab('raw');
+      setAspectRatio('1:1');
+    } else {
+      setAspectRatio(DEFAULT_IMAGE_INPUT.aspectRatio);
+    }
   };
 
   const handleSelectImageRecipe = (recipe: ImageStyleRecipe | null) => {
@@ -453,6 +482,12 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
     setAdditionalNotes(inp?.additionalNotes ?? '');
     setReferenceImages(inp?.referenceImages ?? []);
     setKeepRefImages(false);
+    // Clear any previously generated output so a stale brief from the other
+    // mode (e.g. an image prompt while restoring a logo brief) doesn't linger.
+    setStreamingText('');
+    setSections(null);
+    setPreviousSections(null);
+    setActiveTab('raw');
     try {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
@@ -748,6 +783,25 @@ export function ImagePromptStudio({ activeProvider, onSelectActiveModel }: Image
 
   return (
     <div className="space-y-6">
+      <ConfirmModal
+        isOpen={pendingMode !== null}
+        title="Switch to Logo Studio?"
+        message={
+          mode === 'logo'
+            ? 'You have a generated logo brief. Leaving will discard it unless you save it first. Switch to Image mode?'
+            : 'You have a generated image prompt. Switching to Logo Studio will discard it — a normal image prompt should not carry over into logo mode. Save it first, or discard?'
+        }
+        confirmLabel="Discard & switch"
+        cancelLabel="Keep editing"
+        variant="warning"
+        onCancel={() => setPendingMode(null)}
+        onConfirm={() => {
+          const m = pendingMode;
+          setPendingMode(null);
+          if (m) applyMode(m);
+        }}
+      />
+
       <StudioHeader platformCount={platforms.length} mode={mode} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,5fr)_minmax(0,7fr)] gap-6 lg:items-start">

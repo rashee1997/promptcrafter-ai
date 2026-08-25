@@ -70,7 +70,7 @@ export function ReadEditToggle({
           <button
             type="button"
             onClick={handleConfirm}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[var(--brand-foreground)] bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all"
           >
             <Check className="w-3 h-3" aria-hidden="true" />
             Save

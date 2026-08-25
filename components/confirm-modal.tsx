@@ -67,7 +67,7 @@ export function ConfirmModal({
   const buttonColors = {
     danger: 'bg-danger hover:bg-danger/80 text-white shadow-danger/20',
     warning: 'bg-warning hover:bg-warning/80 text-white shadow-warning/20',
-    info: 'bg-brand hover:bg-brand-hover text-white shadow-glow',
+    info: 'bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] shadow-glow',
   };
 
   return (

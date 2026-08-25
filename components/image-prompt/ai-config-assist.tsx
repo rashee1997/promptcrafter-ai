@@ -297,7 +297,7 @@ export function AiConfigAssist({ mode, section, input, referenceImages, onApply 
           <button
             type="button"
             onClick={handleApply}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-brand text-white hover:bg-brand-hover shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover shadow-sm transition-colors"
           >
             <Check className="w-3.5 h-3.5" />
             Apply

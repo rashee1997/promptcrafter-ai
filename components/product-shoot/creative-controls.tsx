@@ -15,8 +15,13 @@ import {
   Film,
   Zap,
   Timer,
+  Plus,
 } from 'lucide-react';
-import type { CreativeControls, VideoAspectRatio, GenerationMode, VideoPlatformDialect } from '@/lib/product-shoot/types';
+import { SectionToggle } from '@/components/image-prompt/section-toggle';
+import { CustomChipEditor, useCustomChipEntry } from '@/components/image-prompt/use-custom-chip-entry';
+import { getProductShootConfigAssist } from '@/lib/ai-client';
+import type { ProductShootConfigAssistFieldOption, CustomPresetMode } from '@/types';
+import type { ProductBrief, CreativeControls, VideoAspectRatio, GenerationMode, VideoPlatformDialect } from '@/lib/product-shoot/types';
 import {
   CAMERA_MOTION_PRESETS,
   FOCAL_LENGTH_PRESETS,
@@ -41,11 +46,39 @@ const DIALECT_OPTIONS: { value: VideoPlatformDialect; label: string }[] = [
   { value: 'minimax', label: 'Minimax' },
 ];
 
+/** Human-readable label per field key for the AI Auto-Direct panel rows. */
+const FIELD_LABELS: Record<string, string> = {
+  cameraMotion: 'Camera choreography',
+  focalLength: 'Lens & focal length',
+  lightingStyle: 'Lighting design',
+  surfaceMaterial: 'Surface / pedestal',
+  physicsFX: 'Physics & FX',
+  motionPace: 'Motion pacing',
+  humanInteraction: 'Human interaction',
+};
+
+/** Order the Auto-Direct panel rows are rendered in — matches the assist route's FIELD_DOMAIN. */
+const ASSIST_FIELD_ORDER = [
+  'cameraMotion',
+  'focalLength',
+  'lightingStyle',
+  'surfaceMaterial',
+  'physicsFX',
+  'motionPace',
+  'humanInteraction',
+] as const;
+
 interface CreativeControlsProps {
   controls: CreativeControls;
   onChange: (controls: CreativeControls) => void;
   isOpen: boolean;
   onToggle: () => void;
+  /** Context sent to the AI Auto-Direct assist endpoint. */
+  assistContext: {
+    brief: ProductBrief;
+    recipeId: string | null;
+    referenceImages: { mimeType: string; data: string }[];
+  };
 }
 
 function ChipSelector({
@@ -54,13 +87,22 @@ function ChipSelector({
   presets,
   selectedId,
   onSelect,
+  field,
+  mode,
 }: {
   label: string;
   icon: React.ElementType;
   presets: OptionPreset[];
   selectedId?: string;
   onSelect: (id: string) => void;
+  /** CreativeControls key this row writes to (e.g. 'cameraMotion', 'lightingStyle'). */
+  field: string;
+  mode: CustomPresetMode;
 }) {
+  const custom = useCustomChipEntry({ field, mode });
+  const matchedPreset = presets.find((p) => p.id === selectedId);
+  const summaryLabel = matchedPreset?.label ?? (selectedId || undefined);
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
@@ -68,13 +110,13 @@ function ChipSelector({
           <Icon className="w-3.5 h-3.5 text-brand" />
           {label}
         </label>
-        {selectedId && (
+        {summaryLabel && (
           <span className="text-[10px] text-text-muted font-mono truncate max-w-[140px]">
-            {presets.find((p) => p.id === selectedId)?.label}
+            {summaryLabel}
           </span>
         )}
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {presets.map((preset) => {
           const isSelected = selectedId === preset.id;
           return (
@@ -85,7 +127,7 @@ function ChipSelector({
               title={preset.description}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 border ${
                 isSelected
-                  ? 'bg-brand text-white border-brand shadow-[0_2px_8px_var(--shadow-glow)]'
+                  ? 'bg-brand text-[var(--brand-foreground)] border-brand shadow-[0_2px_8px_var(--shadow-glow)]'
                   : 'bg-surface-input border-border text-text-secondary hover:text-text-primary hover:border-brand/40 hover:bg-surface-muted/50'
               }`}
             >
@@ -93,6 +135,57 @@ function ChipSelector({
             </button>
           );
         })}
+        {custom.saved.map((entry) => {
+          const isSelected = selectedId === entry.value;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => onSelect(isSelected ? '' : entry.value)}
+              title={entry.label}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 border ${
+                isSelected
+                  ? 'bg-brand text-[var(--brand-foreground)] border-brand shadow-[0_2px_8px_var(--shadow-glow)]'
+                  : 'bg-surface-input border-border text-text-secondary hover:text-text-primary hover:border-brand/40 hover:bg-surface-muted/50'
+              }`}
+            >
+              {entry.label}
+            </button>
+          );
+        })}
+        {selectedId && !matchedPreset && !custom.saved.some((e) => e.value === selectedId) && (
+          <button
+            type="button"
+            onClick={() => onSelect('')}
+            className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 border bg-brand text-[var(--brand-foreground)] border-brand shadow-[0_2px_8px_var(--shadow-glow)]"
+          >
+            {selectedId}
+          </button>
+        )}
+        {custom.entering ? (
+          <CustomChipEditor
+            draft={custom.draft}
+            onDraftChange={custom.changeDraft}
+            onConfirm={() => {
+              const value = custom.confirmDraft();
+              if (value) onSelect(value);
+            }}
+            onSave={async () => {
+              const value = await custom.saveDraft();
+              if (value) onSelect(value);
+            }}
+            onCancel={custom.cancel}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={custom.begin}
+            className="px-2.5 py-1 rounded-lg text-xs font-medium border border-dashed border-border text-text-muted hover:text-text-primary hover:border-brand/40 transition-all duration-150 flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" />
+            Custom…
+          </button>
+        )}
       </div>
     </div>
   );
@@ -166,11 +259,162 @@ function SubAccordion({
   );
 }
 
+/** Skeleton row shown while the Auto-Direct assist request is in flight. */
+function ChipRowSkeleton() {
+  return (
+    <div className="space-y-1.5">
+      <div className="h-3 w-32 rounded bg-surface-muted animate-pulse" />
+      <div className="flex gap-1.5">
+        <div className="h-6 w-20 rounded-lg bg-surface-muted animate-pulse" />
+        <div className="h-6 w-24 rounded-lg bg-surface-muted animate-pulse" />
+        <div className="h-6 w-16 rounded-lg bg-surface-muted animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One-call AI art-direction assist. Replaces the three manual SubAccordion groups
+ * with a single "Generate art direction" action that fills all seven chip-row fields
+ * at once. Production mode, duration, aspect ratio, dialects, and notes are
+ * intentionally out of scope here — those stay on the Manual side.
+ */
+function AutoDirectPanel({
+  controls,
+  onChange,
+  assistContext,
+  onApplied,
+}: {
+  controls: CreativeControls;
+  onChange: (controls: CreativeControls) => void;
+  assistContext: CreativeControlsProps['assistContext'];
+  onApplied: () => void;
+}) {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
+  const [fields, setFields] = useState<Record<string, ProductShootConfigAssistFieldOption[]>>({});
+  const [chosen, setChosen] = useState<Record<string, string>>({});
+
+  const handleGenerate = async () => {
+    setStatus('loading');
+    const res = await getProductShootConfigAssist({
+      brief: assistContext.brief,
+      recipeId: assistContext.recipeId,
+      referenceImages: assistContext.referenceImages,
+    });
+    if (res.fields) {
+      setFields(res.fields);
+      setChosen({});
+      setStatus('ready');
+    } else {
+      setStatus('unavailable');
+    }
+  };
+
+  const handleApply = () => {
+    onChange({ ...controls, ...chosen } as CreativeControls);
+    onApplied();
+  };
+
+  if (status === 'idle') {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+        <p className="text-xs text-text-secondary max-w-[280px]">
+          Let AI propose camera, lighting, surface, physics, pacing, and interaction in one pass — tailored to your brief and reference images.
+        </p>
+        <button
+          type="button"
+          onClick={handleGenerate}
+          className="px-3 py-1.5 rounded-md bg-brand text-[var(--brand-foreground)] text-xs font-semibold flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          Generate art direction
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="space-y-3">
+        {ASSIST_FIELD_ORDER.map((key) => (
+          <ChipRowSkeleton key={key} />
+        ))}
+      </div>
+    );
+  }
+
+  if (status === 'unavailable') {
+    return (
+      <div className="space-y-2 py-4">
+        <p className="text-xs text-warning">
+          AI direction unavailable — switch back to Manual to set controls yourself.
+        </p>
+        <button
+          type="button"
+          onClick={handleGenerate}
+          className="px-2.5 py-1 rounded-md border border-border bg-surface-card text-xs font-medium hover:bg-surface-hover transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3.5">
+      {ASSIST_FIELD_ORDER.filter((key) => fields[key]?.length).map((key) => (
+        <div key={key} className="space-y-1.5">
+          <label className="text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+            {FIELD_LABELS[key]}
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {fields[key].map((opt) => {
+              const isSelected = chosen[key] === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setChosen((prev) => ({ ...prev, [key]: opt.value }))}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 border ${
+                    isSelected
+                      ? 'bg-brand text-[var(--brand-foreground)] border-brand'
+                      : 'bg-surface-input border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          type="button"
+          onClick={handleApply}
+          disabled={Object.keys(chosen).length === 0}
+          className="px-3 py-1.5 rounded-md bg-brand text-[var(--brand-foreground)] text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+        >
+          Apply
+        </button>
+        <button
+          type="button"
+          onClick={handleGenerate}
+          className="px-2.5 py-1.5 rounded-md border border-border bg-surface-card text-xs font-medium hover:bg-surface-hover transition-colors"
+        >
+          Regenerate
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function CreativeControlsPanel({
   controls,
   onChange,
   isOpen,
   onToggle,
+  assistContext,
 }: CreativeControlsProps) {
   const update = <K extends keyof CreativeControls>(key: K, value: CreativeControls[K]) => {
     onChange({ ...controls, [key]: value });
@@ -222,6 +466,11 @@ export function CreativeControlsPanel({
   const toggleGroup = (g: 'optics' | 'staging' | 'dialect') =>
     setOpenGroup((prev) => (prev === g ? null : g));
 
+  // Manual vs AI-generated art direction. AI mode replaces the three SubAccordion
+  // groups with a single Auto-Direct panel; production mode, duration, aspect ratio,
+  // dialects, and notes stay manual-only regardless of this toggle.
+  const [directionMode, setDirectionMode] = useState<'manual' | 'ai'>('manual');
+
   return (
     <div className="rounded-xl border border-border bg-surface-card/80 backdrop-blur-xl transition-all">
       {/* Accordion header */}
@@ -241,7 +490,7 @@ export function CreativeControlsPanel({
                 Directorial Controls & Cine Optics
               </span>
               {activeCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand text-white">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand text-[var(--brand-foreground)]">
                   {activeCount} active
                 </span>
               )}
@@ -271,6 +520,14 @@ export function CreativeControlsPanel({
             transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
             className="border-t border-border/60 p-4 space-y-3"
           >
+            <SectionToggle
+              value={directionMode}
+              onChange={setDirectionMode}
+              label="Art direction"
+            />
+
+            {directionMode === 'manual' ? (
+              <>
             {/* Group 1 — Optics & Movement */}
             <SubAccordion
               title="Optics & Movement"
@@ -326,6 +583,8 @@ export function CreativeControlsPanel({
                 presets={FOCAL_LENGTH_PRESETS}
                 selectedId={controls.focalLength}
                 onSelect={(id) => update('focalLength', id)}
+                field="focalLength"
+                mode="product-shoot"
               />
 
               {/* Motion Intensity Scale (1-10) */}
@@ -350,18 +609,28 @@ export function CreativeControlsPanel({
                         title={mip.description}
                         className={`p-2 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[52px] ${
                           isSelected
-                            ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                            ? 'border-brand bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)]'
                             : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
                         }`}
                       >
                         <div className="text-xs font-semibold">{mip.label}</div>
-                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-text-muted'}`}>
+                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-[var(--brand-foreground)]/80' : 'text-text-muted'}`}>
                           {mip.category}
                         </div>
                       </button>
                     );
                   })}
                 </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={controls.motionIntensity ?? 4}
+                  onChange={(e) => update('motionIntensity', Number(e.target.value))}
+                  aria-label="Motion intensity level"
+                  className="w-full accent-[var(--color-accent)]"
+                />
               </div>
 
               {/* Target Duration & Temporal Chaining */}
@@ -386,12 +655,12 @@ export function CreativeControlsPanel({
                         title={dp.description}
                         className={`p-2 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[52px] ${
                           isSelected
-                            ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                            ? 'border-brand bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)]'
                             : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
                         }`}
                       >
                         <div className="text-xs font-semibold">{dp.label}</div>
-                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-text-muted'}`}>
+                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-[var(--brand-foreground)]/80' : 'text-text-muted'}`}>
                           {dp.badge}
                         </div>
                       </button>
@@ -407,6 +676,8 @@ export function CreativeControlsPanel({
                 presets={CAMERA_MOTION_PRESETS}
                 selectedId={controls.cameraMotion}
                 onSelect={(id) => update('cameraMotion', id)}
+                field="cameraMotion"
+                mode="product-shoot"
               />
             </SubAccordion>
 
@@ -458,6 +729,8 @@ export function CreativeControlsPanel({
                 presets={LIGHTING_PRESETS}
                 selectedId={controls.lightingStyle}
                 onSelect={(id) => update('lightingStyle', id)}
+                field="lightingStyle"
+                mode="product-shoot"
               />
 
               {/* Surface / Pedestal */}
@@ -467,6 +740,8 @@ export function CreativeControlsPanel({
                 presets={SURFACE_PRESETS}
                 selectedId={controls.surfaceMaterial}
                 onSelect={(id) => update('surfaceMaterial', id)}
+                field="surfaceMaterial"
+                mode="product-shoot"
               />
 
               {/* Physics & FX */}
@@ -476,6 +751,8 @@ export function CreativeControlsPanel({
                 presets={PHYSICS_FX_PRESETS}
                 selectedId={controls.physicsFX}
                 onSelect={(id) => update('physicsFX', id)}
+                field="physicsFX"
+                mode="product-shoot"
               />
 
               {/* Motion Pace */}
@@ -485,6 +762,8 @@ export function CreativeControlsPanel({
                 presets={MOTION_PACE_PRESETS}
                 selectedId={controls.motionPace}
                 onSelect={(id) => update('motionPace', id)}
+                field="motionPace"
+                mode="product-shoot"
               />
 
               {/* Human / UGC Interaction */}
@@ -494,6 +773,8 @@ export function CreativeControlsPanel({
                 presets={HUMAN_INTERACTION_PRESETS}
                 selectedId={controls.humanInteraction}
                 onSelect={(id) => update('humanInteraction', id)}
+                field="humanInteraction"
+                mode="product-shoot"
               />
             </SubAccordion>
 
@@ -632,6 +913,10 @@ export function CreativeControlsPanel({
                 />
               </div>
             </SubAccordion>
+              </>
+            ) : (
+              <AutoDirectPanel controls={controls} onChange={onChange} assistContext={assistContext} onApplied={() => setDirectionMode('manual')} />
+            )}
           </motion.div>
         )}
       </AnimatePresence>

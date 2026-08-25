@@ -79,18 +79,18 @@ export function DomainSelector({
               type="button"
               onClick={() => onSelectDomain(domain)}
               aria-pressed={isSelected}
-              className={`group relative p-3 rounded-xl border text-left transition-all duration-200 flex flex-col justify-between ${
+              className={`group relative p-3 rounded border text-left transition-colors duration-150 flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-brand/10 dark:bg-brand/15 border-brand text-text-primary ring-2 ring-brand/30 shadow-md'
-                  : 'bg-surface-card/50 border-border text-text-secondary hover:border-border-hover hover:bg-surface-card/80'
+                  ? 'bg-surface-elevated border-brand text-text-primary shadow-sm'
+                  : 'bg-surface-card border-border text-text-secondary hover:border-border-hover'
               }`}
             >
               <div className="flex items-start justify-between gap-1 w-full mb-2">
                 <div
-                  className={`p-2 rounded-lg transition-colors ${
+                  className={`p-1.5 rounded transition-colors ${
                     isSelected
-                      ? 'bg-brand text-white'
-                      : 'bg-surface-hover text-text-secondary group-hover:text-brand'
+                      ? 'text-brand'
+                      : 'text-text-secondary group-hover:text-text-primary'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -101,7 +101,7 @@ export function DomainSelector({
               </div>
 
               <div>
-                <h4 className="text-xs font-bold leading-tight line-clamp-1">
+                <h4 className="text-xs font-semibold leading-tight line-clamp-1">
                   {domain.name}
                 </h4>
                 <p className="mt-1 text-[11px] text-text-muted line-clamp-2 leading-tight">
@@ -116,10 +116,10 @@ export function DomainSelector({
       {/* Domain Examples Bar — static examples render instantly, then quietly
           upgrade to AI-refreshed suggestions matched to the current settings. */}
       {selectedDomain.exampleTopics.length > 0 && onPickExampleTopic && (
-        <div className="p-3 rounded-xl bg-brand/5 border border-brand/10 dark:border-brand/20 space-y-2">
+        <div className="p-3 rounded bg-surface-muted border border-border space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
-              <Lightbulb className="w-3.5 h-3.5 text-warning shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+              <Lightbulb className="w-3.5 h-3.5 shrink-0" />
               <span>Try an example:</span>
             </div>
             <button
@@ -128,7 +128,7 @@ export function DomainSelector({
               disabled={isRefreshing}
               title="Get new suggestions"
               aria-label="Get new example suggestions"
-              className="flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] font-medium text-text-muted hover:text-brand border border-transparent hover:border-brand/40 transition-colors disabled:opacity-60"
+              className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] font-medium text-text-muted hover:text-text-primary transition-colors disabled:opacity-60"
             >
               <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
               {isRefreshing ? 'Refreshing' : 'New ideas'}
@@ -136,7 +136,7 @@ export function DomainSelector({
           </div>
           <div
             className={cn(
-              'flex flex-wrap gap-1.5 transition-opacity duration-300',
+              'flex flex-wrap gap-1.5 transition-opacity duration-150',
               isRefreshing && 'opacity-60'
             )}
             aria-busy={isRefreshing}
@@ -146,7 +146,7 @@ export function DomainSelector({
                 key={`${topic}-${i}`}
                 type="button"
                 onClick={() => onPickExampleTopic(topic)}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-surface-card border border-border text-text-secondary hover:border-brand/40 hover:text-brand transition-colors text-left"
+                className="text-[11px] px-2 py-1 rounded bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors text-left"
               >
                 &quot;{topic}&quot;
               </button>
