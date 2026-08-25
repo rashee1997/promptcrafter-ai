@@ -10,7 +10,7 @@ const MAX_SIZE_MB = 15;
 
 interface ProductUploadPanelProps {
   images: ProductImage[];
-  onImagesChange: (images: ProductImage[]) => void;
+  onImagesChange: (updater: (prev: ProductImage[]) => ProductImage[]) => void;
 }
 
 /**
@@ -61,39 +61,32 @@ export function ProductUploadPanel({
   const [dragOver, setDragOver] = useState(false);
 
   const handleFiles = useCallback(
-    (files: FileList | null) => {
+    async (files: FileList | null) => {
       if (!files) return;
-      const remaining = MAX_IMAGES - images.length;
-      if (remaining <= 0) return;
 
-      const newImages: ProductImage[] = [];
-      const toProcess = Array.from(files).slice(0, remaining);
+      const toProcess = Array.from(files).slice(0, MAX_IMAGES);
 
-      let processed = 0;
-      for (const file of toProcess) {
-        if (file.size > MAX_SIZE_MB * 1024 * 1024) continue;
-        if (!file.type.startsWith('image/')) continue;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-          const rawDataUrl = reader.result as string;
-          compressImageToDataUrl(rawDataUrl).then((compressedDataUrl) => {
-            newImages.push({
-              id: `ps-img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-              dataUrl: compressedDataUrl,
-              name: file.name,
-              size: Math.round(compressedDataUrl.length * 0.75),
-            });
-            processed++;
-            if (processed === toProcess.length) {
-              onImagesChange([...images, ...newImages]);
-            }
+      const tasks = toProcess
+        .filter((file) => file.size <= MAX_SIZE_MB * 1024 * 1024 && file.type.startsWith('image/'))
+        .map(async (file) => {
+          const reader = new FileReader();
+          const dataUrl = await new Promise<string>((resolve) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
           });
-        };
-        reader.readAsDataURL(file);
-      }
+          const compressedDataUrl = await compressImageToDataUrl(dataUrl);
+          return {
+            id: `ps-img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            dataUrl: compressedDataUrl,
+            name: file.name,
+            size: Math.round(compressedDataUrl.length * 0.75),
+          };
+        });
+
+      const resolved = await Promise.all(tasks);
+      onImagesChange((prev) => [...prev, ...resolved].slice(0, MAX_IMAGES));
     },
-    [images, onImagesChange]
+    [onImagesChange]
   );
 
   const handleDrop = useCallback(
@@ -107,9 +100,9 @@ export function ProductUploadPanel({
 
   const handleRemove = useCallback(
     (id: string) => {
-      onImagesChange(images.filter((img) => img.id !== id));
+      onImagesChange((prev) => prev.filter((img) => img.id !== id));
     },
-    [images, onImagesChange]
+    [onImagesChange]
   );
 
   return (
@@ -193,43 +186,31 @@ export function ProductUploadPanel({
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.18 }}
-                className="relative group rounded-xl overflow-hidden border border-border bg-surface-muted/30 aspect-square w-full"
+                transition={{ duration: 0.15 }}
+                className="relative group"
               >
-                <img
-                  src={img.dataUrl}
-                  alt={img.name}
-                  className="w-full h-full object-cover"
-                />
+                <div className="aspect-square rounded-lg overflow-hidden border border-border bg-surface-muted/50">
+                  <img
+                    src={img.dataUrl}
+                    alt={img.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemove(img.id);
-                  }}
-                  className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-overlay/90 text-white
-                    flex items-center justify-center transition-opacity shadow-md
-                    opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  onClick={() => handleRemove(img.id)}
+                  className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-danger/90 hover:bg-danger text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label={`Remove ${img.name}`}
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
-                <div className="absolute bottom-0 inset-x-0 bg-overlay/70 px-1.5 py-0.5">
-                  <p className="text-[9px] text-white truncate font-mono text-center">
-                    {img.name}
-                  </p>
+                <div className="mt-1 text-[10px] text-text-muted truncate" title={img.name}>
+                  {img.name}
                 </div>
               </motion.div>
             ))}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {images.length === 0 && (
-        <p className="text-[11px] text-danger" role="alert">
-          At least one product image is required to generate a shot package.
-        </p>
-      )}
     </div>
   );
 }
