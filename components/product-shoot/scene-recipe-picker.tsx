@@ -108,6 +108,8 @@ export function SceneRecipePicker({
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [busy, setBusy] = useState<boolean>(false);
   const [suggestion, setSuggestion] = useState<{ recipeId: string; rationale: string } | null>(null);
+  /** Full AI-generated recipe object, kept so it can render as its own card (it isn't in SCENE_RECIPES). */
+  const [generatedRecipeCard, setGeneratedRecipeCard] = useState<SceneRecipe | null>(null);
 
   const categories = ['All', 'Commercial', 'Social Ad', 'Sensory / FX', 'Luxury', 'Lifestyle'];
 
@@ -121,6 +123,7 @@ export function SceneRecipePicker({
       const res = await suggestProductShootRecipe({ brief, referenceImages });
       if (res.recipe) {
         setSuggestion({ recipeId: res.recipe.recipeId, rationale: res.recipe.rationale });
+        setGeneratedRecipeCard(res.recipe.generatedRecipe);
         onSelectRecipe(res.recipe.recipeId, res.recipe.generatedRecipe);
       } else {
         setSuggestion(null);
@@ -133,6 +136,7 @@ export function SceneRecipePicker({
   const handleSelectRecipe = (id: string) => {
     onSelectRecipe(id);
     setSuggestion(null);
+    setGeneratedRecipeCard(null);
   };
 
   return (
@@ -176,13 +180,62 @@ export function SceneRecipePicker({
         </div>
       </div>
 
-      {suggestion && (
-        <p className="text-[11px] text-text-secondary">
-          {suggestion.rationale}
-        </p>
-      )}
-
       <div className="grid grid-cols-1 @sm:grid-cols-2 @xl:grid-cols-3 gap-2.5">
+        {/* AI-generated recipe card — shown first when present; not part of SCENE_RECIPES */}
+        {generatedRecipeCard && (
+          <motion.button
+            type="button"
+            onClick={() => onSelectRecipe(generatedRecipeCard.id, generatedRecipeCard)}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.985 }}
+            className={`
+              relative rounded-xl border p-3.5 text-left transition-all duration-200 flex flex-col justify-between
+              ${
+                selectedRecipeId === generatedRecipeCard.id
+                  ? 'border-brand bg-gradient-to-br from-brand/15 to-accent/10 ring-2 ring-brand/30 shadow-[0_4px_16px_var(--shadow-glow)]'
+                  : 'border-border bg-surface-card hover:border-brand/40 hover:bg-surface-muted/30'
+              }
+            `}
+          >
+            <div>
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <Sparkles className="w-3.5 h-3.5 text-brand shrink-0" />
+                  <span className="text-xs font-bold text-text-primary truncate">
+                    {generatedRecipeCard.label}
+                  </span>
+                </div>
+                <span className="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/25 shrink-0">
+                  AI Generated
+                </span>
+              </div>
+              <p className="text-[11px] text-text-muted leading-relaxed line-clamp-2">
+                {generatedRecipeCard.summary}
+              </p>
+              {suggestion && (
+                <p className="text-[10px] text-text-secondary mt-1.5 italic">
+                  {suggestion.rationale}
+                </p>
+              )}
+            </div>
+            <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between gap-1.5 text-[10px] text-text-muted font-mono min-w-0">
+              <span className="flex items-center gap-1 shrink-0">
+                <Clock className="w-3 h-3 text-text-muted" />
+                ~{generatedRecipeCard.durationHint}s
+              </span>
+              <span className="flex items-center gap-1 shrink-0">
+                <AspectIcon ratio={generatedRecipeCard.aspectHint} />
+                {generatedRecipeCard.aspectHint}
+              </span>
+              <span className="text-[10px] text-text-muted/80 truncate min-w-0 flex-1 text-right">
+                Bespoke
+              </span>
+            </div>
+          </motion.button>
+        )}
+
         {/* Surprise Me card */}
         <motion.button
           type="button"
