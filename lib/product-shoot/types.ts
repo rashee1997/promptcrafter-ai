@@ -229,6 +229,8 @@ export interface ProductShootGenerationRequest {
   provider: ProviderConfig;
   brief: ProductBrief;
   recipeId: string;
+  /** Full recipe object when recipeId refers to an ephemeral AI-generated recipe (not in SCENE_RECIPES). */
+  generatedRecipe?: SceneRecipe;
   creativeControls?: CreativeControls;
   /** Base-64 image data parts sent to the model. */
   imageParts: { mimeType: string; data: string }[];
