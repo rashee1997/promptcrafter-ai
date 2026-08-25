@@ -36,7 +36,7 @@ const STREAM_HEADERS = {
 export async function POST(req: NextRequest) {
   try {
     const body: ProductShootGenerationRequest = await req.json();
-    const { provider, brief, recipeId, creativeControls, imageParts } = body;
+    const { provider, brief, recipeId, generatedRecipe, creativeControls, imageParts } = body;
 
     if (!brief?.name?.trim()) {
       return NextResponse.json(
@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Resolve recipe
+    // Resolve recipe — prefer an AI-generated recipe object over the static library lookup.
     const isSurprise = recipeId === SURPRISE_RECIPE_ID;
-    const recipe = isSurprise ? null : (getRecipeById(recipeId) ?? null);
+    const recipe = isSurprise ? null : (generatedRecipe ?? getRecipeById(recipeId) ?? null);
     const recipeLabel = isSurprise ? 'Surprise Me' : (recipe?.label ?? recipeId);
 
     // Build prompts

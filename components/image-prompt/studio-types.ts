@@ -91,6 +91,7 @@ export interface StudioFormHandlers {
   setAspectRatio: (value: string) => void;
   setOutputFormat: (format: 'prose' | 'json' | 'both') => void;
   togglePlatform: (id: ImagePlatform) => void;
+  setPlatforms: (platforms: ImagePlatform[]) => void;
   setNegativePrompt: (value: string) => void;
   setInImageText: (value: string) => void;
   setAdditionalNotes: (value: string) => void;

@@ -112,7 +112,7 @@ export function FaviconSimulator({ input }: FaviconSimulatorProps) {
             type="button"
             onClick={() => setBgMode('dark')}
             className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-              bgMode === 'dark' ? 'bg-brand text-white' : 'bg-surface-input text-text-muted hover:text-text-primary'
+              bgMode === 'dark' ? 'bg-brand text-[var(--brand-foreground)]' : 'bg-surface-input text-text-muted hover:text-text-primary'
             }`}
           >
             Dark (#111)
@@ -121,7 +121,7 @@ export function FaviconSimulator({ input }: FaviconSimulatorProps) {
             type="button"
             onClick={() => setBgMode('light')}
             className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-              bgMode === 'light' ? 'bg-brand text-white' : 'bg-surface-input text-text-muted hover:text-text-primary'
+              bgMode === 'light' ? 'bg-brand text-[var(--brand-foreground)]' : 'bg-surface-input text-text-muted hover:text-text-primary'
             }`}
           >
             Light (#FFF)
@@ -130,7 +130,7 @@ export function FaviconSimulator({ input }: FaviconSimulatorProps) {
             type="button"
             onClick={() => setBgMode('checker')}
             className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-              bgMode === 'checker' ? 'bg-brand text-white' : 'bg-surface-input text-text-muted hover:text-text-primary'
+              bgMode === 'checker' ? 'bg-brand text-[var(--brand-foreground)]' : 'bg-surface-input text-text-muted hover:text-text-primary'
             }`}
           >
             Checker

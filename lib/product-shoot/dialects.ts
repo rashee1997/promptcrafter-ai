@@ -169,17 +169,24 @@ export function parseProductShootOutput(raw: string): ProductShootSections {
   if (adRaw) {
     const smp = extractSection(adRaw, 'Single-Minded Proposition (SMP)', ['###', '##']) || extractSection(adRaw, 'Single-Minded Proposition', ['###', '##']);
     const voiceoverScript = extractSection(adRaw, 'Voiceover Script', ['###', '##']);
-    const hookCaption = extractSection(adRaw, '0–3s Hook', ['3–7s', '7–10s', '###']) || extractSection(adRaw, 'Hook', ['Value', 'CTA', '###']);
-    const valueCaption = extractSection(adRaw, '3–7s Value', ['7–10s', '###']) || extractSection(adRaw, 'Value', ['CTA', '###']);
-    const ctaCaption = extractSection(adRaw, '7–10s CTA', ['###', '##']) || extractSection(adRaw, 'CTA', ['###', '##']);
+    const hookRaw = extractSection(adRaw, '0–3s Hook', ['3–7s', '7–10s', '###']) || extractSection(adRaw, 'Hook', ['Value', 'CTA', '###']);
+    const valueRaw = extractSection(adRaw, '3–7s Value', ['7–10s', '###']) || extractSection(adRaw, 'Value', ['CTA', '###']);
+    const ctaRaw = extractSection(adRaw, '7–10s CTA', ['###', '##']) || extractSection(adRaw, 'CTA', ['###', '##']);
+
+    const [hookCaption, hookStyle] = splitCaptionStyle(hookRaw);
+    const [valueCaption, valueStyle] = splitCaptionStyle(valueRaw);
+    const [ctaCaption, ctaStyle] = splitCaptionStyle(ctaRaw);
 
     adStrategy = {
       smp: smp.replace(/^["']|["']$/g, '').trim() || 'The only product engineered for uncompromising daily perfection.',
       voiceoverScript: voiceoverScript.replace(/^["']|["']$/g, '').trim(),
       onScreenCaptions: {
         hook: hookCaption.replace(/^[*:\-\s]+/, '').trim() || 'Experience the difference.',
+        hookStyle: hookStyle || 'Bold condensed sans-serif, large centered title-safe text, high-contrast white with soft drop shadow, snaps in with a quick scale-up.',
         benefit: valueCaption.replace(/^[*:\-\s]+/, '').trim() || 'Engineered with pure active ingredients.',
+        benefitStyle: valueStyle || 'Medium-weight sans-serif, lower-third placement, high-contrast white on subtle gradient scrim, slides in from the left and fades out.',
         cta: ctaCaption.replace(/^[*:\-\s]+/, '').trim() || 'Available Now · Shop Online',
+        ctaStyle: ctaStyle || 'Bold sans-serif end-card lockup, centered, brand-color background chip, punches in and holds to the final frame.',
       },
     };
   }
@@ -339,6 +346,17 @@ function extractSection(text: string, headerName: string, stopHeaders: string[])
   const result = stopMatch ? subText.slice(0, stopMatch.index) : subText;
 
   return result.trim();
+}
+
+/**
+ * Split an OST caption line "[caption text] — Style: [typography/animation direction]"
+ * into its caption and style parts. Falls back gracefully when the model omits the
+ * "— Style:" suffix (older prompts, or when no style is offered).
+ */
+function splitCaptionStyle(raw: string): [string, string] {
+  const match = /^([\s\S]*?)(?:—|--)\s*Style:\s*([\s\S]*)$/i.exec(raw.trim());
+  if (!match) return [raw, ''];
+  return [match[1].trim(), match[2].trim()];
 }
 
 function escapeRegExp(string: string): string {

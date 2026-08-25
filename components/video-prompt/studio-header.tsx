@@ -38,7 +38,7 @@ export function StudioHeader({
     <button
       type="button"
       onClick={onNewProject}
-      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all shrink-0"
+      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-[var(--brand-foreground)] bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all shrink-0"
     >
       <Plus className="w-3.5 h-3.5" aria-hidden="true" />
       New Project
@@ -127,7 +127,7 @@ export function StudioHeader({
         ) : (
           <>
             <div className="w-9 h-9 rounded-xl bg-brand flex items-center justify-center shadow-orb border border-brand/30 shrink-0">
-              <Clapperboard className="w-4 h-4 text-white" />
+              <Clapperboard className="w-4 h-4 text-[var(--brand-foreground)]" />
             </div>
             <div>
               <h2 className="text-base font-bold tracking-tight text-text-primary">

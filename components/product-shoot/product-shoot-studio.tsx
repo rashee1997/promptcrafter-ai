@@ -9,6 +9,7 @@ import type {
   ProductBrief,
   CreativeControls,
   SavedProductShoot,
+  SceneRecipe,
 } from '@/lib/product-shoot/types';
 import { getModelCapability } from '@/lib/model-capabilities';
 import {
@@ -46,6 +47,13 @@ const EMPTY_BRIEF: ProductBrief = {
   keyFeatures: '',
 };
 
+/** Convert a compressed data URL into the {mimeType, data} shape the API and AI-assist endpoints expect. */
+function toImagePart(dataUrl: string): { mimeType: string; data: string } {
+  const mimeType = dataUrl.split(';')[0].replace('data:', '') || 'image/png';
+  const data = dataUrl.split(',')[1] || '';
+  return { mimeType, data };
+}
+
 export function ProductShootStudio({
   activeProvider,
   onSelectActiveModel,
@@ -54,6 +62,8 @@ export function ProductShootStudio({
   const [images, setImages] = useState<ProductImage[]>([]);
   const [brief, setBrief] = useState<ProductBrief>(EMPTY_BRIEF);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  /** Full recipe object when selectedRecipeId is an ephemeral AI-generated recipe (not in SCENE_RECIPES). Session-only. */
+  const [generatedRecipe, setGeneratedRecipe] = useState<SceneRecipe | null>(null);
   const [creativeControls, setCreativeControls] = useState<CreativeControls>(DEFAULT_CREATIVE_CONTROLS);
   const [showCreativeControls, setShowCreativeControls] = useState(false);
 
@@ -67,6 +77,7 @@ export function ProductShootStudio({
   const [showGallery, setShowGallery] = useState(false);
   const [savedShoots, setSavedShoots] = useState<SavedProductShoot[]>([]);
   const [isSaved, setIsSaved] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
   // Load saved gallery on mount
   useEffect(() => {
@@ -95,16 +106,13 @@ export function ProductShootStudio({
       setOutput('');
       setVisionPrePassNote(null);
       setIsSaved(false);
+      setSaveNotice(null);
 
       // Check if the active model supports vision
       const modelCap = getModelCapability(activeProvider.model);
 
       // Build image parts from uploaded images
-      const imageParts = images.map((img) => {
-        const mimeType = img.dataUrl.split(';')[0].replace('data:', '') || 'image/png';
-        const data = img.dataUrl.split(',')[1] || '';
-        return { mimeType, data };
-      });
+      const imageParts = images.map((img) => toImagePart(img.dataUrl));
 
       // Determine if a vision pre-pass is needed
       let visionPrePass = false;
@@ -129,6 +137,7 @@ export function ProductShootStudio({
             provider: activeProvider,
             brief,
             recipeId: selectedRecipeId,
+            generatedRecipe: generatedRecipe || undefined,
             creativeControls: overrideControls || creativeControls,
             imageParts,
             visionPrePassUsed: visionPrePass,
@@ -166,7 +175,7 @@ export function ProductShootStudio({
         setIsGenerating(false);
       }
     },
-    [canGenerate, images, brief, selectedRecipeId, creativeControls, activeProvider]
+    [canGenerate, images, brief, selectedRecipeId, generatedRecipe, creativeControls, activeProvider]
   );
 
   // 1-Click Remix Handler
@@ -192,8 +201,8 @@ export function ProductShootStudio({
     if (!output || !brief.name) return;
 
     const sections = parseProductShootOutput(output);
-    const recipe = selectedRecipeId ? getRecipeById(selectedRecipeId) : null;
-    const recipeLabel = selectedRecipeId === SURPRISE_RECIPE_ID ? "Director's Choice" : (recipe?.label ?? 'Custom');
+    const staticRecipe = selectedRecipeId ? getRecipeById(selectedRecipeId) : null;
+    const recipeLabel = generatedRecipe?.label ?? (selectedRecipeId === SURPRISE_RECIPE_ID ? "Director's Choice" : (staticRecipe?.label ?? 'Custom'));
 
     const shootRecord: SavedProductShoot = {
       id: `ps-saved-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -212,15 +221,17 @@ export function ProductShootStudio({
       isFavorite: false,
     };
 
-    const updated = saveProductShoot(shootRecord);
-    setSavedShoots(updated);
+    const { shoots, thumbnailsStripped } = saveProductShoot(shootRecord);
+    setSavedShoots(shoots);
     setIsSaved(true);
-  }, [output, brief, selectedRecipeId, creativeControls, activeProvider, images]);
+    setSaveNotice(thumbnailsStripped ? 'Storage was full — saved prompts kept, image thumbnails dropped.' : null);
+  }, [output, brief, selectedRecipeId, generatedRecipe, creativeControls, activeProvider, images]);
 
   // Load example brief
   const handleSelectExample = useCallback((example: ExampleProductBrief) => {
     setBrief(example.brief);
     setSelectedRecipeId(example.recipeId);
+    setGeneratedRecipe(null);
     setCreativeControls(example.creativeControls);
     setShowCreativeControls(true);
   }, []);
@@ -229,6 +240,7 @@ export function ProductShootStudio({
   const handleReuseShoot = useCallback((saved: SavedProductShoot) => {
     setBrief(saved.brief);
     setSelectedRecipeId(saved.recipeId);
+    setGeneratedRecipe(null);
     if (saved.creativeControls) {
       setCreativeControls(saved.creativeControls);
       setShowCreativeControls(true);
@@ -244,10 +256,12 @@ export function ProductShootStudio({
     setImages([]);
     setBrief(EMPTY_BRIEF);
     setSelectedRecipeId(null);
+    setGeneratedRecipe(null);
     setCreativeControls(DEFAULT_CREATIVE_CONTROLS);
     setOutput('');
     setVisionPrePassNote(null);
     setIsSaved(false);
+    setSaveNotice(null);
   }, []);
 
   // Delete saved shoot
@@ -339,7 +353,12 @@ export function ProductShootStudio({
           <div className="rounded-2xl border border-border bg-surface-card/80 backdrop-blur-xl p-4 sm:p-5 shadow-sm">
             <SceneRecipePicker
               selectedRecipeId={selectedRecipeId}
-              onSelectRecipe={setSelectedRecipeId}
+              onSelectRecipe={(id, recipe) => {
+                setSelectedRecipeId(id);
+                setGeneratedRecipe(recipe ?? null);
+              }}
+              brief={brief}
+              referenceImages={images.slice(0, 3).map((img) => toImagePart(img.dataUrl))}
             />
           </div>
 
@@ -349,6 +368,11 @@ export function ProductShootStudio({
             onChange={setCreativeControls}
             isOpen={showCreativeControls}
             onToggle={() => setShowCreativeControls(!showCreativeControls)}
+            assistContext={{
+              brief,
+              recipeId: selectedRecipeId,
+              referenceImages: images.slice(0, 3).map((img) => toImagePart(img.dataUrl)),
+            }}
           />
 
           {/* Spacer so last control has breathing room above the fixed Generate bar */}
@@ -362,6 +386,7 @@ export function ProductShootStudio({
               output={output}
               isGenerating={isGenerating}
               visionPrePassNote={visionPrePassNote}
+              saveNotice={saveNotice}
               onRemix={handleRemix}
               onSave={handleSaveToGallery}
               isSaved={isSaved}
@@ -388,7 +413,7 @@ export function ProductShootStudio({
                 </span>
                 {selectedRecipeId && (
                   <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-medium text-text-primary">
-                    🎬 {selectedRecipeId === SURPRISE_RECIPE_ID ? "Director's Choice" : (getRecipeById(selectedRecipeId)?.label || 'Recipe')}
+                    🎬 {generatedRecipe?.label ?? (selectedRecipeId === SURPRISE_RECIPE_ID ? "Director's Choice" : (getRecipeById(selectedRecipeId)?.label || 'Recipe'))}
                   </span>
                 )}
                 <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-mono">
@@ -426,19 +451,19 @@ export function ProductShootStudio({
                   text-sm font-bold transition-all duration-200 min-h-[48px]
                   ${
                     canGenerate && !isGenerating
-                      ? 'bg-brand hover:bg-brand-hover active:bg-brand-active text-white shadow-[0_8px_24px_var(--shadow-glow)] cursor-pointer'
+                      ? 'bg-brand hover:bg-brand-hover active:bg-brand-active text-[var(--brand-foreground)] shadow-[0_8px_24px_var(--shadow-glow)] cursor-pointer'
                       : 'bg-surface-muted text-text-muted cursor-not-allowed opacity-60'
                   }
                 `}
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-foreground)]" />
                     <span className="truncate">Directing Commercial Shot Package...</span>
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4 text-white fill-white" />
+                    <Zap className="w-4 h-4 text-[var(--brand-foreground)] fill-white" />
                     <span>Generate Shot Package</span>
                     <kbd className="ml-1.5 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-90">
                       ⌘⏎

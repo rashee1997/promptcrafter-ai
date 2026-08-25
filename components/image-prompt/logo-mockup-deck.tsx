@@ -108,7 +108,7 @@ export function LogoMockupDeck({ input }: LogoMockupDeckProps) {
           <button
             type="button"
             onClick={() => copy(generatedPrompt, selectedMockup.id)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-brand text-white hover:bg-brand/90 shadow-xs transition-all"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand/90 shadow-xs transition-all"
           >
             {copiedKey === selectedMockup.id ? (
               <>

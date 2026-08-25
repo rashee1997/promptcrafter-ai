@@ -76,12 +76,11 @@ import { extractPromptVariables, lintPromptVariables } from '@/lib/prompt-variab
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<AppTab>('generator');
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
-    }
-    return true;
-  });
+  // Default false to match SSR output; actual theme (set by the inline
+  // script in layout.tsx to avoid flash-of-wrong-theme) is read into state
+  // in the mount effect below instead of here, so the very first client
+  // render matches the server-rendered HTML and avoids a hydration mismatch.
+  const [darkMode, setDarkMode] = useState<boolean>(false);
 
   // Storage state
   const [providers, setProviders] = useState<ProviderConfig[]>([DEFAULT_BUILTIN_PROVIDER]);
@@ -141,8 +140,19 @@ export default function HomePage() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync dark mode
+  // Read the actual theme after mount — the inline script in layout.tsx
+  // already applied the correct `dark` class before hydration to avoid a
+  // flash of the wrong theme; this just brings React state in sync with it
+  // without re-triggering a class/localStorage write for the initial value.
+  const themeSynced = useRef(false);
   useEffect(() => {
+    setDarkMode(document.documentElement.classList.contains('dark'));
+    themeSynced.current = true;
+  }, []);
+
+  // Sync dark mode (skips the initial mount value, which is applied above)
+  useEffect(() => {
+    if (!themeSynced.current) return;
     if (darkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -852,14 +862,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-white flex flex-col justify-between">
-      {/* Dynamic Atmospheric Light Glow Orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand/15 rounded-full blur-[120px] dark:animate-orb-drift" />
-        <div className="absolute top-1/3 right-[-10%] w-[45%] h-[45%] bg-brand/10 rounded-full blur-[120px] dark:animate-orb-drift [animation-delay:-15s]" />
-        <div className="absolute bottom-[-10%] left-1/3 w-[50%] h-[50%] bg-brand/10 rounded-full blur-[120px] dark:animate-orb-drift [animation-delay:-30s]" />
-      </div>
-
+    <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-[var(--brand-foreground)] flex flex-col justify-between">
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Navigation Bar */}
         <Navbar
@@ -876,31 +879,46 @@ export default function HomePage() {
           tabIndex={-1}
           className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 md:pb-8"
         >
-          {/* Static intro block — server-rendered into the initial HTML for SEO/AEO */}
-          <section aria-labelledby="home-intro-heading" className="mb-6 lg:mb-8 max-w-3xl">
-            <h1
-              id="home-intro-heading"
-              className="text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-text-primary"
-            >
-              Create clear prompts, refine them, and keep every version
-            </h1>
-            <p className="mt-3 text-sm sm:text-base text-text-secondary leading-relaxed">
-              Describe what you want, and PromptCrafter writes a complete prompt, checks its quality,
-              and lets you test and adjust it before you use it. Every change is saved as a new
-              version you can compare and reuse. No account needed — your work stays in your browser.
-            </p>
-            <p className="mt-2 text-xs sm:text-sm text-text-muted">
-              See how it works in the{' '}
-              <Link href="/blog" className="font-semibold text-brand hover:underline">
-                blog
-              </Link>
-              , or read the{' '}
-              <Link href="/faq" className="font-semibold text-brand hover:underline">
-                FAQ
-              </Link>
-              .
-            </p>
-          </section>
+          {/* Hero / intro block — full version only on the generator tab; compact
+              single-line strip on all other tabs to save vertical space. */}
+          {activeTab === 'generator' ? (
+            <section aria-labelledby="home-intro-heading" className="mb-6 lg:mb-8 max-w-3xl">
+              <h1
+                id="home-intro-heading"
+                className="text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-text-primary"
+              >
+                Create clear prompts, refine them, and keep every version
+              </h1>
+              <p className="mt-3 text-sm sm:text-base text-text-secondary leading-relaxed">
+                Describe what you want, and PromptCrafter writes a complete prompt, checks its quality,
+                and lets you test and adjust it before you use it. Every change is saved as a new
+                version you can compare and reuse. No account needed — your work stays in your browser.
+              </p>
+              <p className="mt-2 text-xs sm:text-sm text-text-muted">
+                See how it works in the{' '}
+                <Link href="/blog" className="font-semibold text-brand hover:underline">
+                  blog
+                </Link>
+                , or read the{' '}
+                <Link href="/faq" className="font-semibold text-brand hover:underline">
+                  FAQ
+                </Link>
+                .
+              </p>
+            </section>
+          ) : (
+            <div className="mb-4 flex items-center gap-2">
+              <h1 className="text-sm font-bold text-text-primary tracking-tight">PromptCrafter AI</h1>
+              <span className="text-[11px] text-text-muted">\u2022</span>
+              <span className="text-[11px] text-text-muted">
+                {activeTab === 'image' && 'Image Studio'}
+                {activeTab === 'video' && 'Video Studio'}
+                {activeTab === 'history' && 'Saved Prompts'}
+                {activeTab === 'settings' && 'Settings'}
+                {activeTab === 'docs' && 'Documentation'}
+              </span>
+            </div>
+          )}
 
           <AnimatePresence mode="wait" initial={false}>
             {activeTab === 'generator' && (

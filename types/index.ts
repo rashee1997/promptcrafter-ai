@@ -1,3 +1,4 @@
+import type { ProductBrief } from '@/lib/product-shoot/types';
 export type StudioMode = 'prompt';
 
 // ── Phase 6: App Settings ─────────────────────────────────────────────────
@@ -642,7 +643,7 @@ export interface ImagePromptInput {
  * rows (style, mood, resolution…) that appear in both studio modes, or the
  * text studio's rows (tone, framework).
  */
-export type CustomPresetMode = 'image' | 'logo' | 'text' | 'both';
+export type CustomPresetMode = 'image' | 'logo' | 'text' | 'product-shoot' | 'both';
 
 /**
  * A user-saved custom chip value for the Image/Logo Prompt Studio. Custom
@@ -742,6 +743,87 @@ export interface ImageConfigAssistFieldOption {
 export interface ImageConfigAssistResponse {
   /** Null on total failure or unparseable model output — client falls back to static ChipRow presets for the section. */
   fields: Record<string, ImageConfigAssistFieldOption[]> | null;
+}
+
+/** Request contract for the Product Shoot Studio AI art-direction assist endpoint. */
+export interface ProductShootConfigAssistRequest {
+  /** Current brief — only the fields the user has filled. */
+  brief: ProductBrief;
+  /** Selected scene recipe id, or the surprise sentinel, or null when none picked. */
+  recipeId: string | null;
+  /** Capped at 3 by the caller, same limit as the upload panel. */
+  referenceImages?: { mimeType: string; data: string }[];
+}
+
+export interface ProductShootConfigAssistFieldOption {
+  /**
+   * A preset id from the matching list in lib/product-shoot/presets.ts, OR a
+   * short freeform descriptive phrase (same style as a preset's `keyword`)
+   * the model invented for this specific product — falls through to raw text
+   * in the prompt builder exactly like a manual custom chip value does.
+   */
+  value: string;
+  label: string;
+}
+
+export interface ProductShootConfigAssistResponse {
+  /** Null on failure or unparseable output — client keeps the manual chip rows. */
+  fields: Record<string, ProductShootConfigAssistFieldOption[]> | null;
+}
+
+/** Request contract for the Product Shoot Studio AI scene-recipe suggestion endpoint. */
+export interface ProductShootRecipeSuggestRequest {
+  brief: ProductBrief;
+  referenceImages?: { mimeType: string; data: string }[];
+}
+
+export interface ProductShootRecipeSuggestResponse {
+  /** Null on failure or when the model fails to generate a valid recipe. */
+  recipe: {
+    recipeId: string;
+    rationale: string;
+    generatedRecipe: import('@/lib/product-shoot/types').SceneRecipe;
+  } | null;
+}
+
+/** Request contract for the Logo Prompt Studio AI Critique endpoint. */
+export interface LogoCritiqueRequest {
+  input: ImagePromptInput;
+}
+
+export interface LogoPrincipleScore {
+  principle: 'simplicity' | 'memorability' | 'versatility' | 'appropriateness' | 'distinctiveness' | 'timelessness' | 'colorDiscipline';
+  /** 0-100. */
+  score: number;
+  /** One to two sentence actionable note. */
+  feedback: string;
+}
+
+export interface LogoCritiqueResponse {
+  /** Null on total failure or unparseable model output — client shows nothing rather than garbage. */
+  overallScore: number | null;
+  principles: LogoPrincipleScore[];
+  /** Single highest-leverage fix. */
+  topRecommendation: string;
+}
+
+/** Request contract for the Logo Prompt Studio AI Lockup/Variation Suggestor endpoint. */
+export interface LogoVariationRequest {
+  input: ImagePromptInput;
+}
+
+export interface LogoVariationSuggestion {
+  /** Must be a member of LOGO_LOCKUP_PRESETS ids — server drops any suggestion that isn't. */
+  lockupType: string;
+  /** Real-world use case this lockup solves, e.g. "Favicon / app icon". */
+  useCase: string;
+  /** Why this lockup suits this specific brief. */
+  reasoning: string;
+}
+
+export interface LogoVariationResponse {
+  /** Null on total failure or unparseable model output — client shows nothing rather than garbage. */
+  variations: LogoVariationSuggestion[] | null;
 }
 
 /** Response contract for Image Edit instructions. */

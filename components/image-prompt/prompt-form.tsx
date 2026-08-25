@@ -259,11 +259,13 @@ export function PromptForm({
         className={cn(
           'flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all',
           selected
-            ? 'bg-surface-card border-brand/40 text-text-primary ring-1 ring-brand/40 shadow-sm'
+            ? isLogoMode
+              ? 'bg-accent-soft border-accent/40 text-text-primary ring-1 ring-accent/40 shadow-sm'
+              : 'bg-brand-soft border-brand/40 text-text-primary ring-1 ring-brand/40 shadow-sm'
             : 'border-transparent text-text-muted hover:text-text-primary'
         )}
       >
-        {isLogoMode ? <PenTool className="w-4 h-4 text-warning" /> : <ImageIcon className="w-4 h-4 text-brand" />}
+        {isLogoMode ? <PenTool className="w-4 h-4 text-accent" /> : <ImageIcon className="w-4 h-4 text-brand" />}
         {isLogoMode ? 'Logo' : 'Image'}
         <span className="text-[9px] font-medium text-text-muted hidden sm:inline">
           {isLogoMode ? 'brand marks' : 'photos & scenes'}
@@ -357,6 +359,8 @@ export function PromptForm({
                   key={ex}
                   type="button"
                   onClick={() => handlers.setSubject(ex)}
+                  title={ex}
+                  aria-label={ex}
                   className="px-2 py-1 rounded-lg text-[10px] font-medium bg-surface-muted border border-border text-text-muted hover:text-brand hover:border-brand/40 transition-colors"
                 >
                   {ex.length > 46 ? `${ex.slice(0, 46)}…` : ex}
@@ -395,12 +399,9 @@ export function PromptForm({
           )}
         </div>
 
-        {/* Bottom control bar — SettingsPopover trigger (relocated Tier 1 controls) + Mode pill (visible at chat-card level per Wave 3.2.2) */}
-        <div className="flex items-center justify-between gap-3 pt-1">
+        {/* Bottom control bar — SettingsPopover trigger (relocated Tier 1 controls; Wave 3.2.2) */}
+        <div className="flex items-center pt-1">
           <SettingsPopover state={state} handlers={handlers} isLogo={isLogo} />
-          <div className="flex items-center justify-end">
-            {renderModeButton(state.mode)}
-          </div>
         </div>
 
         {/* Style & Direction — Tier 1, collapsed by default behind existing Expandable (Task 3.3). */}
@@ -428,7 +429,7 @@ export function PromptForm({
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all text-[11px]',
                   styleTab === 'recipes'
-                    ? 'bg-brand text-white shadow-xs font-bold'
+                    ? 'bg-brand text-[var(--brand-foreground)] shadow-xs font-bold'
                     : 'text-text-muted hover:text-text-primary'
                 )}
               >
@@ -441,7 +442,7 @@ export function PromptForm({
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all text-[11px]',
                   styleTab === 'styles'
-                    ? 'bg-brand text-white shadow-xs font-bold'
+                    ? 'bg-brand text-[var(--brand-foreground)] shadow-xs font-bold'
                     : 'text-text-muted hover:text-text-primary'
                 )}
               >

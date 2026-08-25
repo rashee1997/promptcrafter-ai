@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BookOpenCheck, Camera, ChevronDown, Eraser, Eye, Gauge, Globe, LayoutGrid, Monitor, Package, Palette, Search, SlidersHorizontal, Sparkles, Triangle, Type } from 'lucide-react';
 import { Expandable } from '../expandable';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,8 @@ import { ImagePromptInput } from '@/types';
 import { ChipRow, MultiChipRow } from './chip-row';
 import { SectionToggle } from './section-toggle';
 import { AiConfigAssist } from './ai-config-assist';
+import { LogoCritiquePanel } from './logo-critique-panel';
+import { LogoVariationSuggestor } from './logo-variation-suggestor';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
 
 interface ArtDirectionProps {
@@ -39,6 +41,17 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
 
   const [artDirectionMode, setArtDirectionMode] = useState<'manual' | 'ai' | undefined>(undefined);
   const [aiProposalsKey, setAiProposalsKey] = useState(0);
+
+  // Auto-scroll the accordion header into view when expanded, accounting
+  // for the sticky action bar that may obscure the top of newly visible content.
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (showArtDirection && toggleRef.current) {
+      requestAnimationFrame(() => {
+        toggleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  }, [showArtDirection]);
 
   const buildArtDirectionInput = (): ImagePromptInput => ({
     subject: state.subject,
@@ -163,11 +176,12 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
   return (
     <div className="border-t border-border pt-4">
       <button
+        ref={toggleRef}
         type="button"
         onClick={() => handlers.setShowArtDirection(!showArtDirection)}
         aria-expanded={showArtDirection}
         aria-controls="img-art-direction"
-        className="w-full flex items-center justify-between gap-2 text-left group"
+        className="w-full flex items-center justify-between gap-2 text-left group scroll-mt-28"
       >
         <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary group-hover:text-brand transition-colors">
           <SlidersHorizontal className="w-4 h-4 text-brand" />
@@ -178,8 +192,9 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
         </div>
         <ChevronDown className={cn('w-4 h-4 transition-transform', showArtDirection && 'rotate-180')} />
       </button>
-
       <Expandable open={showArtDirection} id="img-art-direction" className="mt-4 space-y-4">
+        {isLogo && <LogoCritiquePanel input={buildArtDirectionInput()} />}
+
         {/* Manual / AI Generated segmented control gates the chip-preset rows below.
             The in-image-text / negative-prompt / notes inputs are always available. */}
         <SectionToggle
@@ -270,6 +285,13 @@ export function ArtDirection({ state, handlers }: ArtDirectionProps) {
             onChange={(id) => handlers.setLockup(state.lockup === id ? undefined : id)}
             field="lockup"
             mode="logo"
+          />
+        )}
+        {isLogo && (
+          <LogoVariationSuggestor
+            input={buildArtDirectionInput()}
+            currentLockup={state.lockup}
+            onSelect={(id) => handlers.setLockup(id)}
           />
         )}
         {isLogo && (

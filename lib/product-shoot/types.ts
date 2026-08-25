@@ -157,9 +157,12 @@ export interface AdStrategyPackage {
   smp: string; // Single-Minded Proposition (e.g. "The only X that Y")
   voiceoverScript: string;
   onScreenCaptions: {
-    hook: string; // 0-3s
-    benefit: string; // 3-7s
-    cta: string; // 7-10s
+    hook: string; // 0-3s caption text
+    hookStyle: string; // typography, size, color/contrast, entrance animation, position
+    benefit: string; // 3-7s caption text
+    benefitStyle: string;
+    cta: string; // 7-10s caption text
+    ctaStyle: string;
   };
 }
 
@@ -229,6 +232,8 @@ export interface ProductShootGenerationRequest {
   provider: ProviderConfig;
   brief: ProductBrief;
   recipeId: string;
+  /** Full recipe object when recipeId refers to an ephemeral AI-generated recipe (not in SCENE_RECIPES). */
+  generatedRecipe?: SceneRecipe;
   creativeControls?: CreativeControls;
   /** Base-64 image data parts sent to the model. */
   imageParts: { mimeType: string; data: string }[];

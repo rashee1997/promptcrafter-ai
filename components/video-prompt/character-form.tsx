@@ -77,7 +77,7 @@ export function CharacterForm({ initial, onSubmit, onCancel }: CharacterFormProp
           type="button"
           onClick={() => canSave && onSubmit(draft)}
           disabled={!canSave}
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--brand-foreground)] bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Save character
         </button>

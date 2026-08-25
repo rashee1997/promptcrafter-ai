@@ -609,7 +609,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
                   />
                 </div>
               )}
-              <button type="button" onClick={() => void runStage(step)} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all">
+              <button type="button" onClick={() => void runStage(step)} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-[var(--brand-foreground)] bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all">
                 <Sparkles className="w-4 h-4" aria-hidden="true" />
                 Generate {meta.label}
               </button>
@@ -740,7 +740,7 @@ export function BootstrapFlow({ intent, customInstructions, provider, project, o
                   Click below to activate the production.
                 </p>
               </div>
-              <button type="button" onClick={confirmStage} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all">
+              <button type="button" onClick={confirmStage} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-[var(--brand-foreground)] bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all">
                 <Sparkles className="w-4 h-4" aria-hidden="true" />
                 Activate production
               </button>

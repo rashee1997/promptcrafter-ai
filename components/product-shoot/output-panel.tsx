@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Copy,
@@ -26,6 +26,8 @@ interface OutputPanelProps {
   output: string;
   isGenerating: boolean;
   visionPrePassNote: string | null;
+  /** Warning shown when a save stripped image thumbnails due to a storage quota limit. */
+  saveNotice?: string | null;
   onRemix?: (suggestion: string) => void;
   onSave?: () => void;
   isSaved?: boolean;
@@ -99,8 +101,13 @@ function formatAdStrategy(ad: import('@/lib/product-shoot/types').AdStrategyPack
   const lines: string[] = [];
   if (ad.smp) lines.push(`SMP: "${ad.smp}"`, '');
   if (ad.voiceoverScript) lines.push(`Voiceover Script:\n${ad.voiceoverScript}`, '');
-  const { hook, benefit, cta } = ad.onScreenCaptions;
-  lines.push(`On-Screen Text (OST):\n  0–3s Hook: ${hook}\n  3–7s Value: ${benefit}\n  7–10s CTA: ${cta}`);
+  const { hook, hookStyle, benefit, benefitStyle, cta, ctaStyle } = ad.onScreenCaptions;
+  lines.push(
+    `On-Screen Text (OST):\n` +
+    `  0–3s Hook: ${hook}${hookStyle ? ` — Style: ${hookStyle}` : ''}\n` +
+    `  3–7s Value: ${benefit}${benefitStyle ? ` — Style: ${benefitStyle}` : ''}\n` +
+    `  7–10s CTA: ${cta}${ctaStyle ? ` — Style: ${ctaStyle}` : ''}`
+  );
   return lines.join('\n').trim();
 }
 
@@ -186,6 +193,7 @@ export function OutputPanel({
   output,
   isGenerating,
   visionPrePassNote,
+  saveNotice,
   onRemix,
   onSave,
   isSaved,
@@ -198,7 +206,7 @@ export function OutputPanel({
   const [viewMode, setViewMode] = useState<'tabs' | 'grid'>('tabs');
 
   // Parse structured sections
-  const sections = parseProductShootOutput(output);
+  const sections = useMemo(() => parseProductShootOutput(output), [output]);
 
   // Auto-scroll during streaming
   useEffect(() => {
@@ -315,6 +323,23 @@ export function OutputPanel({
         )}
       </AnimatePresence>
 
+      {/* Storage quota fallback notice */}
+      <AnimatePresence>
+        {saveNotice && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-start gap-2.5 rounded-xl bg-warning-muted border border-warning/30 p-3.5"
+          >
+            <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+            <p className="text-xs text-text-secondary leading-relaxed">
+              {saveNotice}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Empty State */}
       {!isGenerating && !hasOutput && (
         <div className="flex flex-col items-center justify-center rounded-2xl bg-surface-code border border-border p-10 min-h-[360px] text-center">
@@ -360,7 +385,7 @@ export function OutputPanel({
                         onClick={() => setActiveTab(card.id)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                            ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                             : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                         }`}
                       >
@@ -377,7 +402,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('audio')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'audio'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -393,7 +418,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('adcopy')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'adcopy'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -408,7 +433,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('campaign')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'campaign'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -424,7 +449,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('extensions')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'extensions'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -439,7 +464,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('aspects')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'aspects'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -454,7 +479,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('alternatives')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'alternatives'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -632,14 +657,23 @@ export function OutputPanel({
                           <div className="p-3 rounded-xl bg-surface-code border border-border">
                             <div className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1">0–3s Hook</div>
                             <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.hook}</div>
+                            {sections.adStrategy.onScreenCaptions.hookStyle && (
+                              <div className="text-[10px] text-text-muted mt-1.5 leading-relaxed">{sections.adStrategy.onScreenCaptions.hookStyle}</div>
+                            )}
                           </div>
                           <div className="p-3 rounded-xl bg-surface-code border border-border">
                             <div className="text-[10px] font-bold text-brand uppercase tracking-wider mb-1">3–7s Value</div>
                             <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.benefit}</div>
+                            {sections.adStrategy.onScreenCaptions.benefitStyle && (
+                              <div className="text-[10px] text-text-muted mt-1.5 leading-relaxed">{sections.adStrategy.onScreenCaptions.benefitStyle}</div>
+                            )}
                           </div>
                           <div className="p-3 rounded-xl bg-surface-code border border-border">
                             <div className="text-[10px] font-bold text-success uppercase tracking-wider mb-1">7–10s CTA</div>
                             <div className="text-xs text-text-primary font-semibold">{sections.adStrategy.onScreenCaptions.cta}</div>
+                            {sections.adStrategy.onScreenCaptions.ctaStyle && (
+                              <div className="text-[10px] text-text-muted mt-1.5 leading-relaxed">{sections.adStrategy.onScreenCaptions.ctaStyle}</div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -665,7 +699,7 @@ export function OutputPanel({
                         <div key={shot.shotNumber} className="rounded-2xl border border-border bg-surface-card p-4 space-y-3">
                           <div className="flex items-center justify-between pb-2 border-b border-border/50">
                             <div className="flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">
+                              <span className="w-6 h-6 rounded-full bg-brand text-[var(--brand-foreground)] text-xs font-bold flex items-center justify-center">
                                 {shot.shotNumber}
                               </span>
                               <h4 className="text-xs font-bold text-text-primary">
@@ -733,7 +767,7 @@ export function OutputPanel({
                           <div key={beat.beatNumber} className="rounded-2xl border border-border bg-surface-card p-4 space-y-3">
                             <div className="flex items-center justify-between pb-2 border-b border-border/50">
                               <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-brand text-white text-xs font-bold font-mono">
+                                <span className="px-2 py-0.5 rounded-md bg-brand text-[var(--brand-foreground)] text-xs font-bold font-mono">
                                   {beat.timecodeRange}
                                 </span>
                                 <h4 className="text-xs font-bold text-text-primary">

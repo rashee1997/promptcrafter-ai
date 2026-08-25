@@ -157,7 +157,7 @@ export function CustomChipEditor({ draft, onDraftChange, onConfirm, onSave, onCa
         onClick={onConfirm}
         title="Use custom value"
         aria-label="Use this custom value"
-        className="flex items-center justify-center w-6 h-6 shrink-0 rounded-md bg-brand text-white hover:bg-brand-hover transition-colors"
+        className="flex items-center justify-center w-6 h-6 shrink-0 rounded-md bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover transition-colors"
       >
         <Check className="w-3.5 h-3.5" />
       </button>

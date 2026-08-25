@@ -10,6 +10,10 @@ import {
   ImageEditRequest,
   ImageEditResult,
   ImagePromptGenerationRequest,
+  LogoCritiqueRequest,
+  LogoCritiqueResponse,
+  LogoVariationRequest,
+  LogoVariationResponse,
   ImagePromptRedoRequest,
   ImageToPromptRequest,
   ImageToPromptResult,
@@ -24,6 +28,10 @@ import {
   SuggestNegativePromptRequest,
   SuggestNegativePromptResponse,
   TestPromptRequest,
+  ProductShootConfigAssistRequest,
+  ProductShootConfigAssistResponse,
+  ProductShootRecipeSuggestRequest,
+  ProductShootRecipeSuggestResponse,
 } from '@/types';
 import type { VideoCharacter, VideoLocation } from '@/types/video';
 import type {
@@ -402,6 +410,95 @@ export async function getImageConfigAssist(
   } catch (err) {
     console.error('getImageConfigAssist failed:', err);
     return { fields: null };
+  }
+}
+
+/** Product Shoot Studio AI art-direction assist — proposes preset ids for the seven chip rows. */
+export async function getProductShootConfigAssist(
+  request: ProductShootConfigAssistRequest,
+  signal?: AbortSignal
+): Promise<ProductShootConfigAssistResponse> {
+  try {
+    const res = await fetch('/api/product-shoot/config-assist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return { fields: null };
+    const data = await res.json();
+    return { fields: data?.fields && typeof data.fields === 'object' ? data.fields : null };
+  } catch (err) {
+    console.error('getProductShootConfigAssist failed:', err);
+    return { fields: null };
+  }
+}
+
+/** Product Shoot Studio AI scene-recipe suggestion — generates a fresh, product-specific recipe. */
+export async function suggestProductShootRecipe(
+  request: ProductShootRecipeSuggestRequest,
+  signal?: AbortSignal
+): Promise<ProductShootRecipeSuggestResponse> {
+  try {
+    const res = await fetch('/api/product-shoot/suggest-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return { recipe: null };
+    const data = await res.json();
+    return { recipe: data?.recipe && typeof data.recipe === 'object' ? data.recipe : null };
+  } catch (err) {
+    console.error('suggestProductShootRecipe failed:', err);
+    return { recipe: null };
+  }
+}
+
+/** Logo Prompt Studio AI Critique — scores a brief against the seven logo design principles. */
+export async function getLogoCritique(
+  request: LogoCritiqueRequest,
+  signal?: AbortSignal
+): Promise<LogoCritiqueResponse> {
+  const empty: LogoCritiqueResponse = { overallScore: null, principles: [], topRecommendation: '' };
+  try {
+    const res = await fetch('/api/logo-critique', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return empty;
+    const data = await res.json();
+    return {
+      overallScore: typeof data?.overallScore === 'number' ? data.overallScore : null,
+      principles: Array.isArray(data?.principles) ? data.principles : [],
+      topRecommendation: typeof data?.topRecommendation === 'string' ? data.topRecommendation : '',
+    };
+  } catch (err) {
+    console.error('getLogoCritique failed:', err);
+    return empty;
+  }
+}
+
+/** Logo Prompt Studio AI Lockup Variation Suggestor — proposes a coherent lockup/variation set for the brief. */
+export async function getLogoVariations(
+  request: LogoVariationRequest,
+  signal?: AbortSignal
+): Promise<LogoVariationResponse> {
+  try {
+    const res = await fetch('/api/logo-variations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+    if (!res.ok) return { variations: null };
+    const data = await res.json();
+    return { variations: Array.isArray(data?.variations) ? data.variations : null };
+  } catch (err) {
+    console.error('getLogoVariations failed:', err);
+    return { variations: null };
   }
 }
 

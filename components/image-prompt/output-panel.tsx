@@ -108,7 +108,7 @@ export function OutputPanel({
             <div className="relative">
               <div className="absolute inset-0 bg-brand/20 rounded-full blur-2xl" />
               <div className="relative w-16 h-16 rounded-2xl bg-brand flex items-center justify-center shadow-orb border border-brand/30">
-                <ImagePlus className="w-7 h-7 text-white" />
+                <ImagePlus className="w-7 h-7 text-[var(--brand-foreground)]" />
               </div>
             </div>
             <h3 className="mt-5 text-base font-bold text-text-primary">

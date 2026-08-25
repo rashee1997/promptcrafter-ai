@@ -231,17 +231,17 @@ export function ProviderSettings({
   return (
     <div className="space-y-6">
       {/* Header & Active Provider Card */}
-      <GlassCard variant="default" className="p-5 space-y-4">
+      <GlassCard variant="default" className="p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/20">
-              <Cpu className="w-5 h-5" />
+            <div className="p-1.5 rounded bg-surface-muted text-text-secondary border border-border">
+              <Cpu className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-text-primary">
+              <h2 className="text-sm font-semibold text-text-primary">
                 AI connections
               </h2>
-              <p className="text-xs text-text-muted">
+              <p className="text-[11px] text-text-muted mt-0.5">
                 Connect your own AI service or use the built-in Google Gemini
               </p>
             </div>
@@ -249,33 +249,33 @@ export function ProviderSettings({
 
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-brand text-white hover:bg-brand/80 shadow-md shadow-brand/20 flex items-center gap-1.5 transition-all"
+            className="px-3 py-1.5 rounded text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover flex items-center gap-1.5 transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Add AI service</span>
           </button>
         </div>
 
         {/* Security / Privacy Banner */}
-        <div className="p-3 rounded-xl bg-success/10 border border-success/20 text-xs text-success flex items-start gap-2.5">
+        <div className="p-3 rounded bg-success/10 border border-success/20 text-xs text-success flex items-start gap-2.5">
           <ShieldCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong className="font-bold">Security:</strong> API keys are encrypted on your device before saving and are only sent to the AI service you choose. They are never stored on our servers.
+            <strong className="font-semibold">Security:</strong> API keys are encrypted on your device before saving and are only sent to the AI service you choose. They are never stored on our servers.
           </p>
         </div>
       </GlassCard>
 
       {/* Add Custom Provider Drawer/Form (animated slide-in) */}
       <Expandable open={showAddForm} className="w-full">
-        <GlassCard variant="glowing" className="p-5 space-y-4">
+        <GlassCard variant="default" className="p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-border">
-            <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
               <Server className="w-4 h-4 text-brand" />
               {editingProviderId ? 'Edit connection' : 'Connect an AI service'}
             </h3>
             <button
               onClick={resetForm}
-              className="text-xs text-text-muted hover:text-text-primary dark:hover:text-text-primary"
+              className="text-[11px] font-medium text-text-muted hover:text-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -283,35 +283,35 @@ export function ProviderSettings({
 
           {/* Preset Helper Pills */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-text-muted">
+            <span className="text-[11px] font-medium text-text-muted">
               Quick setup:
             </span>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => applyPreset('openai')}
-                className="px-2.5 py-1 text-xs rounded-lg bg-surface-muted hover:bg-brand/10 text-text-secondary border border-border transition-colors"
+                className="px-2 py-1 text-[11px] rounded bg-surface-muted hover:bg-surface-hover text-text-secondary border border-border transition-colors"
               >
                 OpenAI
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('openrouter')}
-                className="px-2.5 py-1 text-xs rounded-lg bg-surface-muted hover:bg-brand/10 text-text-secondary border border-border transition-colors"
+                className="px-2 py-1 text-[11px] rounded bg-surface-muted hover:bg-surface-hover text-text-secondary border border-border transition-colors"
               >
                 OpenRouter
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('groq')}
-                className="px-2.5 py-1 text-xs rounded-lg bg-surface-muted hover:bg-brand/10 text-text-secondary border border-border transition-colors"
+                className="px-2 py-1 text-[11px] rounded bg-surface-muted hover:bg-surface-hover text-text-secondary border border-border transition-colors"
               >
                 Groq
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('ollama')}
-                className="px-2.5 py-1 text-xs rounded-lg bg-surface-muted hover:bg-brand/10 text-text-secondary border border-border transition-colors"
+                className="px-2 py-1 text-[11px] rounded bg-surface-muted hover:bg-surface-hover text-text-secondary border border-border transition-colors"
               >
                 Local server
               </button>
@@ -593,7 +593,7 @@ export function ProviderSettings({
 
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand/80 shadow-md shadow-brand/20 transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand/80 shadow-md shadow-brand/20 transition-all"
               >
                 {editingProviderId ? 'Update connection' : 'Save connection'}
               </button>
@@ -624,7 +624,7 @@ export function ProviderSettings({
                       <div
                         className={`p-2 rounded-xl ${
                           isActive
-                            ? 'bg-brand text-white'
+                            ? 'bg-brand text-[var(--brand-foreground)]'
                             : 'bg-surface-muted text-text-secondary'
                         }`}
                       >

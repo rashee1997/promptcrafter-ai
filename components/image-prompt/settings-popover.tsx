@@ -4,6 +4,7 @@ import { SlidersHorizontal, X, Sparkles, Image as ImageIcon, Shapes } from 'luci
 import { cn } from '@/lib/utils';
 import { ASPECT_RATIOS, PURPOSE_OPTIONS } from '@/lib/image-prompts';
 import { StudioFormHandlers, StudioFormState } from './studio-types';
+import { toast } from '../toast';
 
 interface SettingsPopoverProps {
   state: StudioFormState;
@@ -48,9 +49,10 @@ export function SettingsPopover({ state, handlers, isLogo }: SettingsPopoverProp
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              className="absolute left-0 bottom-full mb-2 z-50 w-80 sm:w-96 rounded-2xl border border-border/80 bg-surface-card/95 shadow-2xl p-4 space-y-4 max-h-[80vh] overflow-y-auto scrollbar-thin"
+              className="absolute left-0 bottom-full mb-2 z-50 w-80 sm:w-96 rounded-2xl border border-border/80 bg-surface-card/95 shadow-2xl max-h-[80vh] flex flex-col"
             >
-              <div className="flex items-center justify-between border-b border-border pb-3">
+              {/* Pinned header — close button never moves */}
+              <div className="flex items-center justify-between border-b border-border px-4 py-3 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-brand/10 text-brand">
                     <SlidersHorizontal className="w-4 h-4" />
@@ -68,6 +70,8 @@ export function SettingsPopover({ state, handlers, isLogo }: SettingsPopoverProp
                 </button>
               </div>
 
+              {/* Scrollable content area */}
+              <div className="overflow-y-auto px-4 py-3 space-y-4 flex-1 min-h-0 scrollbar-thin">
               {/* Purpose Routing */}
               <div className="space-y-2">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
@@ -86,11 +90,6 @@ export function SettingsPopover({ state, handlers, isLogo }: SettingsPopoverProp
                             handlers.setPurpose(undefined);
                           } else {
                             handlers.setPurpose(opt.id);
-                            for (const pid of opt.suggestPlatforms) {
-                              if (!state.platforms.includes(pid)) {
-                                handlers.togglePlatform(pid);
-                              }
-                            }
                           }
                         }}
                         aria-pressed={selected}
@@ -102,16 +101,39 @@ export function SettingsPopover({ state, handlers, isLogo }: SettingsPopoverProp
                         )}
                       >
                         <span className="truncate">{opt.label}</span>
-                        {selected && <span className="text-[10px] text-brand font-bold">Active</span>}
+                        {selected && <span className="text-[10px] text-brand font-bold">Selected</span>}
                       </button>
                     );
                   })}
                 </div>
-                {state.purpose && (
-                  <p className="text-[10px] text-brand font-medium leading-relaxed bg-brand/5 p-2 rounded-lg border border-brand/20">
-                    {PURPOSE_OPTIONS.find((o) => o.id === state.purpose)?.reason}
-                  </p>
-                )}
+                {state.purpose && (() => {
+                  const activeOpt = PURPOSE_OPTIONS.find((o) => o.id === state.purpose);
+                  if (!activeOpt) return null;
+                  const logoPreset = activeOpt.suggestPlatforms.some((p) => ['recraft', 'ideogram'].includes(p));
+                  return (
+                    <>
+                      <p className="text-[10px] text-brand font-medium leading-relaxed bg-brand/5 p-2 rounded-lg border border-brand/20">
+                        {activeOpt.reason}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handlers.setPlatforms(activeOpt.suggestPlatforms);
+                          if (logoPreset && state.mode !== 'logo') {
+                            handlers.setMode('logo');
+                          } else if (!logoPreset && state.mode === 'logo') {
+                            handlers.setMode('image');
+                          }
+                          handlers.setPurpose(undefined);
+                          toast.success('Preset applied', `${activeOpt.label} — platforms and mode updated.`);
+                        }}
+                        className="w-full py-1.5 rounded-lg text-[11px] font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover transition-colors shadow-sm"
+                      >
+                        Apply {activeOpt.label} preset
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Aspect Ratio / Geometry */}
@@ -170,6 +192,7 @@ export function SettingsPopover({ state, handlers, isLogo }: SettingsPopoverProp
                   })}
                 </div>
               </div>
+              </div>{/* end scrollable content */}
             </motion.div>
           </>
         )}

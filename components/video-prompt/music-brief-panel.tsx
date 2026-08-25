@@ -224,7 +224,7 @@ export function MusicBriefPanel({ project }: MusicBriefPanelProps) {
                 type="button"
                 onClick={() => void copy(brief.promptText, 'music-brief-prompt')}
                 className={cn(
-                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-white transition-all',
+                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-[var(--brand-foreground)] transition-all',
                   'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985]',
                   copiedPrompt && 'from-success to-success bg-none',
                 )}

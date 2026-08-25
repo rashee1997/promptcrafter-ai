@@ -27,8 +27,8 @@ export function getSavedProductShoots(): SavedProductShoot[] {
 }
 
 /** Save or update a product shoot generation record. */
-export function saveProductShoot(shoot: SavedProductShoot): SavedProductShoot[] {
-  if (typeof window === 'undefined') return [];
+export function saveProductShoot(shoot: SavedProductShoot): { shoots: SavedProductShoot[]; thumbnailsStripped: boolean } {
+  if (typeof window === 'undefined') return { shoots: [], thumbnailsStripped: false };
   try {
     const existing = getSavedProductShoots();
     const index = existing.findIndex((item) => item.id === shoot.id);
@@ -47,12 +47,12 @@ export function saveProductShoot(shoot: SavedProductShoot): SavedProductShoot[] 
       console.warn('LocalStorage quota exceeded, saving without thumbnail data to preserve prompts:', quotaErr);
       const stripped = updated.map((item) => ({ ...item, imageThumbnails: undefined }));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped));
-      return stripped;
+      return { shoots: stripped, thumbnailsStripped: true };
     }
-    return updated;
+    return { shoots: updated, thumbnailsStripped: false };
   } catch (err) {
     console.error('Failed to save product shoot to storage:', err);
-    return [];
+    return { shoots: [], thumbnailsStripped: false };
   }
 }
 

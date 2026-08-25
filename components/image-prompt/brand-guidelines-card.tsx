@@ -68,7 +68,7 @@ export function BrandGuidelinesCard({ input }: BrandGuidelinesCardProps) {
               onClick={() => setActiveContrastBg('white')}
               className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                 activeContrastBg === 'white'
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-[var(--brand-foreground)]'
                   : 'bg-surface-muted text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -79,7 +79,7 @@ export function BrandGuidelinesCard({ input }: BrandGuidelinesCardProps) {
               onClick={() => setActiveContrastBg('dark')}
               className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                 activeContrastBg === 'dark'
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-[var(--brand-foreground)]'
                   : 'bg-surface-muted text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -269,7 +269,7 @@ export function BrandGuidelinesCard({ input }: BrandGuidelinesCardProps) {
         <div className="rounded-lg border border-error/25 bg-error/5 p-2.5 space-y-1.5">
           <div className="flex items-center gap-1 text-[10px] font-bold uppercase text-error">
             <XCircle className="w-3 h-3" />
-            <span>Violations to Avoid (Don'ts)</span>
+            <span>Violations to Avoid (Don&apos;ts)</span>
           </div>
           <ul className="space-y-1 text-[10px] text-text-secondary leading-snug">
             {spec.dosAndDonts.donts.map((item, idx) => (

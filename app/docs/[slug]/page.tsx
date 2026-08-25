@@ -13,8 +13,8 @@ export async function generateStaticParams() {
   return docs.map((doc) => ({ slug: doc.slug }));
 }
 
-export default async function DocPage({ params }: { params: { slug: string } }) {
-  const doc = getDocBySlug(params.slug);
+export default async function DocPage({ params }: { params: Promise<{ slug: string }> }) {
+  const doc = getDocBySlug((await params).slug);
   if (!doc) {
     return (
       <DocsLayout>

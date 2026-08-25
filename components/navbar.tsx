@@ -49,33 +49,24 @@ export function Navbar({
 
   return (
     <LayoutGroup id="nav-tabs">
-      <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-surface-card/80 border-b border-border transition-colors duration-300">
-        {/* Step 1 — Fluid width: clamp() padding scales with viewport, cap raised to 1800px */}
-        <div className="w-full mx-auto px-[clamp(1rem,3vw,3rem)] max-w-[1800px]">
-          {/* Main Bar */}
-          <div className="h-16 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
-            {/* Brand Logo & Name */}
-            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-brand flex items-center justify-center shadow-orb border border-brand/30">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+      <header className="sticky top-0 z-40 w-full bg-surface-card border-b border-border transition-colors duration-150">
+        <div className="w-full mx-auto px-4 max-w-[1400px]">
+          <div className="h-16 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="w-8 h-8 rounded bg-brand flex items-center justify-center text-[var(--brand-foreground)]">
+                <Sparkles className="w-4 h-4" />
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-text-primary via-brand to-text-secondary bg-clip-text text-transparent whitespace-nowrap">
-                    PromptCrafter<span className="text-brand font-light">AI</span>
-                  </span>
-                  <span className="inline-block px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold tracking-widest uppercase rounded-full bg-brand/10 text-brand border border-brand/20">
-                    v1.1.0
-                  </span>
-                </div>
-                <p className="hidden lg:block text-[11px] text-text-muted">
-                  Create, refine, and test prompts
-                </p>
+              <div className="flex items-center gap-2">
+                <span className="text-base font-semibold text-text-primary tracking-tight">
+                  PromptCrafter AI
+                </span>
+                <span className="px-1.5 py-0.5 text-[10px] font-medium uppercase rounded bg-surface-muted text-text-secondary">
+                  v1.1.0
+                </span>
               </div>
             </div>
 
-            {/* Step 3 — Desktop nav tabs: icon-only between md–lg, full labels at lg+ */}
-            <nav aria-label="Primary" className="hidden md:flex items-center p-1 rounded-2xl bg-surface-sunken border border-border shrink-0">
+            <nav aria-label="Primary" className="hidden md:flex items-center p-1 rounded-md bg-surface-muted border border-border shrink-0">
               {TABS.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -83,34 +74,27 @@ export function Navbar({
                     key={tab.id}
                     onClick={() => handleTabClick(tab.id)}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`relative flex items-center gap-1.5 lg:gap-2 px-2 py-1.5 lg:px-3.5 text-xs font-semibold rounded-xl transition-colors duration-200 ${
-                      isActive ? 'text-brand' : 'text-text-secondary hover:text-text-primary'
+                    className={`relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded transition-colors duration-150 ${
+                      isActive ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     {isActive && (
                       <motion.span
                         layoutId="nav-tab-pill"
-                        className="absolute inset-0 rounded-xl bg-surface-card border border-border shadow-sm shadow-brand/10"
-                        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+                        className="absolute inset-0 rounded bg-surface-card shadow-sm"
+                        transition={{ duration: 0.15, ease: 'easeInOut' }}
                       />
                     )}
-                    <span className="relative z-10 flex items-center gap-1.5 lg:gap-2">
-                      <tab.Icon className="w-3.5 h-3.5" />
+                    <span className="relative z-10 flex items-center gap-2">
+                      <tab.Icon className="w-4 h-4" />
                       <span className="hidden lg:inline">{tab.label}</span>
-                      {tab.id === 'history' && (
-                        <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-brand/10 text-brand">
-                          {activeTab === 'history' ? '•' : '*'}
-                        </span>
-                      )}
                     </span>
                   </button>
                 );
               })}
             </nav>
 
-            {/* Right-hand controls */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">
-              {/* Command Palette Trigger (⌘K) */}
+            <div className="flex items-center gap-2 shrink-0">
               {onOpenPalette && (
                 <Tooltip label="Quick actions (⌘K)" className="hidden md:inline-flex">
                   <button
@@ -118,26 +102,24 @@ export function Navbar({
                       setPaletteOpen(!paletteOpen);
                       if (onOpenPalette) onOpenPalette();
                     }}
-                    className="hidden md:flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-surface-muted text-text-secondary hover:bg-surface-hover transition-colors border border-border"
-                    aria-label="Open quick actions"
+                    className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded bg-surface-card hover:bg-surface-hover transition-colors border border-border text-sm font-medium text-text-secondary"
                   >
-                    <Command className="w-4 h-4 text-brand" />
-                    <kbd className="px-1 py-0.5 rounded-md bg-surface-card border border-border text-[10px] font-mono text-text-muted">
+                    <Command className="w-4 h-4" />
+                    <span>Search...</span>
+                    <kbd className="px-1 py-0.5 rounded bg-surface-muted text-[10px] font-mono text-text-secondary">
                       ⌘K
                     </kbd>
                   </button>
                 </Tooltip>
               )}
 
-              {/* Dark / Light Theme Toggle */}
               <Tooltip label={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className="p-2 rounded-xl bg-surface-muted text-text-secondary hover:bg-surface-hover transition-colors border border-border"
-                  aria-label={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+                  className="p-1.5 rounded bg-surface-card hover:bg-surface-hover transition-colors border border-border text-text-secondary"
                   aria-pressed={darkMode}
                 >
-                  {darkMode ? <Sun className="w-4 h-4 text-warning" /> : <Moon className="w-4 h-4 text-brand" />}
+                  {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
               </Tooltip>
             </div>
@@ -145,10 +127,10 @@ export function Navbar({
         </div>
       </header>
 
-      {/* Mobile Bottom Tab Bar (fixed, thumb-first; hidden ≥ md) */}
+      {/* Mobile Tab Bar */}
       <nav
         aria-label="Primary"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface-card/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface-card pb-[env(safe-area-inset-bottom)]"
       >
         <div className="grid h-16 grid-cols-6 max-w-md mx-auto">
           {TABS.map((tab) => {
