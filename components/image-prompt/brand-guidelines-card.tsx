@@ -68,7 +68,7 @@ export function BrandGuidelinesCard({ input }: BrandGuidelinesCardProps) {
               onClick={() => setActiveContrastBg('white')}
               className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                 activeContrastBg === 'white'
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-[var(--brand-foreground)]'
                   : 'bg-surface-muted text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -79,7 +79,7 @@ export function BrandGuidelinesCard({ input }: BrandGuidelinesCardProps) {
               onClick={() => setActiveContrastBg('dark')}
               className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                 activeContrastBg === 'dark'
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-[var(--brand-foreground)]'
                   : 'bg-surface-muted text-text-secondary hover:text-text-primary'
               }`}
             >

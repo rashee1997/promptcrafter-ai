@@ -360,7 +360,7 @@ export function OutputPanel({
                         onClick={() => setActiveTab(card.id)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                            ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                             : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                         }`}
                       >
@@ -377,7 +377,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('audio')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'audio'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -393,7 +393,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('adcopy')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'adcopy'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -408,7 +408,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('campaign')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'campaign'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -424,7 +424,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('extensions')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'extensions'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -439,7 +439,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('aspects')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'aspects'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -454,7 +454,7 @@ export function OutputPanel({
                       onClick={() => setActiveTab('alternatives')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         activeTab === 'alternatives'
-                          ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                          ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                           : 'bg-surface-card border border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
                       }`}
                     >
@@ -665,7 +665,7 @@ export function OutputPanel({
                         <div key={shot.shotNumber} className="rounded-2xl border border-border bg-surface-card p-4 space-y-3">
                           <div className="flex items-center justify-between pb-2 border-b border-border/50">
                             <div className="flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">
+                              <span className="w-6 h-6 rounded-full bg-brand text-[var(--brand-foreground)] text-xs font-bold flex items-center justify-center">
                                 {shot.shotNumber}
                               </span>
                               <h4 className="text-xs font-bold text-text-primary">
@@ -733,7 +733,7 @@ export function OutputPanel({
                           <div key={beat.beatNumber} className="rounded-2xl border border-border bg-surface-card p-4 space-y-3">
                             <div className="flex items-center justify-between pb-2 border-b border-border/50">
                               <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-brand text-white text-xs font-bold font-mono">
+                                <span className="px-2 py-0.5 rounded-md bg-brand text-[var(--brand-foreground)] text-xs font-bold font-mono">
                                   {beat.timecodeRange}
                                 </span>
                                 <h4 className="text-xs font-bold text-text-primary">

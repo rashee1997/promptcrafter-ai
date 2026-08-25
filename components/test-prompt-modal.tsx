@@ -243,7 +243,7 @@ export function TestPromptModal({
                 <button
                   onClick={handleRunTest}
                   disabled={isLoading || abRunning}
-                  className="w-full py-2 px-3 rounded font-semibold text-xs bg-brand hover:bg-brand-hover text-surface-page flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors shrink-0"
+                  className="w-full py-2 px-3 rounded font-semibold text-xs bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors shrink-0"
                 >
                   {isLoading ? (
                     <>
@@ -281,7 +281,7 @@ export function TestPromptModal({
                               aria-pressed={selected}
                               className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
                                 selected
-                                  ? 'bg-brand text-white border-brand'
+                                  ? 'bg-brand text-[var(--brand-foreground)] border-brand'
                                   : 'bg-surface-card text-text-secondary border-border hover:bg-surface-hover'
                               }`}
                               title={`${p.name} · ${p.model}`}

@@ -429,7 +429,7 @@ export function PromptForm({
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all text-[11px]',
                   styleTab === 'recipes'
-                    ? 'bg-brand text-white shadow-xs font-bold'
+                    ? 'bg-brand text-[var(--brand-foreground)] shadow-xs font-bold'
                     : 'text-text-muted hover:text-text-primary'
                 )}
               >
@@ -442,7 +442,7 @@ export function PromptForm({
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all text-[11px]',
                   styleTab === 'styles'
-                    ? 'bg-brand text-white shadow-xs font-bold'
+                    ? 'bg-brand text-[var(--brand-foreground)] shadow-xs font-bold'
                     : 'text-text-muted hover:text-text-primary'
                 )}
               >

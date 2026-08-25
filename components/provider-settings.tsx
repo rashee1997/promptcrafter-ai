@@ -249,7 +249,7 @@ export function ProviderSettings({
 
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="px-3 py-1.5 rounded text-xs font-semibold bg-brand text-surface-page hover:bg-brand-hover flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 rounded text-xs font-semibold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover flex items-center gap-1.5 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add AI service</span>
@@ -593,7 +593,7 @@ export function ProviderSettings({
 
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand/80 shadow-md shadow-brand/20 transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand/80 shadow-md shadow-brand/20 transition-all"
               >
                 {editingProviderId ? 'Update connection' : 'Save connection'}
               </button>
@@ -624,7 +624,7 @@ export function ProviderSettings({
                       <div
                         className={`p-2 rounded-xl ${
                           isActive
-                            ? 'bg-brand text-white'
+                            ? 'bg-brand text-[var(--brand-foreground)]'
                             : 'bg-surface-muted text-text-secondary'
                         }`}
                       >

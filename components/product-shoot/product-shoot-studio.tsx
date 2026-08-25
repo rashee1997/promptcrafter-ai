@@ -426,19 +426,19 @@ export function ProductShootStudio({
                   text-sm font-bold transition-all duration-200 min-h-[48px]
                   ${
                     canGenerate && !isGenerating
-                      ? 'bg-brand hover:bg-brand-hover active:bg-brand-active text-white shadow-[0_8px_24px_var(--shadow-glow)] cursor-pointer'
+                      ? 'bg-brand hover:bg-brand-hover active:bg-brand-active text-[var(--brand-foreground)] shadow-[0_8px_24px_var(--shadow-glow)] cursor-pointer'
                       : 'bg-surface-muted text-text-muted cursor-not-allowed opacity-60'
                   }
                 `}
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-foreground)]" />
                     <span className="truncate">Directing Commercial Shot Package...</span>
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4 text-white fill-white" />
+                    <Zap className="w-4 h-4 text-[var(--brand-foreground)] fill-white" />
                     <span>Generate Shot Package</span>
                     <kbd className="ml-1.5 rounded-md border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold opacity-90">
                       ⌘⏎

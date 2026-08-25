@@ -85,7 +85,7 @@ function ChipSelector({
               title={preset.description}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 border ${
                 isSelected
-                  ? 'bg-brand text-white border-brand shadow-[0_2px_8px_var(--shadow-glow)]'
+                  ? 'bg-brand text-[var(--brand-foreground)] border-brand shadow-[0_2px_8px_var(--shadow-glow)]'
                   : 'bg-surface-input border-border text-text-secondary hover:text-text-primary hover:border-brand/40 hover:bg-surface-muted/50'
               }`}
             >
@@ -241,7 +241,7 @@ export function CreativeControlsPanel({
                 Directorial Controls & Cine Optics
               </span>
               {activeCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand text-white">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand text-[var(--brand-foreground)]">
                   {activeCount} active
                 </span>
               )}
@@ -350,12 +350,12 @@ export function CreativeControlsPanel({
                         title={mip.description}
                         className={`p-2 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[52px] ${
                           isSelected
-                            ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                            ? 'border-brand bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)]'
                             : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
                         }`}
                       >
                         <div className="text-xs font-semibold">{mip.label}</div>
-                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-text-muted'}`}>
+                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-[var(--brand-foreground)]/80' : 'text-text-muted'}`}>
                           {mip.category}
                         </div>
                       </button>
@@ -386,12 +386,12 @@ export function CreativeControlsPanel({
                         title={dp.description}
                         className={`p-2 rounded-lg border text-left transition-all flex flex-col justify-between min-h-[52px] ${
                           isSelected
-                            ? 'border-brand bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)]'
+                            ? 'border-brand bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)]'
                             : 'border-border bg-surface-input text-text-secondary hover:text-text-primary hover:border-brand/40'
                         }`}
                       >
                         <div className="text-xs font-semibold">{dp.label}</div>
-                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-text-muted'}`}>
+                        <div className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-[var(--brand-foreground)]/80' : 'text-text-muted'}`}>
                           {dp.badge}
                         </div>
                       </button>

@@ -230,7 +230,7 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
               {/* Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-brand text-white shadow-orb border border-brand/30">
+                  <div className="p-2.5 rounded-xl bg-brand text-[var(--brand-foreground)] shadow-orb border border-brand/30">
                     <Clapperboard className="w-5 h-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -393,7 +393,7 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                       <button
                         type="submit"
                         className={cn(
-                          'flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
+                          'flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-[var(--brand-foreground)]',
                           'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all'
                         )}
                       >
@@ -567,7 +567,7 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                           onClick={handleConfirmWithOverview}
                           disabled={generating}
                           className={cn(
-                            'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
+                            'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-[var(--brand-foreground)]',
                             'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all',
                             generating && 'opacity-50 cursor-not-allowed'
                           )}

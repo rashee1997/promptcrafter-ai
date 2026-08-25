@@ -126,7 +126,7 @@ function ChatInputInner({ project, busy, onSend }: ChatInputProps) {
             disabled={!canSend}
             aria-label="Send message"
             className={cn(
-              'inline-flex items-center justify-center w-8 h-8 rounded-lg text-white transition-all',
+              'inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-foreground)] transition-all',
               'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985]',
               !canSend && 'opacity-40 cursor-not-allowed shadow-none'
             )}

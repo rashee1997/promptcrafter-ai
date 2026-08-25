@@ -94,7 +94,7 @@ export function BootstrapPlatformStep({
                   className={cn(
                     'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
                     isActive
-                      ? 'border-brand bg-brand text-white'
+                      ? 'border-brand bg-brand text-[var(--brand-foreground)]'
                       : 'border-border group-hover:border-brand/40'
                   )}
                 >
@@ -211,7 +211,7 @@ export function BootstrapPlatformStep({
             (selectedPlatform === 'higgsfield' && !subModel)
           }
           className={cn(
-            'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white',
+            'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-[var(--brand-foreground)]',
             'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all',
             (!selectedPlatform ||
               (selectedPlatform === 'higgsfield' && !subModel)) &&

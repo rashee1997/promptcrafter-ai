@@ -165,7 +165,7 @@ export function SavedGallery({
                     <button
                       type="button"
                       onClick={() => onReuse(shoot)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hover shadow-sm transition-all min-h-[32px]"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand text-[var(--brand-foreground)] text-xs font-semibold hover:bg-brand-hover shadow-sm transition-all min-h-[32px]"
                       title="Load this brief, recipe and controls into the active canvas"
                     >
                       <RotateCcw className="w-3 h-3" />

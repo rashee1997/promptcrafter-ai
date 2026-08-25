@@ -177,7 +177,7 @@ export function StyleRecipePicker({
             onClick={() => setFilterCategory(cat)}
             className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors whitespace-nowrap shrink-0 ${
               filterCategory === cat
-                ? 'bg-brand text-white shadow-xs font-semibold'
+                ? 'bg-brand text-[var(--brand-foreground)] shadow-xs font-semibold'
                 : 'bg-surface-input text-text-muted hover:text-text-primary border border-border/60'
             }`}
           >

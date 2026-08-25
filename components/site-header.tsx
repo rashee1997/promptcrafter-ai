@@ -11,7 +11,7 @@ export function SiteHeader() {
             className="w-8 h-8 shrink-0 rounded bg-brand flex items-center justify-center"
             aria-hidden="true"
           >
-            <Sparkles className="w-4 h-4 text-surface-page" />
+            <Sparkles className="w-4 h-4 text-[var(--brand-foreground)]" />
           </span>
           <span className="font-semibold tracking-tight text-text-primary truncate">PromptCrafter AI</span>
         </Link>
@@ -30,7 +30,7 @@ export function SiteHeader() {
           </Link>
           <Link
             href="/"
-            className="px-3 py-1.5 rounded bg-brand hover:bg-brand-hover text-surface-page transition-colors"
+            className="px-3 py-1.5 rounded bg-brand hover:bg-brand-hover text-[var(--brand-foreground)] transition-colors"
           >
             Open the app
           </Link>

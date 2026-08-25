@@ -18,7 +18,7 @@ export function StudioHeader({ platformCount, mode }: StudioHeaderProps) {
       <div>
         <h2 className="text-lg font-bold tracking-tight text-text-primary flex items-center gap-2">
           <span className="inline-flex w-8 h-8 rounded-xl bg-brand items-center justify-center shadow-orb border border-brand/30">
-            {isLogo ? <PenTool className="w-4 h-4 text-white" /> : <ImagePlus className="w-4 h-4 text-white" />}
+            {isLogo ? <PenTool className="w-4 h-4 text-[var(--brand-foreground)]" /> : <ImagePlus className="w-4 h-4 text-[var(--brand-foreground)]" />}
           </span>
           {isLogo ? 'Logo Prompt Studio' : 'Image Prompt Studio'}
         </h2>

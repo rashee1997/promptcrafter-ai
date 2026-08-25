@@ -127,7 +127,7 @@ export function SettingsPopover({ state, handlers, isLogo }: SettingsPopoverProp
                           handlers.setPurpose(undefined);
                           toast.success('Preset applied', `${activeOpt.label} — platforms and mode updated.`);
                         }}
-                        className="w-full py-1.5 rounded-lg text-[11px] font-bold bg-brand text-white hover:bg-brand-hover transition-colors shadow-sm"
+                        className="w-full py-1.5 rounded-lg text-[11px] font-bold bg-brand text-[var(--brand-foreground)] hover:bg-brand-hover transition-colors shadow-sm"
                       >
                         Apply {activeOpt.label} preset
                       </button>

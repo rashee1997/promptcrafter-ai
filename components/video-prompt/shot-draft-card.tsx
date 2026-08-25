@@ -272,7 +272,7 @@ export function ShotDraftCard({ draft, disabled, targetPlatform, project, onAppr
           onClick={() => onApprove(draftState)}
           disabled={disabled}
           className={cn(
-            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all',
+            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--brand-foreground)] transition-all',
             'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985]',
             disabled && 'opacity-50 cursor-not-allowed'
           )}

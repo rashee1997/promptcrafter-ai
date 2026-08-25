@@ -53,7 +53,7 @@ export function Navbar({
         <div className="w-full mx-auto px-4 max-w-[1400px]">
           <div className="h-16 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 shrink-0">
-              <div className="w-8 h-8 rounded bg-brand flex items-center justify-center text-surface-page">
+              <div className="w-8 h-8 rounded bg-brand flex items-center justify-center text-[var(--brand-foreground)]">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div className="flex items-center gap-2">

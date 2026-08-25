@@ -204,7 +204,7 @@ export function Sidebar({ project, provider, onUpdate }: SidebarProps) {
                 }
               }}
               className={cn(
-                'px-3 py-1.5 text-[10px] font-semibold rounded-lg text-white',
+                'px-3 py-1.5 text-[10px] font-semibold rounded-lg text-[var(--brand-foreground)]',
                 'bg-brand hover:bg-brand-hover shadow-glow active:scale-[0.985] transition-all',
                 (!pendingPlatform || pendingPlatform === project.targetPlatform) &&
                   'opacity-40 cursor-not-allowed'

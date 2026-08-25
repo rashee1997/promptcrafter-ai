@@ -123,7 +123,7 @@ export function SceneRecipePicker({
               onClick={() => setFilterCategory(cat)}
               className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors whitespace-nowrap shrink-0 ${
                 filterCategory === cat
-                  ? 'bg-brand text-white shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
+                  ? 'bg-brand text-[var(--brand-foreground)] shadow-[0_2px_8px_var(--shadow-glow)] font-semibold'
                   : 'bg-surface-input text-text-muted hover:text-text-primary border border-border/60'
               }`}
             >

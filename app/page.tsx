@@ -862,7 +862,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-surface-page text-text-primary transition-colors selection:bg-brand selection:text-[var(--brand-foreground)] flex flex-col justify-between">
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Navigation Bar */}
         <Navbar
