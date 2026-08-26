@@ -224,11 +224,11 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.28, ease: [0.34, 1.56, 0.64, 1] }}
-            className="w-full max-w-lg"
+            className={cn('w-full', view === 'review' ? 'max-w-3xl' : 'max-w-lg')}
           >
-            <GlassCard variant="glowing" className="p-6">
+            <GlassCard variant="glowing" className="p-6 flex flex-col max-h-[85vh] overflow-hidden">
               {/* Header */}
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-brand text-[var(--brand-foreground)] shadow-orb border border-brand/30">
                     <Clapperboard className="w-5 h-5" aria-hidden="true" />
@@ -260,7 +260,7 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                     e.preventDefault();
                     handleCreateProject();
                   }}
-                  className="mt-5 space-y-4"
+                  className="mt-5 space-y-4 flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-1 -mr-1"
                 >
                   {/* Title (required) */}
                   <div>
@@ -433,7 +433,7 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                 </form>
               ) : (
                 /* Step 2 — review the AI-drafted Overview */
-                <div className="mt-5 space-y-4">
+                <div className="mt-5 space-y-4 flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-1 -mr-1">
                   {error && (
                     <div role="alert" className="rounded-xl border border-danger/30 bg-danger/5 p-3.5 text-xs text-danger">
                       <p className="font-bold">Overview generation failed</p>
@@ -464,6 +464,8 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                     </div>
                   ) : (
                     <>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                      <div className="space-y-4">
                       {/* Logline */}
                       <div className="rounded-xl border border-brand/30 bg-brand/5 p-4">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-brand flex items-center gap-1.5">
@@ -503,7 +505,8 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                           ))}
                         </div>
                       </div>
-
+                      </div>
+                      <div className="space-y-4">
                       {/* Premise + theme + emotional arc */}
                       <div className="rounded-xl border border-border bg-surface-card/60 p-3.5">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Premise</p>
@@ -518,6 +521,8 @@ export function NewProjectModal({ isOpen, onClose, provider, onCreate }: NewProj
                           <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Theme</p>
                           <p className="mt-1 text-xs text-text-secondary leading-relaxed">{overview.theme}</p>
                         </div>
+                      </div>
+                      </div>
                       </div>
 
                       {/* Revise */}
