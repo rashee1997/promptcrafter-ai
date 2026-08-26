@@ -59,13 +59,24 @@ export function ShotSceneSelector({ project, onContextChange }: ShotSceneSelecto
   );
 
   // ── Auto-fill from scene when scene changes ──
+  // `presentCharacterIds` on a screenplay scene is actually a list of
+  // character NAMES (Stage 3/screenplay runs before Stage 5/characters, so
+  // the AI has no ids to reference yet — see screenplay.ts schema). Resolve
+  // those names to real character ids by matching against the confirmed
+  // cast; unmatched/renamed characters just don't pre-select.
   useEffect(() => {
     if (selectedScene) {
       setSelectedLocationId(selectedScene.locationId ?? null);
-      setSelectedCharacterIds(selectedScene.presentCharacterIds ?? []);
+      const wanted = new Set(
+        (selectedScene.presentCharacterIds ?? []).map((n) => n.trim().toLowerCase())
+      );
+      const resolvedIds = characters
+        .filter((c) => wanted.has(c.name.trim().toLowerCase()))
+        .map((c) => c.id);
+      setSelectedCharacterIds(resolvedIds);
       setConditions({ timeOfDay: selectedScene.timeOfDay });
     }
-  }, [selectedScene]);
+  }, [selectedScene, characters]);
 
   // ── Emit context whenever selection changes ──
   useEffect(() => {
