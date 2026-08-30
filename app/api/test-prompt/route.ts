@@ -4,6 +4,7 @@ import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-pro
 import { withModelFallback } from '@/lib/model-fallback';
 import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { TestPromptRequest } from '@/types';
+import { boundedText, MAX_INPUT_CHARS, MAX_PROMPT_CHARS, validateProvider } from '@/lib/request-validation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -11,7 +12,9 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   try {
     const body: TestPromptRequest = await req.json();
-    const { provider, generatedPrompt, testInput } = body;
+    const provider = validateProvider(body.provider);
+    const generatedPrompt = boundedText(body.generatedPrompt, MAX_PROMPT_CHARS, 'Generated prompt');
+    const testInput = typeof body.testInput === 'string' ? body.testInput.trim().slice(0, MAX_INPUT_CHARS) : '';
 
     if (!generatedPrompt) {
       return NextResponse.json({ error: 'Generated prompt is missing.' }, { status: 400 });
@@ -40,7 +43,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const responseStream = await withModelFallback(
+      const responseStream = await withModelFallback<AsyncIterable<{ text?: string }>>(
         { ...provider, model: provider?.model || GEMINI_DEFAULT_MODEL },
         (model) =>
           ai.models.generateContentStream({

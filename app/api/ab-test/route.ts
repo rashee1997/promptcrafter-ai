@@ -3,6 +3,7 @@ import { ABTestRequest, ABTestResult } from '@/types';
 import { runNonStreamingCompletion } from '@/lib/server-completion';
 import { consistencyScore } from '@/lib/similarity';
 import { getModelPrice } from '@/lib/model-pricing';
+import { boundedText, MAX_AB_PROVIDERS, MAX_PROMPT_CHARS, validateProvider } from '@/lib/request-validation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,16 +11,13 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   try {
     const body: ABTestRequest = await req.json();
-    const { providers, generatedPrompt, testInput } = body;
-
-    if (!Array.isArray(providers) || providers.length === 0) {
-      return NextResponse.json({ error: 'At least one provider is required.' }, { status: 400 });
+    const { providers: rawProviders, generatedPrompt: rawPrompt, testInput: rawInput } = body;
+    if (!Array.isArray(rawProviders) || rawProviders.length < 2 || rawProviders.length > MAX_AB_PROVIDERS) {
+      return NextResponse.json({ error: `Between 2 and ${MAX_AB_PROVIDERS} providers are required.` }, { status: 400 });
     }
-    if (!generatedPrompt || !generatedPrompt.trim()) {
-      return NextResponse.json({ error: 'Generated prompt is required.' }, { status: 400 });
-    }
-
-    const userMessage = testInput?.trim() || 'Please execute the prompt with standard parameters.';
+    const generatedPrompt = boundedText(rawPrompt, MAX_PROMPT_CHARS, 'Generated prompt');
+    const providers = rawProviders.map(validateProvider);
+    const userMessage = typeof rawInput === 'string' && rawInput.trim() ? rawInput.trim().slice(0, 40_000) : 'Please execute the prompt with standard parameters.';
 
     const settled = await Promise.allSettled(
       providers.map(async (provider) => {
@@ -65,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     const abResult: ABTestResult = {
       results,
-      consistency: consistencyScore(results.map((r) => r.output)),
+      consistency: consistencyScore(results.filter((r) => !r.error && r.output).map((r) => r.output)),
       ranAt: Date.now(),
     };
 

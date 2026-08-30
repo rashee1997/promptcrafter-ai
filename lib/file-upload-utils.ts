@@ -6,6 +6,7 @@
  */
 
 import { CodeFileAttachment, ProjectContext } from '@/types';
+import { escapeXml } from '@/lib/request-validation';
 
 // ── Exclusion Rules ──────────────────────────────────────────────────────────
 
@@ -353,7 +354,7 @@ export function processUploadedProject(
 export function formatProjectContext(ctx: ProjectContext): string {
   const lines: string[] = [];
 
-  lines.push(`<project_context project_name="${ctx.projectName || 'Attached Codebase'}">`);
+  lines.push(`<project_context project_name="${escapeXml(ctx.projectName || 'Attached Codebase')}">`);
   lines.push('<!-- GROUND TRUTH CODEBASE CONTEXT: Use the exact file paths, schemas, interfaces, function signatures, and imports provided below. DO NOT invent alternative structures, mock placeholders, or TODO stubs for files that exist here. -->');
   lines.push('');
 
@@ -367,8 +368,8 @@ export function formatProjectContext(ctx: ProjectContext): string {
   // File contents in XML blocks
   lines.push('<repository_files>');
   for (const file of ctx.files) {
-    lines.push(`  <file path="${file.path}">`);
-    lines.push(file.content);
+    lines.push(`  <file path="${escapeXml(file.path)}">`);
+    lines.push(escapeXml(file.content));
     lines.push('  </file>');
     lines.push('');
   }

@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { ProviderConfig } from '@/types';
 import { withModelFallback } from './model-fallback';
+import { validateProviderUrl } from './request-validation';
 
 /**
  * Normalizes user-provided Base URL:
@@ -38,6 +39,7 @@ export function normalizeBaseUrl(url: string): string {
  * If the provider API key is empty, it is omitted so self-hosted/unauthenticated endpoints can work.
  */
 export function createOpenAIClient(provider: ProviderConfig): OpenAI {
+  validateProviderUrl(provider.baseUrl);
   const baseURL = normalizeBaseUrl(provider.baseUrl);
   const apiKey =
     provider.apiKey && provider.apiKey.trim() !== '' && provider.apiKey !== 'BUILTIN'
@@ -63,7 +65,7 @@ export async function handleOpenAIProviderRequest(
 ): Promise<Response> {
   const client = createOpenAIClient(provider);
   const temperature = overrideOptions?.temperature ?? provider.temperature ?? 0.7;
-  const max_tokens = overrideOptions?.maxTokens ?? provider.maxTokens ?? 3000;
+  const max_tokens = Math.min(overrideOptions?.maxTokens ?? provider.maxTokens ?? 3000, 100_000);
 
   if (provider.disableStreaming) {
     // Single complete non-streamed request, retried per fallback config.

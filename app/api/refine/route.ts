@@ -5,6 +5,7 @@ import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-pro
 import { withModelFallback } from '@/lib/model-fallback';
 import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { DomainPreset, RefineRequest } from '@/types';
+import { boundedText, MAX_INPUT_CHARS, MAX_PROMPT_CHARS, validateProvider } from '@/lib/request-validation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -37,7 +38,10 @@ EDITING RULES:
 export async function POST(req: NextRequest) {
   try {
     const body: RefineRequest = await req.json();
-    const { provider, session, priorMessages, instruction, basePrompt } = body;
+    const provider = validateProvider(body.provider);
+    const { session, priorMessages, instruction: rawInstruction, basePrompt: rawBasePrompt } = body;
+    const instruction = boundedText(rawInstruction, MAX_INPUT_CHARS, 'Refinement instruction');
+    const basePrompt = boundedText(rawBasePrompt, MAX_PROMPT_CHARS, 'Prompt');
 
     if (!instruction || !instruction.trim()) {
       return NextResponse.json({ error: 'Refinement instruction is required.' }, { status: 400 });
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
       }));
 
       // Chat creation + first message are retried across fallback models.
-      const responseStream = await withModelFallback(
+      const responseStream = await withModelFallback<AsyncIterable<{ text?: string }>>(
         { ...provider, model: modelName },
         async (model) => {
           const chat = await ai.chats.create({

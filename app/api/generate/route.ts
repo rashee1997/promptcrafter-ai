@@ -5,6 +5,7 @@ import { handleOpenAIProviderRequest, formatOpenAIError } from '@/lib/openai-pro
 import { withModelFallback } from '@/lib/model-fallback';
 import { GEMINI_DEFAULT_MODEL } from '@/lib/storage';
 import { AttachmentPayload, GenerationRequest } from '@/types';
+import { boundedText, MAX_ATTACHMENTS, MAX_INPUT_CHARS, MAX_TOTAL_ATTACHMENT_BYTES, validateDataUrl, validateProvider } from '@/lib/request-validation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -94,13 +95,26 @@ async function extractAttachmentsViaGemini(
 
 export async function POST(req: NextRequest) {
   try {
-    const body: GenerationRequest = await req.json();
-    const { provider, input, attachments } = body;
+    const body = (await req.json()) as GenerationRequest;
+    const provider = validateProvider(body.provider);
+    const input = body.input;
+    const attachments = body.attachments;
 
     if (!input || !input.topic) {
       return NextResponse.json({ error: 'Topic is required.' }, { status: 400 });
     }
 
+    const topic = boundedText(input.topic, MAX_INPUT_CHARS, 'Topic');
+    if (attachments) {
+      const allParts = [...(attachments.pdfParts || []), ...(attachments.imageParts || [])];
+      if (allParts.length > MAX_ATTACHMENTS) throw new Error(`No more than ${MAX_ATTACHMENTS} attachments are allowed.`);
+      let totalBytes = 0;
+      for (const part of allParts) {
+        const data = validateDataUrl(`data:${part.mimeType};base64,${part.data}`);
+        totalBytes += Math.floor(data.split(',')[1].length * 0.75);
+      }
+      if (totalBytes > MAX_TOTAL_ATTACHMENT_BYTES) throw new Error('Total attachment size is too large.');
+    }
     const domain = DOMAIN_PRESETS.find((d) => d.id === input.domainId) || DOMAIN_PRESETS[0];
     const systemInstruction = buildMetaSystemPrompt(input, domain);
 
@@ -122,7 +136,7 @@ export async function POST(req: NextRequest) {
     // Build user message with project context and extracted attachment text
     const extractedText = [extractedPdfText, extractedImageText].filter(Boolean).join('\n');
     const userMessage = buildUserPromptMessage(
-      input,
+      { ...input, topic },
       domain,
       attachments?.projectContextText,
       extractedText || undefined,
@@ -169,7 +183,7 @@ export async function POST(req: NextRequest) {
         contents = { role: 'user', parts };
       }
 
-      const responseStream = await withModelFallback(
+      const responseStream = await withModelFallback<AsyncIterable<{ text?: string }>>(
         { ...provider, model: modelName },
         (model) =>
           ai.models.generateContentStream({
