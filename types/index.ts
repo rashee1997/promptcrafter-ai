@@ -725,6 +725,17 @@ export interface ImageEditRequest {
   mode?: 'image' | 'logo';
 }
 
+/** Severity-tagged lint finding surfaced by prompt-quality auditing and AI config assist. */
+export interface ImagePromptLintIssue {
+  severity: 'warning' | 'info' | 'error';
+  platform?: ImagePlatform | 'master' | 'universal';
+  rule: string;
+  message: string;
+  suggestion?: string;
+  /** AI config assist field key this issue belongs to (e.g. "lighting"); absent for general prompt-quality issues. */
+  field?: string;
+}
+
 /** Request contract for the Image Prompt Studio AI Config Assist endpoint (Refine / Art direction sections). */
 export interface ImageConfigAssistRequest {
   mode: 'image' | 'logo';
@@ -733,16 +744,24 @@ export interface ImageConfigAssistRequest {
   input: ImagePromptInput;
   /** Capped at 3, same limit as today's reference-image upload. */
   referenceImages?: { dataUrl: string; purpose: ImagePromptReferenceImage['purpose'] }[];
+  /** Field keys to regenerate; omitted regenerates the whole section (per-field re-roll). */
+  targetFields?: string[];
 }
 
 export interface ImageConfigAssistFieldOption {
   value: string;
   label: string;
+  /** One-sentence guidance shown as a tooltip on the chip. */
+  hint?: string;
+  /** Model's self-reported confidence (0-1); options >= 0.8 render a badge. */
+  confidence?: number;
 }
 
 export interface ImageConfigAssistResponse {
   /** Null on total failure or unparseable model output — client falls back to static ChipRow presets for the section. */
   fields: Record<string, ImageConfigAssistFieldOption[]> | null;
+  /** Buzzword/quality lint findings for the returned options, if any. */
+  lintIssues?: ImagePromptLintIssue[];
 }
 
 /** Request contract for the Product Shoot Studio AI art-direction assist endpoint. */

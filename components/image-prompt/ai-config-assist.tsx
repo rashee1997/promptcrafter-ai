@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Sparkles } from 'lucide-react';
+import { AlertTriangle, Check, RefreshCw, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getImageConfigAssist } from '@/lib/ai-client';
 import {
@@ -28,7 +28,7 @@ import {
 } from '@/lib/logo-prompts';
 import { CHIP_DOTS } from './chip-row';
 import { CustomChipEditor, useCustomChipEntry } from './use-custom-chip-entry';
-import { ImagePromptInput, ImagePromptReferenceImage } from '@/types';
+import { ImageConfigAssistFieldOption, ImagePromptInput, ImagePromptLintIssue, ImagePromptReferenceImage } from '@/types';
 
 interface AiConfigAssistProps {
   mode: 'image' | 'logo';
@@ -40,7 +40,7 @@ interface AiConfigAssistProps {
 }
 
 /** Option shape shared by both the AI-proposed chips and the static fallback chips. */
-type OptionLike = { value: string; label: string; hint?: string };
+type OptionLike = { value: string; label: string; hint?: string; confidence?: number };
 
 /**
  * Static per-field option lists, mirrored 1:1 from the Manual side of the
@@ -133,6 +133,8 @@ function AssistFieldRow({
   options,
   value,
   onValueChange,
+  onReroll,
+  isRerolling,
 }: {
   field: string;
   mode: 'image' | 'logo';
@@ -140,6 +142,9 @@ function AssistFieldRow({
   options: OptionLike[];
   value: string | undefined;
   onValueChange: (value: string) => void;
+  /** Regenerates just this field's options, if AI generation is active (undefined on the static fallback). */
+  onReroll?: (field: string) => void;
+  isRerolling?: boolean;
 }) {
   // Local-only custom entry — inline edit of a starting value, not persisted
   // to saved presets (nothing is written anywhere before Apply).
@@ -154,7 +159,20 @@ function AssistFieldRow({
 
   return (
     <div className="space-y-2">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">{label}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">{label}</span>
+        {onReroll && (
+          <button
+            type="button"
+            disabled={isRerolling}
+            onClick={() => onReroll(field)}
+            title="Regenerate this field only"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-text-muted hover:text-brand transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={cn('w-3 h-3', isRerolling && 'animate-spin')} />
+          </button>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {options.map((opt, i) => {
           const selected = value === opt.value;
@@ -174,6 +192,11 @@ function AssistFieldRow({
             >
               <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', CHIP_DOTS[i % CHIP_DOTS.length])} />
               {opt.label}
+              {typeof opt.confidence === 'number' && opt.confidence >= 0.8 && (
+                <span className="text-[9px] font-semibold px-1 py-0.5 rounded bg-brand/20 text-brand shrink-0">
+                  {Math.round(opt.confidence * 100)}%
+                </span>
+              )}
               {selected && <Check className="w-3 h-3 text-brand shrink-0" />}
             </button>
           );
@@ -228,8 +251,10 @@ function AssistFieldRow({
  */
 export function AiConfigAssist({ mode, section, input, referenceImages, onApply }: AiConfigAssistProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
-  const [fields, setFields] = useState<Record<string, { value: string; label: string }[]>>({});
+  const [fields, setFields] = useState<Record<string, ImageConfigAssistFieldOption[]>>({});
   const [values, setValues] = useState<Record<string, string>>({});
+  const [lintIssues, setLintIssues] = useState<ImagePromptLintIssue[]>([]);
+  const [rerollingField, setRerollingField] = useState<string | null>(null);
 
   const fieldDomain = STATIC_FIELD_OPTIONS[section][mode];
   const fieldKeys = Object.keys(fieldDomain);
@@ -242,7 +267,21 @@ export function AiConfigAssist({ mode, section, input, referenceImages, onApply 
       return;
     }
     setFields(response.fields);
+    setLintIssues(response.lintIssues ?? []);
     setStatus('ready');
+  };
+
+  const handleReroll = async (field: string) => {
+    setRerollingField(field);
+    const response = await getImageConfigAssist({ mode, section, input, referenceImages, targetFields: [field] });
+    if (response.fields?.[field]) {
+      setFields((prev) => ({ ...prev, [field]: response.fields![field] }));
+      setLintIssues((prev) => [
+        ...prev.filter((issue) => issue.field !== field),
+        ...(response.lintIssues ?? []),
+      ]);
+    }
+    setRerollingField(null);
   };
 
   const handleApply = () => {
@@ -292,8 +331,20 @@ export function AiConfigAssist({ mode, section, input, referenceImages, onApply 
               options={optionsFor(key)}
               value={values[key]}
               onValueChange={(v) => setValues((prev) => ({ ...prev, [key]: v }))}
+              onReroll={status === 'ready' ? handleReroll : undefined}
+              isRerolling={rerollingField === key}
             />
           ))}
+          {lintIssues.length > 0 && (
+            <ul className="space-y-1 bg-warning/10 p-2.5 rounded-lg border border-warning/20">
+              {lintIssues.map((issue, i) => (
+                <li key={i} className="text-[11px] flex items-start gap-1.5">
+                  <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5 text-warning" />
+                  <span className="text-warning">{issue.message}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <button
             type="button"
             onClick={handleApply}
